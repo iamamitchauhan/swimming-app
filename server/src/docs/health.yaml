@@ -1,0 +1,22 @@
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Server liveness check
+      description: Returns HTTP 200 with server uptime. No authentication required.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Server is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'OK' }
+                  data:
+                    type: object
+                    properties:
+                      uptime: { type: number, example: 3621.54 }
+                  error: { type: string, nullable: true, example: null }

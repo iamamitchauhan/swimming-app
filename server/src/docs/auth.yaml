@@ -1,0 +1,229 @@
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register with email
+      description: |
+        Accepts an email address, creates a pending user account, and sends a
+        verification link. If the email is already registered and verified a
+        409 Conflict is returned.
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: jane.doe@example.com
+      responses:
+        '200':
+          description: Verification email sent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessResponse' }
+              example:
+                success: true
+                message: Verification email sent
+                data: null
+                error: null
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/verify-email:
+    get:
+      tags: [Auth]
+      summary: Verify email address
+      description: |
+        Validates the one-time token sent in the registration email. On success
+        the account is activated. The token is single-use and expires in
+        `EMAIL_VERIFY_EXPIRES_HOURS` hours (default 24 h).
+      operationId: verifyEmail
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: One-time verification token from the email link
+          example: a3f8c1d2e4b5...
+      responses:
+        '200':
+          description: Email verified, account activated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user: { $ref: '#/components/schemas/PublicUser' }
+        '400':
+          description: Token is invalid or expired
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                success: false
+                message: Invalid or expired verification link.
+                data: null
+                error: EMAIL_VERIFY_TOKEN_INVALID
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Request OTP login
+      description: |
+        Accepts a registered, verified email address and sends a 6-digit OTP
+        (valid for `OTP_EXPIRES_MINUTES` minutes, default 10 m). For security
+        the response is always 200 even if the email does not exist.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: jane.doe@example.com
+      responses:
+        '200':
+          description: OTP sent (or silently ignored if email not found)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessResponse' }
+              example:
+                success: true
+                message: OTP sent to your email
+                data: null
+                error: null
+        '403':
+          description: Account is suspended
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/verify-otp:
+    post:
+      tags: [Auth]
+      summary: Verify OTP and receive JWT
+      description: |
+        Validates the 6-digit OTP for the given email. Returns a short-lived JWT
+        on success. After 5 failed attempts the OTP is locked and a new one must
+        be requested.
+      operationId: verifyOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, otp]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: jane.doe@example.com
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: '482951'
+      responses:
+        '200':
+          description: OTP verified — JWT returned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+                            example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                          user: { $ref: '#/components/schemas/PublicUser' }
+        '400':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                success: false
+                message: Invalid or expired OTP.
+                data: null
+                error: OTP_INVALID
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Too many OTP attempts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      description: |
+        Stateless logout. The server has no session to clear — the client must
+        discard the JWT. Requires a valid Bearer token.
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuccessResponse' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get authenticated user profile
+      description: Returns the public profile of the currently authenticated user.
+      operationId: getAuthMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Authenticated user profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user: { $ref: '#/components/schemas/PublicUser' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'

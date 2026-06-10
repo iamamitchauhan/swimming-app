@@ -1,0 +1,194 @@
+paths:
+  /onboarding/status:
+    get:
+      tags: [Onboarding]
+      summary: Get onboarding status
+      description: |
+        Returns the authenticated admin's current onboarding step (0–3) and
+        any previously saved club draft. Use this to resume an interrupted
+        onboarding session.
+      operationId: getOnboardingStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current onboarding state
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          step:
+                            type: integer
+                            minimum: 0
+                            maximum: 3
+                            example: 1
+                          club:
+                            oneOf:
+                              - $ref: '#/components/schemas/Club'
+                              - type: object
+                                nullable: true
+                                example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /onboarding/step/1:
+    put:
+      tags: [Onboarding]
+      summary: 'Step 1 — Save club info'
+      description: |
+        Saves (or updates) the club's basic information: name, address, phone,
+        and optional logo URL. Creates a draft club if none exists yet. The
+        `logoUrl` field should be a pre-uploaded CDN URL (use the upload utility
+        before calling this endpoint).
+      operationId: onboardingStep1
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, address, phone]
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  example: Blue Dolphins Swim Club
+                address:
+                  type: string
+                  minLength: 5
+                  example: 12 Poolside Lane, Miami, FL 33101
+                phone:
+                  type: string
+                  example: +1-305-555-0100
+                logoUrl:
+                  type: string
+                  format: uri
+                  example: https://cdn.example.com/club-logo.png
+      responses:
+        '200':
+          description: Step 1 saved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          club: { $ref: '#/components/schemas/Club' }
+        '400':
+          description: Club already submitted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /onboarding/step/2:
+    put:
+      tags: [Onboarding]
+      summary: 'Step 2 — Invite coaches (optional)'
+      description: |
+        Optionally sends invitation emails to a list of coach email addresses.
+        Emails for existing users are silently skipped. Pass an empty array
+        (`coachEmails: []`) to skip this step.
+        Requires step 1 to be completed first.
+      operationId: onboardingStep2
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                coachEmails:
+                  type: array
+                  items: { type: string, format: email }
+                  maxItems: 50
+                  example: ['coach1@example.com', 'coach2@example.com']
+      responses:
+        '200':
+          description: Coach invitations sent
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          invited:
+                            type: array
+                            items: { type: string, format: email }
+                            example: ['coach1@example.com']
+                          skipped:
+                            type: array
+                            items: { type: string, format: email }
+                            example: ['coach2@example.com']
+        '400':
+          description: Step 1 not completed or club already submitted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /onboarding/step/3:
+    put:
+      tags: [Onboarding]
+      summary: 'Step 3 — Submit club for review'
+      description: |
+        Submits the club application to super admins for approval.
+        The club status changes from `draft` to `pending_review`.
+        All super admins are notified by email.
+        Step 1 must be completed before calling this endpoint.
+      operationId: onboardingStep3
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Club submitted for review
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          club: { $ref: '#/components/schemas/Club' }
+        '400':
+          description: Step 1 not completed, club incomplete, or already submitted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
