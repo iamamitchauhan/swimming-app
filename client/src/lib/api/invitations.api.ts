@@ -28,10 +28,18 @@ export interface AcceptInvitationInput {
 }
 
 export interface AcceptInvitationResponse {
-  userId: string;
-  email: string;
-  role: string;
-  clubId: string;
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+    clubId: string;
+    firstName: string;
+    lastName: string;
+    emailVerified: boolean;
+    status: string;
+    onboardingStep: number;
+  };
 }
 
 // ─── API calls ────────────────────────────────────────────────────────────────
@@ -53,5 +61,17 @@ export const invitationsApi = {
   listByClub: (clubId: string) =>
     api<{ invitations: Invitation[] }>(
       apiClient.get(`/invitations/club/${clubId}`),
+    ),
+
+  /** POST /invitations/:invitationId/resend */
+  resend: (invitationId: string) =>
+    api<{ invitation: Invitation }>(
+      apiClient.post(`/invitations/${invitationId}/resend`),
+    ),
+
+  /** DELETE /invitations/:invitationId */
+  cancel: (invitationId: string) =>
+    api<null>(
+      apiClient.delete(`/invitations/${invitationId}`),
     ),
 };

@@ -42,26 +42,25 @@ const MENUS: Record<string, Item[]> = {
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Users", url: "/users", icon: Users },
     { title: "Clubs", url: "/clubs", icon: Building2 },
-    { title: "Tryouts", url: "/tryouts", icon: Waves },
-    { title: "Settings", url: "/settings", icon: Settings },
+    // { title: "Tryouts", url: "/tryouts", icon: Waves },
+    // { title: "Settings", url: "/settings", icon: Settings },
   ],
   admin: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Club Management", url: "/clubs", icon: Building2 },
     { title: "Coaches", url: "/users", icon: UserCog },
     { title: "Tryouts", url: "/tryouts", icon: Waves },
-    { title: "Profile", url: "/profile", icon: UserIcon },
+    // { title: "Profile", url: "/profile", icon: UserIcon },
   ],
   coach: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "My Tryouts", url: "/tryouts", icon: Waves },
-    { title: "Profile", url: "/profile", icon: UserIcon },
+    // { title: "Profile", url: "/profile", icon: UserIcon },
   ],
   parent: [
     { title: "My Children", url: "/children", icon: Baby },
     { title: "Tryouts", url: "/tryouts", icon: Waves },
     { title: "My Registrations", url: "/registrations", icon: CalendarRange },
-    { title: "Profile", url: "/profile", icon: UserIcon },
+    // { title: "Profile", url: "/profile", icon: UserIcon },
   ],
 };
 
@@ -122,7 +121,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {!collapsed && (
+        {/* {!collapsed && (
           <SidebarGroup className="mt-4">
             <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-muted-foreground/70">
               Quick links
@@ -140,7 +139,7 @@ export function AppSidebar() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
+        )} */}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border p-3">
         {!collapsed ? (

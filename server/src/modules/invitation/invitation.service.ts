@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 import { InvitationRepository, PlainInvitation } from './invitation.repository';
 import {
   BadRequestError,
@@ -12,7 +13,21 @@ import { generateSecureToken, hashToken, verifyToken } from '../../shared/utils/
 import { sendInvitation as sendInvitationEmail } from '../../shared/utils/mailer';
 import { UserModel } from '../../models/user.model';
 import { ClubModel } from '../../models/club.model';
+import { InvitationModel } from '../../models/invitation.model';
 import logger from '../../shared/utils/logger';
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+function signToken(payload: {
+  id: string;
+  email: string;
+  role: string;
+  clubId: string | null;
+}): string {
+  return jwt.sign(payload, config.JWT_SECRET, {
+    expiresIn: config.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+  });
+}
 
 // ─── Role permission matrix ───────────────────────────────────────────────────
 
@@ -108,13 +123,14 @@ export class InvitationService {
 
   /**
    * Accepts an invitation by token.
-   * Creates the user account, links them to the club, and marks the invitation used.
+   * Creates the user account, links them to the club, marks the invitation used,
+   * and returns a JWT token for auto-login.
    */
   async acceptInvitation(
     token: string,
     firstName: string,
     lastName: string,
-  ): Promise<{ userId: string; email: string; role: string; clubId: string }> {
+  ): Promise<{ token: string; user: { id: string; email: string; role: string; clubId: string; firstName: string; lastName: string; emailVerified: boolean; status: string; onboardingStep: number } }> {
     const tokenHash = hashToken(token);
     const invitation = await this.repo.findByTokenHash(tokenHash);
 
@@ -145,21 +161,36 @@ export class InvitationService {
       clubId: new mongoose.Types.ObjectId(invitation.clubId),
       firstName,
       lastName,
+      onboardingStep: 3,
     }).save();
 
     await this.repo.markAccepted(invitation._id.toString());
+
+    const authToken = signToken({
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      clubId: invitation.clubId.toString(),
+    });
+
+    const userData = {
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      clubId: invitation.clubId.toString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      emailVerified: user.emailVerified,
+      status: user.status,
+      onboardingStep: user.onboardingStep,
+    };
 
     logger.info(
       { userId: user._id, email: invitation.email, role: invitation.role },
       'invitation.accepted',
     );
 
-    return {
-      userId: user._id.toString(),
-      email: invitation.email,
-      role: invitation.role,
-      clubId: invitation.clubId.toString(),
-    };
+    return { token: authToken, user: userData };
   }
 
   /**
@@ -174,5 +205,63 @@ export class InvitationService {
    */
   async listClubInvitations(clubId: string): Promise<PlainInvitation[]> {
     return this.repo.findByClub(clubId);
+  }
+
+  /**
+   * Resends an invitation with a new token and extended expiry.
+   */
+  async resendInvitation(invitationId: string): Promise<PlainInvitation> {
+    const invitation = await this.repo.findById(invitationId);
+    if (!invitation) {
+      throw new NotFoundError('Invitation not found');
+    }
+
+    const plainToken = generateSecureToken();
+    const tokenHash = hashToken(plainToken);
+    const expiresAt = new Date(
+      Date.now() + config.INVITATION_EXPIRES_HOURS * 60 * 60 * 1000,
+    );
+
+    const updated = await this.repo.resend(invitationId, expiresAt);
+    if (!updated) throw new NotFoundError('Failed to resend invitation');
+
+    const club = await ClubModel.findById(invitation.clubId).lean().exec();
+    const inviter = await UserModel.findById(invitation.invitedBy).lean().exec() as {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+    } | null;
+    const inviterName = inviter
+      ? `${inviter.firstName ?? ''} ${inviter.lastName ?? ''}`.trim() || inviter.email!
+      : 'A club admin';
+
+    const acceptUrl = `${config.APP_BASE_URL}/invitation/accept?token=${plainToken}`;
+
+    await sendInvitationEmail({
+      to: invitation.email,
+      inviterName,
+      clubName: (club as { name: string })?.name ?? 'Swimming Club',
+      role: invitation.role as UserRole,
+      acceptUrl,
+    });
+
+    logger.info({ invitationId, email: invitation.email }, 'invitation.resent');
+
+    return updated;
+  }
+
+  /**
+   * Cancels (deletes) an invitation.
+   */
+  async cancelInvitation(invitationId: string): Promise<void> {
+    const invitation = await this.repo.findById(invitationId);
+    if (!invitation) {
+      throw new NotFoundError('Invitation not found');
+    }
+
+    const deleted = await this.repo.delete(invitationId);
+    if (!deleted) throw new NotFoundError('Failed to cancel invitation');
+
+    logger.info({ invitationId, email: invitation.email }, 'invitation.cancelled');
   }
 }

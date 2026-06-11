@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const { toastError } = useApiError();
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const sendOtp = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setErrorCode(null);
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       setError("Enter a valid email address");
       return;
@@ -35,7 +37,9 @@ export default function LoginPage() {
         onSuccess: () => setStep("otp"),
         onError: (err) => {
           toastError(err);
-          setError((err as Error).message);
+          const apiErr = err as any;
+          setError(apiErr.message || "An error occurred");
+          setErrorCode(apiErr.errorCode || apiErr.code || null);
         },
       },
     );
@@ -126,7 +130,27 @@ export default function LoginPage() {
                     className={error ? "border-destructive" : ""}
                     autoFocus
                   />
-                  {error && <p className="text-xs text-destructive">{error}</p>}
+                  {error && (
+                    <p className="text-xs text-destructive">
+                      {error}
+                      {errorCode === "NOT_FOUND" && (
+                        <>
+                          {" "}
+                          <Link to="/register" className="underline hover:text-destructive/80">
+                            Register now
+                          </Link>
+                        </>
+                      )}
+                      {errorCode === "EMAIL_NOT_VERIFIED" && (
+                        <>
+                          {" "}
+                          <Link to="/register" className="underline hover:text-destructive/80">
+                            Resend verification
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                  )}
                 </div>
                 <Button type="submit" className="w-full h-11" disabled={loading}>
                   {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending code…</> : "Continue with email"}

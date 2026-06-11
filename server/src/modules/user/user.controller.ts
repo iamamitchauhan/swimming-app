@@ -49,8 +49,11 @@ export class UserController {
     try {
       const role = req.query['role'] as UserRole | undefined;
       const clubId = req.query['clubId'] as string | undefined;
-      const users = await this.service.listAll({ role, clubId });
-      sendSuccess(res, { users }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+      const search = (req.query['search'] as string | undefined)?.trim() || undefined;
+      const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
+      const result = await this.service.listAll({ role, clubId, search }, { page, limit });
+      sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }
@@ -71,14 +74,47 @@ export class UserController {
   };
 
   /**
+   * PATCH /users/:userId/role
+   * Changes the role of a club member.
+   */
+  changeRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+      if (!['admin', 'coach'].includes(role)) {
+        res.status(400).json({ message: 'Invalid role. Must be admin or coach.' });
+        return;
+      }
+      const user = await this.service.changeRole(userId!, role as UserRole);
+      sendSuccess(res, { user }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * DELETE /users/:userId/club
+   * Removes a user from the club (soft delete).
+   */
+  removeFromClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { userId } = req.params;
+      await this.service.removeFromClub(userId!);
+      sendSuccess(res, null, MESSAGES.DELETED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
    * GET /users/club/:clubId
-   * Returns all users of a specific club (admin of that club or super_admin).
+   * Returns all users of a specific club plus pending invitations (admin of that club or super_admin).
    */
   getByClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { clubId } = req.params;
-      const users = await this.service.getByClub(clubId!);
-      sendSuccess(res, { users }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+      const result = await this.service.getByClub(clubId!);
+      sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

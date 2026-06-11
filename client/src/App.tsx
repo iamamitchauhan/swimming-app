@@ -15,6 +15,8 @@ const ClubsPage = lazy(() => import("./pages/app/ClubsPage"));
 const UsersPage = lazy(() => import("./pages/app/UsersPage"));
 const TryoutsPage = lazy(() => import("./pages/app/TryoutsPage"));
 const TryoutDetailPage = lazy(() => import("./pages/app/TryoutDetailPage"));
+const TryoutNewPage = lazy(() => import("./pages/app/TryoutNewPage"));
+const TryoutEditPage = lazy(() => import("./pages/app/TryoutEditPage"));
 const ChildrenPage = lazy(() => import("./pages/app/ChildrenPage"));
 const RegistrationsPage = lazy(() => import("./pages/app/RegistrationsPage"));
 const ProfilePage = lazy(() => import("./pages/app/ProfilePage"));
@@ -64,6 +66,8 @@ export default function App() {
           <Route path="/clubs" element={<ClubsPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/tryouts" element={<TryoutsPage />} />
+          <Route path="/tryouts/new" element={<TryoutNewPage />} />
+          <Route path="/tryouts/edit/:id" element={<TryoutEditPage />} />
           <Route path="/tryouts/:id" element={<TryoutDetailPage />} />
           <Route path="/children" element={<ChildrenPage />} />
           <Route path="/registrations" element={<RegistrationsPage />} />

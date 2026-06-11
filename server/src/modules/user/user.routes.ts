@@ -33,6 +33,20 @@ userRouter.get(
   controller.getByClub,
 );
 
+userRouter.patch(
+  '/:userId/role',
+  authenticate,
+  authorize(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  controller.changeRole,
+);
+
+userRouter.delete(
+  '/:userId/club',
+  authenticate,
+  authorize(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  controller.removeFromClub,
+);
+
 userRouter.get(
   '/',
   authenticate,

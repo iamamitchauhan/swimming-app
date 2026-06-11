@@ -14,7 +14,7 @@ const controller = new AuthController(service);
 
 const otpRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 100,
   statusCode: HTTP_STATUS.TOO_MANY_REQUESTS,
   handler: (_req, res) =>
     sendError(res, MESSAGES.RATE_LIMIT_EXCEEDED, HTTP_STATUS.TOO_MANY_REQUESTS, 'RATE_LIMIT_EXCEEDED'),

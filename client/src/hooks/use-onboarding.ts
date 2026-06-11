@@ -17,11 +17,12 @@ export const onboardingKeys = {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export function useOnboardingStatus() {
+export function useOnboardingStatus({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery<OnboardingStatus>({
     queryKey: onboardingKeys.status,
     queryFn: onboardingApi.getStatus,
     staleTime: 60_000,
+    enabled,
   });
 }
 
@@ -31,7 +32,10 @@ export function useSaveStep1() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: onboardingApi.saveStep1,
-    onSuccess: () => qc.invalidateQueries({ queryKey: onboardingKeys.status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: onboardingKeys.status });
+      qc.invalidateQueries({ queryKey: ["auth", "me"] });
+    },
   });
 }
 
@@ -47,6 +51,9 @@ export function useSubmitClub() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: onboardingApi.submit,
-    onSuccess: () => qc.invalidateQueries({ queryKey: onboardingKeys.status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: onboardingKeys.status });
+      qc.invalidateQueries({ queryKey: ["auth", "me"] });
+    },
   });
 }

@@ -77,4 +77,34 @@ export class InvitationController {
       next(err);
     }
   };
+
+  /**
+   * POST /invitations/:invitationId/resend
+   * Resend an invitation with a new token and extended expiry.
+   */
+  resendInvitation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { invitationId } = req.params;
+      if (!invitationId) return next(new BadRequestError('invitationId is required'));
+      const invitation = await this.service.resendInvitation(invitationId);
+      sendSuccess(res, { invitation }, MESSAGES.INVITATION_SENT, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * DELETE /invitations/:invitationId
+   * Cancel (delete) an invitation.
+   */
+  cancelInvitation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { invitationId } = req.params;
+      if (!invitationId) return next(new BadRequestError('invitationId is required'));
+      await this.service.cancelInvitation(invitationId);
+      sendSuccess(res, null, MESSAGES.DELETED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
 }

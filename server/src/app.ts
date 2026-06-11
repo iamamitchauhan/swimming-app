@@ -16,6 +16,7 @@ import { onboardingRouter } from './modules/onboarding/onboarding.routes';
 import { clubRouter } from './modules/club/club.routes';
 import { invitationRouter } from './modules/invitation/invitation.routes';
 import { userRouter } from './modules/user/user.routes';
+import { tryoutRouter } from './modules/tryout/tryout.routes';
 
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -85,6 +86,7 @@ export function createApp(): express.Application {
   app.use(`${API_PREFIX}/clubs`, clubRouter);
   app.use(`${API_PREFIX}/invitations`, invitationRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
+  app.use(`${API_PREFIX}/tryouts`, tryoutRouter);
 
   // Global error handler — must be last
   app.use(errorHandler);

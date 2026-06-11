@@ -4,10 +4,13 @@
  * useMyInvitations()       → GET  /invitations/my
  * useClubInvitations(id)   → GET  /invitations/club/:clubId
  * useSendInvitation()      → POST /invitations
- * useAcceptInvitation()    → POST /invitations/accept  (public)
+ * useAcceptInvitation()    → POST /invitations/accept  (public, auto-login)
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { invitationsApi, type Invitation } from "../lib/api/invitations.api";
+import { userKeys } from "./use-users";
+import { useAuthStore } from "../lib/auth.store";
+import { authKeys } from "./use-auth";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
@@ -43,19 +46,56 @@ export function useClubInvitations(clubId: string) {
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
-export function useSendInvitation() {
+export function useSendInvitation(clubId?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: invitationsApi.send,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: invitationKeys.my });
+      if (clubId) {
+        qc.invalidateQueries({ queryKey: userKeys.byClub(clubId) });
+      }
     },
   });
 }
 
-/** Public — no auth token needed. */
+export function useResendInvitation(clubId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: invitationsApi.resend,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: invitationKeys.my });
+      if (clubId) {
+        qc.invalidateQueries({ queryKey: userKeys.byClub(clubId) });
+      }
+    },
+  });
+}
+
+export function useCancelInvitation(clubId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: invitationsApi.cancel,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: invitationKeys.my });
+      if (clubId) {
+        qc.invalidateQueries({ queryKey: userKeys.byClub(clubId) });
+      }
+    },
+  });
+}
+
+/** Public — no auth token needed. Auto-logins after successful acceptance. */
 export function useAcceptInvitation() {
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const qc = useQueryClient();
+
   return useMutation({
     mutationFn: invitationsApi.accept,
+    onSuccess: (data) => {
+      const userWithId = { ...data.user, _id: data.user.id, role: data.user.role as any };
+      setAuth(data.token, userWithId);
+      qc.setQueryData(authKeys.me, userWithId);
+    },
   });
 }

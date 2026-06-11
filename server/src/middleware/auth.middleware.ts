@@ -4,6 +4,7 @@ import { config } from '../config/env';
 import { HTTP_STATUS } from '../shared/constants/httpStatus';
 import { MESSAGES } from '../shared/constants/messages';
 import { sendError } from '../shared/utils/response';
+import { AuthRepository } from '../modules/auth/auth.repository';
 
 // Lowercase prefix used for case-insensitive comparison
 const BEARER_PREFIX = 'bearer ';
@@ -27,13 +28,14 @@ function extractToken(req: Request): string | null {
 /**
  * Express middleware that enforces JWT authentication on a route.
  * On success, attaches the decoded AuthUser payload to `req.user`.
+ * Fetches fresh user data from database to get current clubId.
  * Returns a 401 error envelope when the token is missing or invalid.
  */
-export function authenticate(
+export async function authenticate(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   const token = extractToken(req);
 
   if (!token) {
@@ -66,11 +68,18 @@ export function authenticate(
       return;
     }
 
+    // Fetch fresh user data from database to get current clubId
+    const authRepo = new AuthRepository();
+    const freshUser = await authRepo.findUserById(id);
+
+    const finalClubId = freshUser?.clubId ?? (typeof clubId === 'string' ? clubId : null);
+    console.log('[auth.middleware] JWT clubId:', clubId, 'DB clubId:', freshUser?.clubId, 'Final clubId:', finalClubId);
+
     req.user = {
       id,
       email,
       role,
-      clubId: typeof clubId === 'string' ? clubId : null,
+      clubId: finalClubId?.toString() ?? null,
     };
     next();
   } catch {

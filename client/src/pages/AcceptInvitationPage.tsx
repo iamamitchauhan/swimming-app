@@ -46,7 +46,7 @@ export default function AcceptInvitationPage() {
       {
         onSuccess: () => {
           setDone(true);
-          setTimeout(() => navigate("/login"), 2500);
+          setTimeout(() => navigate("/dashboard"), 1500);
         },
         onError: (err) => toastError(err),
       },
@@ -59,7 +59,7 @@ export default function AcceptInvitationPage() {
         <div className="text-center space-y-4 max-w-sm">
           <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
           <h2 className="text-xl font-bold">Account activated!</h2>
-          <p className="text-sm text-muted-foreground">Your account is ready. Redirecting to login…</p>
+          <p className="text-sm text-muted-foreground">Signing you in…</p>
         </div>
       </div>
     );

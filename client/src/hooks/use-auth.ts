@@ -77,15 +77,17 @@ export function useVerifyOtp() {
   });
 }
 
-/** GET /auth/verify-email?token= — one-shot email verification. */
+/** GET /auth/verify-email?token= — one-shot email verification with auto-login. */
 export function useVerifyEmail(token: string) {
-  const setUser = useAuthStore((s) => s.setUser);
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const queryClient = useQueryClient();
 
   return useQuery({
     queryKey: ["auth", "verify-email", token],
     queryFn: async () => {
       const data = await authApi.verifyEmail(token);
-      setUser(data.user);
+      setAuth(data.token, data.user);
+      queryClient.setQueryData(authKeys.me, data.user);
       return data.user;
     },
     enabled: !!token,

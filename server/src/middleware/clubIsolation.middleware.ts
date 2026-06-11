@@ -29,6 +29,8 @@ export function clubIsolation(
 
   const targetClubId = req.params['clubId'];
 
+  console.log('[clubIsolation] user.clubId:', req.user.clubId, 'targetClubId:', targetClubId, 'user.role:', req.user.role);
+
   if (!targetClubId) {
     next();
     return;

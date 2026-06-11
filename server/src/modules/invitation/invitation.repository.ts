@@ -75,4 +75,22 @@ export class InvitationRepository {
       .lean<PlainInvitation[]>()
       .exec();
   }
+
+  async findById(id: string): Promise<PlainInvitation | null> {
+    return InvitationModel.findById(id).lean<PlainInvitation>().exec();
+  }
+
+  async resend(id: string, expiresAt: Date): Promise<PlainInvitation | null> {
+    return InvitationModel.findByIdAndUpdate(
+      id,
+      { $set: { status: 'pending', expiresAt } },
+      { new: true },
+    )
+      .lean<PlainInvitation>()
+      .exec();
+  }
+
+  async delete(id: string): Promise<PlainInvitation | null> {
+    return InvitationModel.findByIdAndDelete(id).lean<PlainInvitation>().exec();
+  }
 }

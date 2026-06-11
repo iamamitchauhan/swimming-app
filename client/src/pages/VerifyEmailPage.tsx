@@ -4,20 +4,25 @@ import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useVerifyEmail } from "@/hooks/use-auth";
+import { useAuthStore } from "@/lib/auth.store";
 
 export default function VerifyEmailPage() {
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
 
   const { isLoading, isSuccess, isError, error } = useVerifyEmail(token);
 
   useEffect(() => {
-    if (isSuccess) {
-      const t = setTimeout(() => navigate("/login"), 2000);
+    if (isSuccess && user) {
+      const { role, clubId, onboardingStep } = user;
+      const needsOnboarding = role === "admin" && !clubId && onboardingStep < 3;
+      const destination = needsOnboarding ? "/onboarding" : "/dashboard";
+      const t = setTimeout(() => navigate(destination), 1500);
       return () => clearTimeout(t);
     }
-  }, [isSuccess, navigate]);
+  }, [isSuccess, user, navigate]);
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-muted/30 px-4">
@@ -35,7 +40,7 @@ export default function VerifyEmailPage() {
             <>
               <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
               <h2 className="text-lg font-semibold">Email verified!</h2>
-              <p className="text-sm text-muted-foreground">Redirecting you to login…</p>
+              <p className="text-sm text-muted-foreground">Signing you in…</p>
             </>
           )}
           {isError && (

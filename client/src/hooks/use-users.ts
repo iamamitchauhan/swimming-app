@@ -8,14 +8,14 @@
  * useUser(id)         → GET  /users/:userId        (super_admin)
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, type User } from "../lib/api/users.api";
+import { usersApi, type User, type ClubUserItem, type PaginatedUsersResponse } from "../lib/api/users.api";
 import type { UserRole } from "../lib/auth.store";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
 export const userKeys = {
   me: ["users", "me"] as const,
-  all: (params?: { role?: UserRole; clubId?: string }) =>
+  all: (params?: { role?: UserRole; clubId?: string; search?: string; page?: number; limit?: number }) =>
     ["users", "all", params] as const,
   byClub: (clubId: string) => ["users", "club", clubId] as const,
   detail: (id: string) => ["users", id] as const,
@@ -34,23 +34,19 @@ export function useCurrentUser() {
   });
 }
 
-export function useAllUsers(params?: { role?: UserRole; clubId?: string }) {
-  return useQuery<User[]>({
+export function useAllUsers(params?: { role?: UserRole; clubId?: string; search?: string; page?: number; limit?: number }) {
+  return useQuery<PaginatedUsersResponse>({
     queryKey: userKeys.all(params),
-    queryFn: async () => {
-      const data = await usersApi.listAll(params);
-      return data.users;
-    },
+    queryFn: () => usersApi.listAll(params),
     staleTime: 2 * 60 * 1000,
   });
 }
 
 export function useUsersByClub(clubId: string) {
-  return useQuery<User[]>({
+  return useQuery<ClubUserItem[]>({
     queryKey: userKeys.byClub(clubId),
     queryFn: async () => {
-      const data = await usersApi.listByClub(clubId);
-      return data.users;
+      return usersApi.listByClub(clubId);
     },
     enabled: !!clubId,
     staleTime: 2 * 60 * 1000,
@@ -77,6 +73,27 @@ export function useUpdateMe() {
     mutationFn: usersApi.updateMe,
     onSuccess: (data) => {
       qc.setQueryData(userKeys.me, data.user);
+    },
+  });
+}
+
+export function useChangeRole(clubId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
+      usersApi.changeRole(userId, role),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: userKeys.byClub(clubId) });
+    },
+  });
+}
+
+export function useRemoveFromClub(clubId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => usersApi.removeFromClub(userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: userKeys.byClub(clubId) });
     },
   });
 }

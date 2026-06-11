@@ -4,22 +4,19 @@ import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  CheckCircle2, Plus, Trash2, ArrowRight, ArrowLeft,
-  Building2, Users, UserPlus, Sparkles, Mail, ShieldCheck, Trophy, CalendarCheck, Loader2,
+  CheckCircle2, ArrowRight, ArrowLeft,
+  Building2, Users, Sparkles, ShieldCheck, Trophy, Loader2,
 } from "lucide-react";
-import { useSaveStep1, useSaveStep2, useSubmitClub } from "@/hooks/use-onboarding";
+import { useSaveStep1, useSubmitClub } from "@/hooks/use-onboarding";
 import { useApiError } from "@/hooks/use-api-error";
 
 type StepDef = { n: number; label: string; description: string; icon: React.ComponentType<{ className?: string }> };
 
 const STEPS: StepDef[] = [
   { n: 1, label: "Club Details", description: "Tell us about your swimming club", icon: Building2 },
-  { n: 2, label: "Invite Coaches", description: "Add coaches to help manage the club", icon: UserPlus },
-  { n: 3, label: "Invite Parents", description: "Invite parents to register their children", icon: Users },
-  { n: 4, label: "Review & Submit", description: "Review your setup before going live", icon: ShieldCheck },
+  { n: 2, label: "Review & Submit", description: "Review your setup before going live", icon: ShieldCheck },
 ];
 
 const CLUB_SIZES = ["1–25", "26–50", "51–100", "101–250", "250+"];
@@ -33,43 +30,28 @@ export default function OnboardingPage() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [region, setRegion] = useState("");
-  const [about, setAbout] = useState("");
   const [step1Errors, setStep1Errors] = useState<{ name?: string; address?: string; phone?: string }>({});
-  const [coaches, setCoaches] = useState<string[]>([""]);
-  const [parents, setParents] = useState<string[]>([""]);
 
   const saveStep1 = useSaveStep1();
-  const saveStep2 = useSaveStep2();
   const submitClub = useSubmitClub();
   const { toastError } = useApiError();
-  const isMutating = saveStep1.isPending || saveStep2.isPending || submitClub.isPending;
+  const isMutating = saveStep1.isPending || submitClub.isPending;
 
   const progress = ((step - 1) / (STEPS.length - 1)) * 100;
   const current = STEPS[step - 1];
 
   const handleContinue = () => {
-    if (step === 1) {
-      const errs: typeof step1Errors = {};
-      if (clubName.trim().length < 2) errs.name = "Club name must be at least 2 characters";
-      if (address.trim().length < 5) errs.address = "Address must be at least 5 characters";
-      if (phone.trim().length < 7) errs.phone = "Phone must be at least 7 characters";
-      else if (!/^[+\d\s\-().]+$/.test(phone.trim())) errs.phone = "Phone number is invalid (digits, spaces, +, -, (, ) only)";
-      setStep1Errors(errs);
-      if (Object.keys(errs).length) return;
-      saveStep1.mutate(
-        { name: clubName.trim(), address: address.trim(), phone: phone.trim() },
-        { onSuccess: () => setStep(2), onError: toastError },
-      );
-    } else if (step === 2) {
-      const validEmails = coaches.filter((e) => e.trim());
-      if (validEmails.length === 0) { setStep(3); return; }
-      saveStep2.mutate(
-        { coachEmails: validEmails },
-        { onSuccess: () => setStep(3), onError: toastError },
-      );
-    } else if (step === 3) {
-      setStep(4);
-    }
+    const errs: typeof step1Errors = {};
+    if (clubName.trim().length < 2) errs.name = "Club name must be at least 2 characters";
+    if (address.trim().length < 5) errs.address = "Address must be at least 5 characters";
+    if (phone.trim().length < 7) errs.phone = "Phone must be at least 7 characters";
+    else if (!/^[+\d\s\-().]+$/.test(phone.trim())) errs.phone = "Phone number is invalid (digits, spaces, +, -, (, ) only)";
+    setStep1Errors(errs);
+    if (Object.keys(errs).length) return;
+    saveStep1.mutate(
+      { name: clubName.trim(), address: address.trim(), phone: phone.trim() },
+      { onSuccess: () => setStep(2), onError: toastError },
+    );
   };
 
   const handleFinish = () => {
@@ -77,13 +59,6 @@ export default function OnboardingPage() {
       onSuccess: () => navigate("/dashboard"),
       onError: toastError,
     });
-  };
-
-  const addEmail = (list: string[], set: (v: string[]) => void) => set([...list, ""]);
-  const removeEmail = (list: string[], set: (v: string[]) => void, i: number) =>
-    set(list.filter((_, idx) => idx !== i));
-  const updateEmail = (list: string[], set: (v: string[]) => void, i: number, val: string) => {
-    const next = [...list]; next[i] = val; set(next);
   };
 
   return (
@@ -199,48 +174,6 @@ export default function OnboardingPage() {
                 </div>
               )}
               {step === 2 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                    <Mail className="h-4 w-4" />
-                    <span>Coaches will receive an invitation email to join your club.</span>
-                  </div>
-                  {coaches.map((c, i) => (
-                    <div key={i} className="flex gap-2">
-                      <Input type="email" placeholder="coach@club.com" value={c} onChange={(e) => updateEmail(coaches, setCoaches, i, e.target.value)} />
-                      {coaches.length > 1 && (
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeEmail(coaches, setCoaches, i)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => addEmail(coaches, setCoaches)}>
-                    <Plus className="h-4 w-4 mr-1.5" /> Add another coach
-                  </Button>
-                </div>
-              )}
-              {step === 3 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                    <Mail className="h-4 w-4" />
-                    <span>Parents will be invited to register their children for tryouts.</span>
-                  </div>
-                  {parents.map((p, i) => (
-                    <div key={i} className="flex gap-2">
-                      <Input type="email" placeholder="parent@example.com" value={p} onChange={(e) => updateEmail(parents, setParents, i, e.target.value)} />
-                      {parents.length > 1 && (
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeEmail(parents, setParents, i)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => addEmail(parents, setParents)}>
-                    <Plus className="h-4 w-4 mr-1.5" /> Add another parent
-                  </Button>
-                </div>
-              )}
-              {step === 4 && (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">Review your club setup before submitting for approval.</p>
                   <div className="rounded-xl border border-border divide-y divide-border">
@@ -248,8 +181,6 @@ export default function OnboardingPage() {
                       { icon: Building2, label: "Club Name", value: clubName || "—" },
                       { icon: Users, label: "Size", value: clubSize || "—" },
                       { icon: Trophy, label: "Address", value: address || "—" },
-                      { icon: UserPlus, label: "Coaches invited", value: coaches.filter(Boolean).length.toString() },
-                      { icon: CalendarCheck, label: "Parents invited", value: parents.filter(Boolean).length.toString() },
                     ].map(({ icon: Icon, label, value }) => (
                       <div key={label} className="flex items-center gap-3 px-4 py-3">
                         <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -278,16 +209,13 @@ export default function OnboardingPage() {
                   {step === 1 ? "Back to login" : "Previous"}
                 </Button>
                 <div className="flex items-center gap-2">
-                  {(step === 2 || step === 3) && (
-                    <Button variant="ghost" onClick={() => setStep(step + 1)} disabled={isMutating}>Skip for now</Button>
-                  )}
-                  {step < 4 ? (
+                  {step < 2 ? (
                     <Button onClick={handleContinue} disabled={isMutating} className="h-10 px-5">
                       {isMutating ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Saving…</> : <>Continue <ArrowRight className="h-4 w-4 ml-1.5" /></>}
                     </Button>
                   ) : (
                     <Button onClick={handleFinish} className="h-10 px-5" disabled={isMutating}>
-                      {isMutating ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Submitting…</> : <>Enter dashboard <ArrowRight className="h-4 w-4 ml-1.5" /></>}
+                      {isMutating ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Submitting…</> : <>Submit <ArrowRight className="h-4 w-4 ml-1.5" /></>}
                     </Button>
                   )}
                 </div>

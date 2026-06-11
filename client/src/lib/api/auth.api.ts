@@ -5,6 +5,8 @@ import type { AuthUser } from "../auth.store";
 
 export interface RegisterInput {
   email: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface LoginInput {
@@ -32,9 +34,9 @@ export const authApi = {
   register: (input: RegisterInput) =>
     api<null>(apiClient.post("/auth/register", input)),
 
-  /** GET /auth/verify-email?token= — activate account */
+  /** GET /auth/verify-email?token= — activate account and return token for auto-login */
   verifyEmail: (token: string) =>
-    api<{ user: AuthUser }>(
+    api<VerifyOtpResponse>(
       apiClient.get("/auth/verify-email", { params: { token } }),
     ),
 

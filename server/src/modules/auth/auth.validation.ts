@@ -3,11 +3,13 @@ import { z } from 'zod';
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 /**
- * POST /auth/register — accepts email only; triggers verification email.
+ * POST /auth/register — accepts email, firstName, lastName; triggers verification email.
  */
 export const registerSchema = z
   .object({
     email: z.string().email('Email must be a valid email address').toLowerCase(),
+    firstName: z.string().min(1, 'First name is required').trim(),
+    lastName: z.string().min(1, 'Last name is required').trim(),
   })
   .strict();
 

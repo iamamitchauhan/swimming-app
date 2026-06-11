@@ -55,6 +55,8 @@ export class AuthRepository {
 
   async createUser(data: {
     email: string;
+    firstName: string;
+    lastName: string;
     role: UserRole;
     status?: string;
   }): Promise<PlainUser> {

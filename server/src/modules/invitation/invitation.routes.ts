@@ -45,4 +45,18 @@ invitationRouter.get(
   controller.listClub,
 );
 
+invitationRouter.post(
+  '/:invitationId/resend',
+  authenticate,
+  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
+  controller.resendInvitation,
+);
+
+invitationRouter.delete(
+  '/:invitationId',
+  authenticate,
+  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
+  controller.cancelInvitation,
+);
+
 export { invitationRouter };

@@ -45,10 +45,10 @@ export function AppHeader({ title, crumbs = [] }: { title: string; crumbs?: Crum
         <h1 className="text-lg md:text-xl font-bold tracking-tight truncate">{title}</h1>
       </div>
 
-      <div className="hidden md:flex relative w-64 lg:w-80">
+      {/* <div className="hidden md:flex relative w-64 lg:w-80">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Search tryouts, swimmers…" className="pl-9 bg-muted/40 border-transparent focus-visible:bg-background h-9" />
-      </div>
+      </div> */}
 
       <Button variant="ghost" size="icon" className="h-9 w-9 relative">
         <Bell className="h-[18px] w-[18px]" />

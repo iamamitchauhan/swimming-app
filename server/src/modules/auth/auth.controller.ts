@@ -23,12 +23,12 @@ export class AuthController {
 
   /**
    * POST /auth/register
-   * Accepts email, creates a pending user, sends a verification email.
+   * Accepts email, firstName, lastName, creates a pending user, sends a verification email.
    */
   register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { email } = registerSchema.parse(req.body);
-      await this.service.register(email);
+      const { email, firstName, lastName } = registerSchema.parse(req.body);
+      await this.service.register(email, firstName, lastName);
       sendSuccess(res, null, MESSAGES.EMAIL_SENT, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -37,13 +37,13 @@ export class AuthController {
 
   /**
    * GET /auth/verify-email?token=<token>
-   * Validates the email verification token and activates the account.
+   * Validates the email verification token, activates the account, and returns a JWT for auto-login.
    */
   verifyEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { token } = verifyEmailSchema.parse(req.query);
-      const user = await this.service.verifyEmail(token);
-      sendSuccess(res, { user }, MESSAGES.OTP_VERIFIED, HTTP_STATUS.OK);
+      const result = await this.service.verifyEmail(token);
+      sendSuccess(res, result, MESSAGES.OTP_VERIFIED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

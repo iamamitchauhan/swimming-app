@@ -76,11 +76,11 @@ export class AuthService {
   constructor(private readonly repository: AuthRepository) {}
 
   /**
-   * Accepts email and sends a verification link.
+   * Accepts email, firstName, lastName and sends a verification link.
    * Creates a pending user record if none exists.
    * Throws ConflictError if the email is already verified.
    */
-  async register(email: string): Promise<void> {
+  async register(email: string, firstName: string, lastName: string): Promise<void> {
     const existing = await this.repository.findUserByEmail(email);
 
     if (existing?.emailVerified) {
@@ -88,7 +88,10 @@ export class AuthService {
     }
 
     if (!existing) {
-      await this.repository.createUser({ email, role: USER_ROLES.ADMIN });
+      await this.repository.createUser({ email, firstName, lastName, role: USER_ROLES.ADMIN });
+    } else {
+      // Update existing user with firstName and lastName if they weren't set
+      await this.repository.updateUser(existing._id.toString(), { firstName, lastName });
     }
 
     const plainToken = generateSecureToken();
@@ -107,9 +110,9 @@ export class AuthService {
 
   /**
    * Verifies the email token, marks the user's email as verified,
-   * and returns the public user profile.
+   * and returns a JWT token and the public user profile for auto-login.
    */
-  async verifyEmail(token: string): Promise<PublicUser> {
+  async verifyEmail(token: string): Promise<{ token: string; user: PublicUser }> {
     const tokenHash = hashToken(token);
     const record = await this.repository.findValidEmailVerification(tokenHash);
 
@@ -126,21 +129,36 @@ export class AuthService {
     const user = await this.repository.findUserByEmail(record.email);
     if (!user) throw new NotFoundError('User not found');
 
+    const publicUser = toPublicUser(user);
+    const authToken = signToken({
+      id: publicUser.id,
+      email: publicUser.email,
+      role: publicUser.role,
+      clubId: publicUser.clubId,
+    });
+
     logger.info({ email: record.email }, 'auth.email.verified');
 
-    return toPublicUser(user);
+    return { token: authToken, user: publicUser };
   }
 
   /**
    * Accepts email, looks up an active user, and sends a 6-digit OTP.
-   * For security, does not reveal whether the email exists.
    */
   async login(email: string): Promise<void> {
     const user = await this.repository.findUserByEmail(email);
 
-    if (!user || !user.emailVerified) {
-      logger.warn({ email }, 'auth.login.unverified_or_missing');
-      return;
+    if (!user) {
+      logger.warn({ email }, 'auth.login.email_not_found');
+      throw new NotFoundError('No account found with this email. Please register first.');
+    }
+
+    if (!user.emailVerified) {
+      logger.warn({ email }, 'auth.login.unverified');
+      throw new BadRequestError(
+        'Your email is not verified. Please check your inbox for the verification link.',
+        'EMAIL_NOT_VERIFIED',
+      );
     }
 
     if (user.status === 'suspended') {
