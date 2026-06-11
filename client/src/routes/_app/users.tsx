@@ -28,6 +28,7 @@ import { useApiError } from "@/hooks/use-api-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { User, ClubUserItem } from "@/lib/api/users.api";
 import type { InvitationRole, Invitation } from "@/lib/api/invitations.api";
+import { ROLE_LABEL } from "@/lib/utils";
 
 export default function UsersPage() {
   const user = useAuthStore((s) => s.user);
@@ -86,6 +87,8 @@ export default function UsersPage() {
     ? users.map((u) => ({ type: 'user' as const, data: u }))
     : filteredItems;
 
+    
+
   const statusBadge = (status: string) => {
     if (status === "active") return "bg-success/10 text-success border-success/20";
     if (status === "pending_verification") return "bg-warning/15 text-warning-foreground border-warning/30";
@@ -106,6 +109,7 @@ export default function UsersPage() {
       onSuccess: () => setRemoveTarget(null),
     });
   };
+
 
   return (
     <PageShell
@@ -158,6 +162,7 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Club Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   {(isAdmin || isSuperAdmin) && <TableHead className="w-16">Actions</TableHead>}
@@ -186,6 +191,9 @@ export default function UsersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{inv.email}</TableCell>
+                        <TableCell>
+                          <span className="font-medium text-muted-foreground">{inv.club?.name || '—'}</span>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary">{inv.role}</Badge>
                         </TableCell>
@@ -248,8 +256,9 @@ export default function UsersPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{u.club?.name || '—'}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{u.role}</Badge>
+                        <Badge variant="secondary">{ROLE_LABEL[u.role] ?? u.role}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={statusBadge(u.status ?? "")}>
@@ -485,7 +494,7 @@ function ConfirmRemoveDialog({
         <div className="py-2 space-y-2">
           <p className="text-sm text-muted-foreground flex items-start">
             Are you sure you want to remove{" "}
-            <b className="font-medium text-foreground">{user?.email}</b>?
+            <b className="font-medium text-foreground ml-1">{user?.email}</b>?
           </p>
           <p className="text-xs text-muted-foreground">
             Their account will be suspended and they will lose access immediately.

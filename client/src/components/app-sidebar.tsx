@@ -27,13 +27,8 @@ import {
 import { BrandLogo } from "./brand-logo";
 import { useAuthStore } from "@/lib/auth.store";
 import { Badge } from "@/components/ui/badge";
+import { ROLE_LABEL } from "@/lib/utils";
 
-const ROLE_LABEL: Record<string, string> = {
-  super_admin: "Super Admin",
-  admin: "Club Admin",
-  coach: "Coach",
-  parent: "Parent",
-};
 
 type Item = { title: string; url: string; icon: React.ComponentType<{ className?: string }> };
 

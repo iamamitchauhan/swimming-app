@@ -50,13 +50,13 @@ export function AppHeader({ title, crumbs = [] }: { title: string; crumbs?: Crum
         <Input placeholder="Search tryouts, swimmers…" className="pl-9 bg-muted/40 border-transparent focus-visible:bg-background h-9" />
       </div> */}
 
-      <Button variant="ghost" size="icon" className="h-9 w-9 relative">
+      {/* <Button variant="ghost" size="icon" className="h-9 w-9 relative">
         <Bell className="h-[18px] w-[18px]" />
         <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-primary" />
-      </Button>
-      <Button variant="ghost" size="icon" className="h-9 w-9 hidden sm:inline-flex" asChild>
+      </Button> */}
+      {/* <Button variant="ghost" size="icon" className="h-9 w-9 hidden sm:inline-flex" asChild>
         <Link to="/settings"><Settings className="h-[18px] w-[18px]" /></Link>
-      </Button>
+      </Button> */}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

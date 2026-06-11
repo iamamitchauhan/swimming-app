@@ -15,6 +15,10 @@ export interface AuthUser {
   role: UserRole;
   status: string;
   clubId: string | null;
+  club: {
+    _id: string;
+    name: string;
+  } | null;
   onboardingStep: number;
   emailVerified: boolean;
   firstName: string;

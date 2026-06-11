@@ -2,12 +2,21 @@ import mongoose from 'mongoose';
 import { UserModel } from '../../models/user.model';
 import { UserRole } from '../../shared/constants/roles';
 
+export type PlainClub = {
+  _id: string;
+  name: string;
+  address: string;
+  phone: string;
+  logoUrl: string | null;
+  status: string;
+};
+
 export type PlainUser = {
   _id: string;
   email: string;
   role: string;
   status: string;
-  clubId: string | null;
+  clubId: string | PlainClub | null;
   onboardingStep: number;
   emailVerified: boolean;
   firstName: string;
@@ -29,20 +38,69 @@ export class UserRepository {
     filters: { role?: UserRole; clubId?: string; search?: string } = {},
     pagination: { page: number; limit: number } = { page: 1, limit: 20 },
   ): Promise<{ users: PlainUser[]; total: number; page: number; limit: number; totalPages: number }> {
-    const query: Record<string, unknown> = { status: { $ne: 'suspended' } };
-    if (filters.role) query['role'] = filters.role;
-    if (filters.clubId) query['clubId'] = new mongoose.Types.ObjectId(filters.clubId);
+    const match: Record<string, unknown> = { status: { $ne: 'suspended' } };
+    if (filters.role) match['role'] = filters.role;
+    if (filters.clubId) match['clubId'] = new mongoose.Types.ObjectId(filters.clubId);
     if (filters.search) {
       const re = new RegExp(filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      query['$or'] = [{ email: re }, { firstName: re }, { lastName: re }];
+      match['$or'] = [{ email: re }, { firstName: re }, { lastName: re }];
     }
     const { page, limit } = pagination;
     const skip = (page - 1) * limit;
+
     const [users, total] = await Promise.all([
-      UserModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean<PlainUser[]>().exec(),
-      UserModel.countDocuments(query).exec(),
+      UserModel.aggregate([
+        { $match: match },
+        {
+          $lookup: {
+            from: 'clubs',
+            localField: 'clubId',
+            foreignField: '_id',
+            as: 'club',
+            pipeline: [
+              {
+                $project: {
+                  _id: 1,
+                  name: 1,
+                  address: 1,
+                  phone: 1,
+                  logoUrl: 1,
+                  status: 1,
+                },
+              },
+            ],
+          },
+        },
+        { $unwind: { path: '$club', preserveNullAndEmptyArrays: true } },
+        {
+          $addFields: {
+            clubId: { $ifNull: ['$club._id', '$clubId'] },
+          },
+        },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: { $toString: '$_id' },
+            email: 1,
+            role: 1,
+            status: 1,
+            clubId: { $toString: '$clubId' },
+            club: 1,
+            onboardingStep: 1,
+            emailVerified: 1,
+            firstName: 1,
+            lastName: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        },
+      ]).exec(),
+      UserModel.countDocuments(match).exec(),
     ]);
-    return { users, total, page, limit, totalPages: Math.ceil(total / limit) };
+
+    return { users: users as PlainUser[], total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findByClub(clubId: string): Promise<PlainUser[]> {

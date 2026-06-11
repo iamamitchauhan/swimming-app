@@ -109,16 +109,12 @@ export default function TryoutNewPage() {
     <PageShell
       title="New Tryout"
       crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: "New" }]}
-      actions={
-        <Button variant="ghost" size="sm" onClick={() => navigate("/tryouts")}>
-          <ChevronLeft className="h-4 w-4 mr-1" /> Back
-        </Button>
-      }
+      
     >
-      <div className="max-w-2xl mx-auto pb-28">
+      <div className="max-w-2xl mx-auto">
 
         {/* ── Stepper header ─────────────────────────────────────────────────── */}
-        <div className="mb-8">
+        <div className="sticky top-[60px] z-10 bg-background/95 backdrop-blur-sm py-4 mb-4 -mx-4 px-4 lg:-mx-8 lg:px-8">
           {/* Progress bar */}
           <div className="flex items-center gap-0 mb-6">
             {WIZARD_STEPS.map((step, i) => {
@@ -179,7 +175,8 @@ export default function TryoutNewPage() {
         )}
 
         {/* ── Step content card ──────────────────────────────────────────────── */}
-        <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+        <div className="min-h-[calc(100vh-525px)]"> 
+          <div className="bg-card rounded-xl border border-border p-6 shadow-sm ">
           <form onSubmit={(e) => e.preventDefault()}>
 
             {currentStep === 1 && (
@@ -235,11 +232,12 @@ export default function TryoutNewPage() {
 
           </form>
         </div>
+        </div>
 
       </div>
 
       {/* ── Sticky footer ─────────────────────────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-background/95 backdrop-blur-sm">
+      <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm py-4 mb-4 -mx-4 px-4 lg:-mx-8 lg:px-8">
         <div className="max-w-2xl mx-auto px-4 lg:px-0 py-3 flex items-center justify-between gap-3">
           <Button
             type="button"

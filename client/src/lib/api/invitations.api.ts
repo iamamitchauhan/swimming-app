@@ -10,6 +10,10 @@ export interface Invitation {
   email: string;
   role: InvitationRole;
   clubId: string;
+  club: {
+    _id: string;
+    name: string;
+  };
   invitedBy: string;
   status: InvitationStatus;
   expiresAt: string;
