@@ -21,6 +21,7 @@ const ChildrenPage = lazy(() => import("./pages/app/ChildrenPage"));
 const RegistrationsPage = lazy(() => import("./pages/app/RegistrationsPage"));
 const ProfilePage = lazy(() => import("./pages/app/ProfilePage"));
 const SettingsPage = lazy(() => import("./pages/app/SettingsPage"));
+const TryoutRegistration = lazy(() => import("./pages/app/TryoutRegistration"));
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   if (!tokenStorage.get()) return <Navigate to="/login" replace />;
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/tryouts" element={<TryoutsPage />} />
           <Route path="/tryouts/new" element={<TryoutNewPage />} />
           <Route path="/tryouts/edit/:id" element={<TryoutEditPage />} />
+          <Route path="/tryouts/register/:id" element={<TryoutRegistration />} />
           <Route path="/tryouts/:id" element={<TryoutDetailPage />} />
           <Route path="/children" element={<ChildrenPage />} />
           <Route path="/registrations" element={<RegistrationsPage />} />
