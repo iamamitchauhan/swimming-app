@@ -185,4 +185,86 @@ export const tryoutsApi = {
    * Deletes a tryout
    */
   delete: (id: string) => apiClient.delete(`/tryouts/${id}`),
+
+  /**
+   * GET /tryouts/:id/slots
+   * Returns all slots for a tryout (admin view)
+   */
+  getSlots: (id: string): Promise<TryoutSlot[]> =>
+    api<{ slots: TryoutSlot[] }>(apiClient.get(`/tryouts/${id}/slots`)).then((res) => res.slots),
+
+  /**
+   * GET /tryouts/:id/sessions
+   * Returns all sessions for a tryout (admin view)
+   */
+  getSessions: (id: string): Promise<TryoutSession[]> =>
+    api<{ sessions: TryoutSession[] }>(apiClient.get(`/tryouts/${id}/sessions`)).then((res) => res.sessions),
 };
+
+// ─── Admin View Types ─────────────────────────────────────────────────────────
+
+export interface TryoutSlot {
+    _id: string,
+    tryoutId: string,
+    sessionId: string,
+    sessionDate: string,
+    startTime: string,
+    endTime: string,
+    label: string,
+    slotIndex: number,
+    capacity: number,
+    registeredCount: number,
+    createdAt: string,
+    updatedAt: string
+}
+
+export interface TryoutSession {
+  _id: string;
+  tryoutId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  label: string;
+  slotDuration: number;
+  swimmersPerSlot: number;
+  totalSlots: number;
+}
+
+export interface Registration {
+  id: string;
+  swimmer_name: string;
+  swimmer_age: number;
+  segment_name?: string;
+  segment_id?: string;
+  session_date?: string;
+  slot_start?: string;
+  slot_end?: string;
+  usa_membership_id?: string;
+  usa_verification_status?: string;
+  club_name?: string;
+  guardian_name?: string;
+  guardian_email?: string;
+  parent_name?: string;
+  parent_email?: string;
+  status: 'registered' | 'waitlisted' | 'offered' | 'rejected' | 'cancelled';
+  waitlist_position?: number;
+  safety_entry_exit?: boolean | null;
+  safety_float?: boolean | null;
+  freestyle?: number | string;
+  backstroke?: number | string;
+  breaststroke?: number | string;
+  butterfly?: number | string;
+  total_score?: number | string;
+  registration_id?: string;
+  age_segment?: string;
+}
+
+export interface LeaderboardEntry {
+  registration_id: string;
+  swimmer_name: string;
+  swimmer_age: number;
+  segment_name?: string;
+  age_segment?: string;
+  total_score: number | string;
+  status: string;
+}
