@@ -102,7 +102,7 @@ export class AuthService {
 
     await this.repository.createEmailVerification({ email, tokenHash, expiresAt });
 
-    const verifyUrl = `${config.APP_BASE_URL}/verify-email?token=${plainToken}`;
+    const verifyUrl = `${config.CLIENT_BASE_URL}/verify-email?token=${plainToken}`;
     await sendEmailVerification({ to: email, verifyUrl });
 
     logger.info({ email }, 'auth.register.verification_sent');

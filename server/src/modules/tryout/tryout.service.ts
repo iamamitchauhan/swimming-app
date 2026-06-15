@@ -60,4 +60,11 @@ export class TryoutService {
     await this.repo.delete(id);
     logger.info({ tryoutId: id, clubId }, 'tryout.deleted');
   }
+
+  /**
+   * Lists all active tryouts for public landing page (no authentication required).
+   */
+  async listActive(params: TryoutListParams = {}): Promise<TryoutListResult> {
+    return this.repo.list({ ...params });
+  }
 }

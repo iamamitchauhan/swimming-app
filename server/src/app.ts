@@ -17,6 +17,10 @@ import { clubRouter } from './modules/club/club.routes';
 import { invitationRouter } from './modules/invitation/invitation.routes';
 import { userRouter } from './modules/user/user.routes';
 import { tryoutRouter } from './modules/tryout/tryout.routes';
+import { swimmerRouter } from './modules/swimmer/swimmer.routes';
+import { registrationRouter } from './modules/registration/registration.routes';
+import { publicRouter } from './modules/public/public.routes';
+import { parentRouter } from './modules/parent/parent.routes';
 
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -39,7 +43,14 @@ export function createApp(): express.Application {
 
   // Security & parsing middleware
   app.use(helmet());
-  app.use(cors({ origin: config.CORS_ORIGIN }));
+  app.use(cors({ 
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173', // Vite default port
+    config.CORS_ORIGIN
+  ],
+  credentials: true
+}));
   app.use(express.json());
   app.use(requestId);
   // app.use(rateLimiter);
@@ -87,6 +98,10 @@ export function createApp(): express.Application {
   app.use(`${API_PREFIX}/invitations`, invitationRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
   app.use(`${API_PREFIX}/tryouts`, tryoutRouter);
+  app.use(`${API_PREFIX}/swimmers`, swimmerRouter);
+  app.use(`${API_PREFIX}/registrations`, registrationRouter);
+  app.use(`${API_PREFIX}/public`, publicRouter);
+  app.use(`${API_PREFIX}/parent`, parentRouter);
 
   // Global error handler — must be last
   app.use(errorHandler);

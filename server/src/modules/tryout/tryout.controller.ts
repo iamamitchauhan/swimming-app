@@ -178,6 +178,30 @@ export class TryoutController {
       next(err);
     }
   };
+
+  /**
+   * GET /tryouts/public
+   * Lists all active tryouts for public landing page (no authentication required).
+   */
+  listPublic = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 10));
+      const search = (req.query['search'] as string | undefined)?.trim() || undefined;
+      const sortBy = (['name', 'createdAt', 'updatedAt'].includes(req.query['sortBy'] as string)
+        ? req.query['sortBy']
+        : 'createdAt') as 'name' | 'createdAt' | 'updatedAt';
+      const sortOrder = (req.query['sortOrder'] === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc';
+
+      const result = await this.service.listActive({
+        page, limit, search, sortBy, sortOrder,
+      });
+
+      sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 
 export { upload };

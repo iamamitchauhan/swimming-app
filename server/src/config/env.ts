@@ -35,6 +35,8 @@ const envSchema = z.object({
   SMTP_FROM_NAME: z.string().default('Swimming App'),
   SMTP_FROM_EMAIL: z.string().email().default('noreply@swimmingapp.com'),
   APP_BASE_URL: z.string().url('APP_BASE_URL must be a valid URL').default('http://localhost:8080'),
+  CLIENT_BASE_URL: z.string().url('CLIENT_BASE_URL must be a valid URL').default('http://localhost:8080'),
+  LANDING_BASE_URL: z.string().url('LANDING_BASE_URL must be a valid URL').default('http://localhost:3000'),
   OTP_EXPIRES_MINUTES: z
     .string()
     .default('10')

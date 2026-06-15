@@ -122,6 +122,253 @@ const options: swaggerJsdoc.Options = {
             createdAt: { type: 'string', format: 'date-time' },
           },
         },
+        // ─── Tryout ───────────────────────────────────────────────────────
+        Tryout: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '665f1a2b3c4d5e6f7a8b9c11' },
+            name: { type: 'string', example: 'Summer Swim Team Tryouts 2024' },
+            location: { type: 'string', example: 'Main Pool - Blue Dolphins Aquatic Center' },
+            description: { 
+              type: 'string', 
+              example: 'Join our competitive swim team! We\'re looking for talented young swimmers ages 6-18 to join our award-winning program.' 
+            },
+            theme: { 
+              type: 'string', 
+              enum: ['ocean', 'sunset', 'forest', 'city'],
+              example: 'ocean' 
+            },
+            bannerUrl: { 
+              type: 'string', 
+              format: 'uri',
+              nullable: true,
+              example: 'https://cdn.example.com/tryout-banner.jpg' 
+            },
+            slotDuration: { type: 'integer', minimum: 15, maximum: 120, example: 30 },
+            swimmersPerSlot: { type: 'integer', minimum: 1, maximum: 20, example: 4 },
+            ctaLabel: { type: 'string', example: 'Sign up today' },
+            highlights: { 
+              type: 'string', 
+              example: '• Professional coaching staff\n• State-of-the-art facility\n• Competitive team environment\n• All skill levels welcome' 
+            },
+            additionalInstructions: { 
+              type: 'string', 
+              nullable: true,
+              example: 'Please bring swimsuit, towel, goggles, and water bottle. Arrive 15 minutes early for check-in.' 
+            },
+            status: {
+              type: 'string',
+              enum: ['draft', 'active', 'closed', 'cancelled'],
+              example: 'active',
+            },
+            sessions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  date: { type: 'string', format: 'date', example: '2024-07-15' },
+                  startTime: { type: 'string', pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$', example: '09:00' },
+                  endTime: { type: 'string', pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$', example: '12:00' },
+                  label: { type: 'string', example: 'Morning Session - Ages 6-10' },
+                },
+              },
+            },
+            segments: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'Junior Swimmers' },
+                  minAge: { type: 'integer', minimum: 4, maximum: 18, example: 6 },
+                  maxAge: { type: 'integer', minimum: 4, maximum: 18, example: 10 },
+                  level: { 
+                    type: 'string', 
+                    enum: ['beginner', 'intermediate', 'advanced', 'elite'],
+                    example: 'beginner' 
+                  },
+                },
+              },
+            },
+            steps: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', example: 'Registration & Check-in' },
+                  description: { type: 'string', example: 'Complete registration forms and receive your tryout number' },
+                },
+              },
+            },
+            faqs: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  question: { type: 'string', example: 'What should my child bring to the tryout?' },
+                  answer: { type: 'string', example: 'Please bring a swimsuit, towel, goggles, cap, and water bottle.' },
+                },
+              },
+            },
+            clubId: { type: 'string', example: '665f1a2b3c4d5e6f7a8b9c0e' },
+            createdBy: { type: 'string', example: '665f1a2b3c4d5e6f7a8b9c0d' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        TryoutListResult: {
+          type: 'object',
+          properties: {
+            tryouts: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/Tryout' },
+            },
+            total: { type: 'integer', example: 25 },
+            page: { type: 'integer', minimum: 1, example: 1 },
+            limit: { type: 'integer', minimum: 1, maximum: 100, example: 10 },
+            totalPages: { type: 'integer', example: 3 },
+          },
+        },
+        CreateTryoutRequest: {
+          type: 'object',
+          required: ['name', 'status'],
+          properties: {
+            name: { type: 'string', example: 'Summer Swim Team Tryouts 2024' },
+            location: { type: 'string', example: 'Main Pool - Blue Dolphins Aquatic Center' },
+            description: { type: 'string', example: 'Join our competitive swim team!' },
+            theme: { 
+              type: 'string', 
+              enum: ['ocean', 'sunset', 'forest', 'city'],
+              example: 'ocean' 
+            },
+            bannerUrl: { type: 'string', format: 'uri', nullable: true },
+            slotDuration: { type: 'integer', minimum: 15, maximum: 120, example: 30 },
+            swimmersPerSlot: { type: 'integer', minimum: 1, maximum: 20, example: 4 },
+            ctaLabel: { type: 'string', example: 'Sign up today' },
+            highlights: { type: 'string', example: 'Professional coaching staff' },
+            additionalInstructions: { type: 'string', nullable: true },
+            status: {
+              type: 'string',
+              enum: ['draft', 'active', 'closed', 'cancelled'],
+              example: 'draft',
+            },
+            sessions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  date: { type: 'string', format: 'date' },
+                  startTime: { type: 'string', pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$' },
+                  endTime: { type: 'string', pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$' },
+                  label: { type: 'string' },
+                },
+              },
+            },
+            segments: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  minAge: { type: 'integer' },
+                  maxAge: { type: 'integer' },
+                  level: { 
+                    type: 'string', 
+                    enum: ['beginner', 'intermediate', 'advanced', 'elite']
+                  },
+                },
+              },
+            },
+            steps: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                },
+              },
+            },
+            faqs: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  question: { type: 'string' },
+                  answer: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        UpdateTryoutRequest: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            location: { type: 'string' },
+            description: { type: 'string' },
+            theme: { 
+              type: 'string', 
+              enum: ['ocean', 'sunset', 'forest', 'city']
+            },
+            bannerUrl: { type: 'string', format: 'uri', nullable: true },
+            slotDuration: { type: 'integer', minimum: 15, maximum: 120 },
+            swimmersPerSlot: { type: 'integer', minimum: 1, maximum: 20 },
+            ctaLabel: { type: 'string' },
+            highlights: { type: 'string' },
+            additionalInstructions: { type: 'string', nullable: true },
+            status: {
+              type: 'string',
+              enum: ['draft', 'active', 'closed', 'cancelled'],
+            },
+            sessions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  date: { type: 'string', format: 'date' },
+                  startTime: { type: 'string', pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$' },
+                  endTime: { type: 'string', pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$' },
+                  label: { type: 'string' },
+                },
+              },
+            },
+            segments: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  minAge: { type: 'integer' },
+                  maxAge: { type: 'integer' },
+                  level: { 
+                    type: 'string', 
+                    enum: ['beginner', 'intermediate', 'advanced', 'elite']
+                  },
+                },
+              },
+            },
+            steps: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                },
+              },
+            },
+            faqs: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  question: { type: 'string' },
+                  answer: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
       },
       responses: {
         Unauthorized: {
@@ -203,6 +450,7 @@ const options: swaggerJsdoc.Options = {
       { name: 'Clubs', description: 'Club management and approval workflow (super_admin)' },
       { name: 'Invitations', description: 'Send and accept user invitations' },
       { name: 'Users', description: 'User profile and listing' },
+      { name: 'Tryouts', description: 'Swim tryout management for clubs and public registration' },
     ],
   },
   apis: ['./src/docs/**/*.yaml'],

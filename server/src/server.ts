@@ -67,7 +67,7 @@ function registerShutdownHandlers(
  */
 async function main(): Promise<void> {
   await connectDatabase();
-  await checkRedis();
+  // await checkRedis();
 
 
   const app = createApp();

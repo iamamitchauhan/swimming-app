@@ -7,6 +7,7 @@ export const MESSAGES = {
   CREATED: 'Resource created successfully.',
   UPDATED: 'Resource updated successfully.',
   DELETED: 'Resource deleted successfully.',
+  RETRIEVED: 'Resource retrieved successfully.',
   NOT_FOUND: 'The requested resource was not found.',
   UNAUTHORIZED: 'Authentication is required to access this resource.',
   FORBIDDEN: 'You do not have permission to perform this action.',

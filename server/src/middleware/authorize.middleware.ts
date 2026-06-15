@@ -12,6 +12,8 @@ import { sendError } from '../shared/utils/response';
  * @param roles - One or more roles that are permitted
  */
 export function authorize(...roles: UserRole[]) {
+  console.log('roles =>',roles);
+  
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       sendError(res, MESSAGES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED, 'MISSING_TOKEN');

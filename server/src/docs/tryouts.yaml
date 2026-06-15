@@ -1,0 +1,590 @@
+paths:
+  /tryouts/public:
+    get:
+      tags: [Tryouts]
+      summary: List all active tryouts (Public)
+      description: |
+        Returns a paginated list of all active tryouts across all clubs.
+        This endpoint is publicly accessible and does not require authentication.
+        Parents can use this to discover available tryouts for registration.
+      operationId: listPublicTryouts
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of tryouts per page (max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: search
+          in: query
+          description: Search tryouts by name, description, or location
+          required: false
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          description: Field to sort results by
+          required: false
+          schema:
+            type: string
+            enum: [name, createdAt, updatedAt]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          description: Sort order (asc or desc)
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: List of active tryouts retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TryoutListResult'
+              example:
+                success: true
+                message: Success
+                data:
+                  tryouts:
+                    - _id: "665f1a2b3c4d5e6f7a8b9c11"
+                      name: "Summer Swim Team Tryouts 2024"
+                      location: "Main Pool - Blue Dolphins Aquatic Center"
+                      description: "Join our competitive swim team!"
+                      status: "active"
+                      theme: "ocean"
+                      bannerUrl: "https://cdn.example.com/tryout-banner.jpg"
+                      slotDuration: 30
+                      swimmersPerSlot: 4
+                      ctaLabel: "Sign up today"
+                      highlights: "Professional coaching staff"
+                      sessions:
+                        - date: "2024-07-15"
+                          startTime: "09:00"
+                          endTime: "12:00"
+                          label: "Morning Session"
+                      segments:
+                        - name: "Junior Swimmers"
+                          minAge: 6
+                          maxAge: 10
+                          level: "beginner"
+                      clubId: "665f1a2b3c4d5e6f7a8b9c0e"
+                      createdAt: "2024-06-15T10:00:00Z"
+                      updatedAt: "2024-06-15T10:00:00Z"
+                  total: 25
+                  page: 1
+                  limit: 10
+                  totalPages: 3
+                error: null
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /tryouts:
+    get:
+      tags: [Tryouts]
+      summary: List tryouts for user's club
+      description: |
+        Returns a paginated list of tryouts for the authenticated user's club.
+        Requires admin or coach role. Supports filtering by status, date range, and search.
+      operationId: listClubTryouts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of tryouts per page (max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: search
+          in: query
+          description: Search tryouts by name, description, or location
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by tryout status
+          required: false
+          schema:
+            type: string
+            enum: [draft, active, closed, cancelled, all]
+            default: all
+        - name: dateFrom
+          in: query
+          description: Filter tryouts created from this date (YYYY-MM-DD)
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          description: Filter tryouts created to this date (YYYY-MM-DD)
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: sortBy
+          in: query
+          description: Field to sort results by
+          required: false
+          schema:
+            type: string
+            enum: [name, status, createdAt, updatedAt]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          description: Sort order (asc or desc)
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: List of tryouts retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TryoutListResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    post:
+      tags: [Tryouts]
+      summary: Create a new tryout
+      description: |
+        Creates a new tryout for the authenticated user's club.
+        Requires admin or coach role. Supports multipart/form-data for banner image upload.
+      operationId: createTryout
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, status]
+              properties:
+                name:
+                  type: string
+                  description: Tryout name
+                  example: "Summer Swim Team Tryouts 2024"
+                location:
+                  type: string
+                  description: Tryout location
+                  example: "Main Pool - Blue Dolphins Aquatic Center"
+                description:
+                  type: string
+                  description: Detailed description of the tryout
+                  example: "Join our competitive swim team!"
+                theme:
+                  type: string
+                  enum: [ocean, sunset, forest, city]
+                  default: ocean
+                  description: Visual theme for the tryout page
+                bannerUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+                  description: URL to banner image (alternative to file upload)
+                banner:
+                  type: string
+                  format: binary
+                  description: Banner image file (max 5MB, image/*)
+                slotDuration:
+                  type: integer
+                  minimum: 15
+                  maximum: 120
+                  default: 30
+                  description: Duration of each registration slot in minutes
+                swimmersPerSlot:
+                  type: integer
+                  minimum: 1
+                  maximum: 20
+                  default: 4
+                  description: Maximum swimmers per time slot
+                ctaLabel:
+                  type: string
+                  default: "Sign up today"
+                  description: Call-to-action button text
+                highlights:
+                  type: string
+                  description: Key highlights (supports newlines)
+                  example: "• Professional coaching staff\n• State-of-the-art facility"
+                additionalInstructions:
+                  type: string
+                  nullable: true
+                  description: Additional instructions for participants
+                status:
+                  type: string
+                  enum: [draft, active, closed, cancelled]
+                  description: Tryout status
+                sessions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date:
+                        type: string
+                        format: date
+                      startTime:
+                        type: string
+                        pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+                      endTime:
+                        type: string
+                        pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+                      label:
+                        type: string
+                  description: Tryout session schedule
+                segments:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      minAge:
+                        type: integer
+                        minimum: 4
+                        maximum: 18
+                      maxAge:
+                        type: integer
+                        minimum: 4
+                        maximum: 18
+                      level:
+                        type: string
+                        enum: [beginner, intermediate, advanced, elite]
+                  description: Age/level segments for registration
+                steps:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      description:
+                        type: string
+                  description: Registration process steps
+                faqs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question:
+                        type: string
+                      answer:
+                        type: string
+                  description: Frequently asked questions
+      responses:
+        '201':
+          description: Tryout created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tryout:
+                            $ref: '#/components/schemas/Tryout'
+              example:
+                success: true
+                message: Tryout created successfully
+                data:
+                  tryout:
+                    _id: "665f1a2b3c4d5e6f7a8b9c11"
+                    name: "Summer Swim Team Tryouts 2024"
+                    status: "draft"
+                    # ... other tryout fields
+                error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /tryouts/{id}:
+    get:
+      tags: [Tryouts]
+      summary: Get tryout by ID
+      description: |
+        Returns a specific tryout by ID. Only accessible by admin/coach users
+        from the same club as the tryout.
+      operationId: getTryoutById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tryout ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tryout retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tryout:
+                            $ref: '#/components/schemas/Tryout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    put:
+      tags: [Tryouts]
+      summary: Update tryout
+      description: |
+        Updates an existing tryout. Requires admin or coach role.
+        Supports multipart/form-data for banner image upload.
+      operationId: updateTryout
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tryout ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Tryout name
+                location:
+                  type: string
+                  description: Tryout location
+                description:
+                  type: string
+                  description: Detailed description of the tryout
+                theme:
+                  type: string
+                  enum: [ocean, sunset, forest, city]
+                  description: Visual theme for the tryout page
+                bannerUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+                  description: URL to banner image
+                banner:
+                  type: string
+                  format: binary
+                  description: Banner image file (max 5MB, image/*)
+                slotDuration:
+                  type: integer
+                  minimum: 15
+                  maximum: 120
+                  description: Duration of each registration slot in minutes
+                swimmersPerSlot:
+                  type: integer
+                  minimum: 1
+                  maximum: 20
+                  description: Maximum swimmers per time slot
+                ctaLabel:
+                  type: string
+                  description: Call-to-action button text
+                highlights:
+                  type: string
+                  description: Key highlights (supports newlines)
+                additionalInstructions:
+                  type: string
+                  nullable: true
+                  description: Additional instructions for participants
+                status:
+                  type: string
+                  enum: [draft, active, closed, cancelled]
+                  description: Tryout status
+                sessions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date:
+                        type: string
+                        format: date
+                      startTime:
+                        type: string
+                        pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+                      endTime:
+                        type: string
+                        pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+                      label:
+                        type: string
+                  description: Tryout session schedule
+                segments:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      minAge:
+                        type: integer
+                        minimum: 4
+                        maximum: 18
+                      maxAge:
+                        type: integer
+                        minimum: 4
+                        maximum: 18
+                      level:
+                        type: string
+                        enum: [beginner, intermediate, advanced, elite]
+                  description: Age/level segments for registration
+                steps:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      description:
+                        type: string
+                  description: Registration process steps
+                faqs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question:
+                        type: string
+                      answer:
+                        type: string
+                  description: Frequently asked questions
+      responses:
+        '200':
+          description: Tryout updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tryout:
+                            $ref: '#/components/schemas/Tryout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    delete:
+      tags: [Tryouts]
+      summary: Delete tryout
+      description: |
+        Deletes a tryout. Requires admin or coach role.
+        This action is irreversible.
+      operationId: deleteTryout
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tryout ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tryout deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        nullable: true
+                        example: null
+              example:
+                success: true
+                message: Tryout deleted successfully
+                data: null
+                error: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'

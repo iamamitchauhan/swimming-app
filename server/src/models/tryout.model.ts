@@ -4,6 +4,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 const SessionSchema = new Schema(
   {
+    id: { type: String, required: true }, // Stable ID for references
     date: { type: String, required: true },
     startTime: { type: String, required: true },
     endTime: { type: String, required: true },
@@ -14,6 +15,7 @@ const SessionSchema = new Schema(
 
 const SegmentSchema = new Schema(
   {
+    id: { type: String, required: true }, // Stable ID for references
     name: { type: String, required: true },
     minAge: { type: Number, required: true },
     maxAge: { type: Number, required: true },
@@ -57,6 +59,11 @@ const TryoutSchema = new Schema(
     highlights: { type: String, default: '' },
     additionalInstructions: { type: String, default: '' },
     status: { type: String, enum: ['draft', 'open', 'closed'], default: 'draft' },
+    
+    // Registration tracking
+    registrationCount: { type: Number, default: 0 },
+    waitlistCount: { type: Number, default: 0 },
+    
     sessions: { type: [SessionSchema], default: [] },
     segments: { type: [SegmentSchema], default: [] },
     steps: { type: [StepSchema], default: [] },

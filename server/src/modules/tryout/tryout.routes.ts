@@ -14,6 +14,7 @@ const controller = new TryoutController(service);
 /**
  * Tryout router — mounted at /api/v1/tryouts by app.ts.
  *
+ * GET  /public          — list all active tryouts for landing page (no auth required)
  * GET  /                — list tryouts for user's club (admin, coach)
  * GET  /:id             — get tryout by ID (admin, coach)
  * POST /                — create tryout (admin, coach) — multipart for banner
@@ -22,6 +23,7 @@ const controller = new TryoutController(service);
  */
 const tryoutRouter = Router();
 
+tryoutRouter.get('/public', controller.listPublic);
 tryoutRouter.get('/', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.list);
 tryoutRouter.get('/:id', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getById);
 

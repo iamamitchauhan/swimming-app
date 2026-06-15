@@ -11,13 +11,12 @@ export function TryoutTimeline({ steps }: Props) {
       <h2 id="how-heading" className="mb-6 text-2xl font-bold tracking-tight sm:text-3xl">
         How It Works
       </h2>
-      <div className="pl-5">
-        <ol className="relative space-y-6 border-l-2 border-border pl-[18px]">
+      <ol className="relative space-y-6 border-l-2 border-border pl-8">
         {steps.map((step, i) => (
-          <li key={i} className="relative pl-2">
+          <li key={i} className="relative">
             <span
               aria-hidden
-              className="absolute left-[-2.4rem] grid size-10 place-items-center rounded-full border-2 border-background bg-primary text-sm font-bold text-primary-foreground shadow"
+              className="absolute -left-[2.4rem] grid size-10 place-items-center rounded-full border-2 border-background bg-primary text-sm font-bold text-primary-foreground shadow"
             >
               {i + 1}
             </span>
@@ -26,7 +25,6 @@ export function TryoutTimeline({ steps }: Props) {
           </li>
         ))}
       </ol>
-      </div>
     </section>
   );
 }

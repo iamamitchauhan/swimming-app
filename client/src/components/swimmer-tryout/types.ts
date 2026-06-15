@@ -39,8 +39,4 @@ export interface Tryout {
   segments: TryoutSegment[];
   steps: TryoutStep[];
   faqs: TryoutFAQ[];
-  clubId?: string;
-  createdBy?: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
