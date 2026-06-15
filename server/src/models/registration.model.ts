@@ -35,10 +35,24 @@ export interface IRegistration extends Document {
   waitlistPosition?: number;
   registeredAt: Date;
   
+  // USA-S Verification
+  usaVerificationStatus?: 'pending' | 'needs_review' | 'verified' | 'rejected';
+
+  // Scores
+  scores?: {
+    safetyEntryExit?: boolean;
+    safetyFloat?: boolean;
+    freestyle?: number;
+    backstroke?: number;
+    breaststroke?: number;
+    butterfly?: number;
+    totalScore?: number;
+  };
+
   // Communication
   emailSent: boolean;
   lastCommunicationAt?: Date;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -101,6 +115,20 @@ const registrationSchema = new Schema<IRegistration>(
     },
     lastCommunicationAt: {
       type: Date,
+    },
+    usaVerificationStatus: {
+      type: String,
+      enum: ['pending', 'needs_review', 'verified', 'rejected'],
+      default: 'pending',
+    },
+    scores: {
+      safetyEntryExit: { type: Boolean },
+      safetyFloat:     { type: Boolean },
+      freestyle:       { type: Number },
+      backstroke:      { type: Number },
+      breaststroke:    { type: Number },
+      butterfly:       { type: Number },
+      totalScore:      { type: Number },
     },
     swimmerDetails: {
       firstName: { type: String, required: true },

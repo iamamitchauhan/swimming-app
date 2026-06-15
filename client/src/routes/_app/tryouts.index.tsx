@@ -298,7 +298,7 @@ export default function TryoutsList() {
                       <TableRow key={t._id}>
                         <TableCell>
                           <Link
-                            to={`/tryouts/${t._id}`}
+                            to={`/tryouts/view/${t._id}`}
                             className="font-medium hover:text-primary"
                           >
                             {t.name}

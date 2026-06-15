@@ -108,14 +108,14 @@ export function UsaVerifyTab({ roster, onSetVerifyStatus }: Props) {
                   <td className="px-3 py-3 text-gray-600">{r.club_name || "—"}</td>
                   <td className="px-3 py-3">
                     <span className="font-mono text-sm">{r.usa_membership_id}</span>
-                    <a
+                    {/* <a
                       href={`https://www.usaswimming.org/find-a-swimmer?name=${encodeURIComponent(r.swimmer_name)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="ml-2 text-xs text-blue-500 hover:underline"
                     >
                       lookup ↗
-                    </a>
+                    </a> */}
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-2 flex-wrap">

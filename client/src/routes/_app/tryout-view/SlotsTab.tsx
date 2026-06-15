@@ -25,8 +25,6 @@ interface Props {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function SlotsTab({ slots }: Props) {
-  console.info('slots =>',slots);
-  
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">

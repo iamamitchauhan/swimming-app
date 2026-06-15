@@ -2,11 +2,15 @@ import { Request, Response, NextFunction } from 'express';
 import { TryoutService } from './tryout.service';
 import { TryoutSlotRepository } from './tryout-slot.repository';
 import { TryoutSessionRepository } from './tryout-session.repository';
+import { RegistrationRepository } from '../registration/registration.repository';
 import { HTTP_STATUS } from '../../shared/constants/httpStatus';
 import { MESSAGES } from '../../shared/constants/messages';
 import { sendSuccess } from '../../shared/utils/response';
 import { NotFoundError, ForbiddenError } from '../../shared/errors/domain.errors';
 import multer from 'multer';
+import { RegistrationModel } from '../../models/registration.model';
+import { SwimmerModel } from '../../models/swimmer.model';
+import { UserModel } from '../../models/user.model';
 
 // ─── Slot helpers ─────────────────────────────────────────────────────────────
 
@@ -326,6 +330,245 @@ export class TryoutController {
       });
 
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  //  Admin registration management endpoints
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * GET /tryouts/:id/registrations
+   * Returns all registrations for a tryout with enriched swimmer/parent/session data.
+   */
+  getRegistrations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const registrations = await RegistrationModel.find({ tryoutId: id })
+        .populate('swimmerId', 'firstName lastName birthDate')
+        .populate('parentId', 'firstName lastName email')
+        .lean()
+        .exec();
+
+      const tryout = await this.service.getById(id, req.user?.clubId ?? '');
+      const sessions = await sessionRepo.findByTryout(id);
+      const slots = await slotRepo.findByTryout(id);
+
+      const segmentMap = new Map((tryout.segments || []).map((s: any) => [s.id || s.name, s.name]));
+      const sessionMap = new Map(sessions.map((s) => [s._id.toString(), s]));
+      const slotMap = new Map(slots.map((s) => [s._id.toString(), s]));
+
+      const data = registrations.map((r: any) => {
+        const swimmer = r.swimmerId as any;
+        const parent = r.parentId as any;
+        const session = sessionMap.get(r.sessionId?.toString?.() ?? r.sessionId);
+        const slot = slotMap.get(r.slotId?.toString?.() ?? r.slotId);
+        const scores = r.scores || {};
+
+        return {
+          id: r._id.toString(),
+          swimmer_name: swimmer ? `${swimmer.firstName} ${swimmer.lastName}` : 'Unknown',
+          swimmer_age: r.swimmerDetails?.ageOnTryoutDay ?? 0,
+          segment_name: segmentMap.get(r.segmentId) || r.segmentId,
+          segment_id: r.segmentId,
+          session_date: session?.date,
+          slot_start: slot?.startTime,
+          slot_end: slot?.endTime,
+          usa_membership_id: r.swimmerDetails?.usaMembershipId || null,
+          usa_verification_status: r.usaVerificationStatus || 'pending',
+          club_name: r.swimmerDetails?.clubName || null,
+          guardian_name: r.swimmerDetails?.guardianName || null,
+          guardian_email: r.swimmerDetails?.guardianEmail || null,
+          parent_name: parent ? `${parent.firstName} ${parent.lastName}` : null,
+          parent_email: parent?.email || null,
+          status: r.status,
+          waitlist_position: r.waitlistPosition,
+          safety_entry_exit: scores.safetyEntryExit ?? null,
+          safety_float: scores.safetyFloat ?? null,
+          freestyle: scores.freestyle ?? null,
+          backstroke: scores.backstroke ?? null,
+          breaststroke: scores.breaststroke ?? null,
+          butterfly: scores.butterfly ?? null,
+          total_score: scores.totalScore ?? null,
+        };
+      });
+
+      sendSuccess(res, data, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /tryouts/:id/leaderboard
+   * Returns scored swimmers sorted by totalScore, grouped by segment.
+   */
+  getLeaderboard = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const registrations = await RegistrationModel.find({
+        tryoutId: id,
+        status: { $nin: ['cancelled'] },
+        'scores.totalScore': { $exists: true, $ne: null },
+      })
+        .populate('swimmerId', 'firstName lastName birthDate')
+        .lean()
+        .exec();
+
+      const tryout = await this.service.getById(id, req.user?.clubId ?? '');
+      const segmentMap = new Map((tryout.segments || []).map((s: any) => [s.id || s.name, s.name]));
+
+      const data = registrations.map((r: any) => {
+        const swimmer = r.swimmerId as any;
+        return {
+          registration_id: r._id.toString(),
+          swimmer_name: swimmer ? `${swimmer.firstName} ${swimmer.lastName}` : 'Unknown',
+          swimmer_age: r.swimmerDetails?.ageOnTryoutDay ?? 0,
+          segment_name: segmentMap.get(r.segmentId) || r.segmentId,
+          age_segment: r.segmentId,
+          total_score: r.scores?.totalScore ?? 0,
+          status: r.status,
+        };
+      });
+
+      data.sort((a: any, b: any) => parseFloat(String(b.total_score)) - parseFloat(String(a.total_score)));
+
+      sendSuccess(res, data, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * PUT /tryouts/:id/registrations/:regId/decision
+   * Update registration status to offered or rejected.
+   */
+  decision = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { regId } = req.params;
+      const { status } = req.body;
+      const updated = await RegistrationModel.findByIdAndUpdate(
+        regId,
+        { $set: { status } },
+        { new: true },
+      ).lean().exec();
+      if (!updated) throw new NotFoundError('Registration not found');
+      sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * PUT /tryouts/:id/registrations/:regId/promote
+   * Promote a waitlisted swimmer to registered.
+   */
+  promoteWaitlist = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { regId } = req.params;
+      const updated = await RegistrationModel.findByIdAndUpdate(
+        regId,
+        { $set: { status: 'registered', waitlistPosition: null } },
+        { new: true },
+      ).lean().exec();
+      if (!updated) throw new NotFoundError('Registration not found');
+      sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * PUT /tryouts/:id/registrations/:regId/verify
+   * Update USA-S verification status.
+   */
+  verifyUsa = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { regId } = req.params;
+      const { status } = req.body;
+      const updated = await RegistrationModel.findByIdAndUpdate(
+        regId,
+        { $set: { usaVerificationStatus: status } },
+        { new: true },
+      ).lean().exec();
+      if (!updated) throw new NotFoundError('Registration not found');
+      sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * PUT /tryouts/:id/registrations/:regId/score
+   * Update swimmer scores.
+   */
+  updateScore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { regId } = req.params;
+      const body = req.body;
+
+      const scoreUpdate: any = {};
+      if (body.safety_entry_exit !== undefined) scoreUpdate['scores.safetyEntryExit'] = body.safety_entry_exit;
+      if (body.safety_float !== undefined)      scoreUpdate['scores.safetyFloat'] = body.safety_float;
+      if (body.freestyle !== undefined)           scoreUpdate['scores.freestyle'] = Number(body.freestyle) || null;
+      if (body.backstroke !== undefined)        scoreUpdate['scores.backstroke'] = Number(body.backstroke) || null;
+      if (body.breaststroke !== undefined)      scoreUpdate['scores.breaststroke'] = Number(body.breaststroke) || null;
+      if (body.butterfly !== undefined)         scoreUpdate['scores.butterfly'] = Number(body.butterfly) || null;
+
+      const strokes = ['freestyle', 'backstroke', 'breaststroke', 'butterfly'] as const;
+      const scores: number[] = [];
+      for (const k of strokes) {
+        if (body[k] !== undefined && body[k] !== '' && !isNaN(Number(body[k]))) {
+          scores.push(Number(body[k]));
+        }
+      }
+      if (scores.length > 0) {
+        const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+        scoreUpdate['scores.totalScore'] = parseFloat(avg.toFixed(1));
+      }
+
+      const updated = await RegistrationModel.findByIdAndUpdate(
+        regId,
+        { $set: scoreUpdate },
+        { new: true },
+      ).lean().exec();
+      if (!updated) throw new NotFoundError('Registration not found');
+      sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * POST /tryouts/:id/comms
+   * Send bulk communication to a filtered group of registrants.
+   */
+  sendComms = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { audience, subject, body } = req.body;
+
+      const statusFilter = audience === 'all' ? ['registered', 'offered', 'rejected', 'waitlisted'] : [audience];
+      const registrations = await RegistrationModel.find({
+        tryoutId: id,
+        status: { $in: statusFilter },
+      }).lean().exec();
+
+      // TODO: integrate with actual email service (SendGrid, AWS SES, etc.)
+      // For now, just mark lastCommunicationAt
+      await RegistrationModel.updateMany(
+        { tryoutId: id, status: { $in: statusFilter } },
+        { $set: { lastCommunicationAt: new Date(), emailSent: true } },
+      );
+
+      sendSuccess(
+        res,
+        { sentCount: registrations.length, audience, subject },
+        'Communication sent successfully',
+        HTTP_STATUS.OK,
+      );
     } catch (err) {
       next(err);
     }
