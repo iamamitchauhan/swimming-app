@@ -1,6 +1,8 @@
 import { db, uid, wait } from "../mock-db";
 import type { Parent } from "../types";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
+
 export interface RegisterInput {
   firstName: string;
   lastName: string;
@@ -8,76 +10,107 @@ export interface RegisterInput {
 }
 
 export async function registerParent(input: RegisterInput): Promise<{ message: string }> {
-  // TODO: Replace with actual API call to parent register endpoint
-  // POST /api/v1/parent/register
-  await wait(400);
-  
-  // Mock email verification - in real implementation, this would call the backend
-  const parent: Parent = {
-    id: uid("usr"),
-    firstName: input.firstName,
-    lastName: input.lastName,
-    email: input.email,
-    emailVerified: false,
-  };
-  
-  // Store pending registration for demo purposes
-  db.setPendingOtp({ parent, code: "123456" });
-  return { message: "Verification email sent. Please check your inbox." };
+  const response = await fetch(`${API_BASE}/parent/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Registration failed');
+  }
+
+  return response.json();
 }
 
 export async function verifyEmail(token: string): Promise<{ token: string; user: Parent }> {
-  // TODO: Replace with actual API call to verify email endpoint
-  // POST /api/v1/parent/verify-email
-  await wait(300);
+  const response = await fetch(`${API_BASE}/parent/auth/verify-email?token=${encodeURIComponent(token)}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Email verification failed');
+  }
+
+  const result = await response.json();
   
-  // For demo, use OTP code as token
-  const pending = db.getPendingOtp();
-  if (!pending) throw new Error("No pending registration. Please sign up again.");
-  if (token.trim() !== pending.code) throw new Error("Invalid verification code. Try 123456.");
-  
-  const parent: Parent = { ...pending.parent, emailVerified: true };
-  db.setParent(parent);
-  db.setPendingOtp(null);
-  
-  // Mock JWT token
-  const mockToken = `mock-jwt-${parent.id}`;
-  return { token: mockToken, user: parent };
+  // Backend wraps response in { success, message, data: { token, user } }
+  const { token: authToken, user: rawUser } = result.data;
+
+  const user: Parent = {
+    id: rawUser.id,
+    firstName: rawUser.firstName,
+    lastName: rawUser.lastName,
+    email: rawUser.email,
+    emailVerified: rawUser.emailVerified,
+  };
+
+  return { token: authToken, user };
 }
 
-export async function resendVerification(): Promise<{ message: string }> {
-  // TODO: Replace with actual API call to resend verification
+export async function resendVerification(email: string): Promise<{ message: string }> {
+  // For demo purposes, we'll use the mock implementation since the backend doesn't have a resend endpoint
   await wait(300);
   const pending = db.getPendingOtp();
   if (!pending) throw new Error("No pending registration.");
   return { message: "Verification email resent." };
 }
 
-export async function login(email: string, _password: string): Promise<Parent> {
-  await wait(350);
-  const existing = db.getParent();
-  if (existing && existing.email.toLowerCase() === email.toLowerCase()) {
-    return existing;
-  }
-  // Create a quick mock account so demo logins always work.
-  const parent: Parent = {
-    id: uid("usr"),
-    firstName: email.split("@")[0] || "Parent",
-    lastName: "Demo",
-    email,
-    emailVerified: true,
+export async function requestLoginOtp(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE}/parent/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.message || 'Failed to send OTP');
+  return body;
+}
+
+export async function verifyLoginOtp(email: string, otp: string): Promise<{ token: string; user: Parent }> {
+  const response = await fetch(`${API_BASE}/parent/auth/verify-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otp }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.message || 'OTP verification failed');
+
+  const { token: authToken, user: rawUser } = body.data;
+  const user: Parent = {
+    id: rawUser.id,
+    firstName: rawUser.firstName,
+    lastName: rawUser.lastName,
+    email: rawUser.email,
+    emailVerified: rawUser.emailVerified,
   };
-  db.setParent(parent);
-  return parent;
+  return { token: authToken, user };
 }
 
 export async function logout(): Promise<void> {
-  await wait(100);
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
   db.setParent(null);
 }
 
 export async function getCurrentParent(): Promise<Parent | null> {
-  await wait(50);
+  // First check localStorage for a real session from backend
+  const stored = localStorage.getItem('auth_user');
+  if (stored) {
+    try {
+      return JSON.parse(stored) as Parent;
+    } catch {
+      localStorage.removeItem('auth_user');
+    }
+  }
+  // Fall back to mock-db session
   return db.getParent();
 }
 

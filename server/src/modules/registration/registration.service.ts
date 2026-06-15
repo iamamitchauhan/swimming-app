@@ -1,13 +1,18 @@
 import { RegistrationRepository, PlainRegistration, RegistrationListParams, RegistrationListResult } from './registration.repository';
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '../../shared/errors/domain.errors';
 import { TryoutRepository } from '../tryout/tryout.repository';
+import { TryoutSessionRepository } from '../tryout/tryout-session.repository';
+import { TryoutSlotRepository } from '../tryout/tryout-slot.repository';
 import { SwimmerRepository } from '../swimmer/swimmer.repository';
+import { CreateRegistrationInput } from './registration.validation';
 import logger from '../../shared/utils/logger';
 
 export class RegistrationService {
   constructor(
     private readonly repo: RegistrationRepository,
     private readonly tryoutRepo: TryoutRepository,
+    private readonly sessionRepo: TryoutSessionRepository,
+    private readonly slotRepo: TryoutSlotRepository,
     private readonly swimmerRepo: SwimmerRepository
   ) {}
 
@@ -36,66 +41,102 @@ export class RegistrationService {
   /**
    * Creates a new registration with comprehensive validation
    */
-  async create(
-    data: Omit<PlainRegistration, '_id' | 'createdAt' | 'updatedAt' | 'waitlistPosition' | 'registeredAt' | 'status'>,
-    parentId: string
-  ): Promise<PlainRegistration> {
-    const { tryoutId, swimmerId, sessionId, segmentId } = data;
+  async create(input: CreateRegistrationInput, parentId: string): Promise<PlainRegistration> {
+    const {
+      tryoutId, sessionId, slotId, segmentId,
+      swimmerFirstName, swimmerLastName, swimmerDob, ageOnTryoutDay,
+      hasUsaMembership, usaMembershipId, clubName,
+      swimTime50Free, swimTime100Free, strokes, starts, turns,
+      guardianName, guardianEmail,
+    } = input;
 
     // 1. Validate tryout exists and is open
     const tryout = await this.tryoutRepo.findById(tryoutId);
     if (!tryout) throw new NotFoundError('Tryout not found');
     if (tryout.status !== 'open') throw new BadRequestError('Tryout is not open for registration');
 
-    // 2. Validate swimmer exists and belongs to parent
-    const swimmer = await this.swimmerRepo.findById(swimmerId);
-    if (!swimmer) throw new NotFoundError('Swimmer not found');
-    if (swimmer.parentId !== parentId) throw new ForbiddenError('Swimmer does not belong to this parent');
+    // 2. Validate session belongs to this tryout
+    const session = await this.sessionRepo.findById(sessionId);
+    if (!session || session.tryoutId.toString() !== tryoutId) throw new NotFoundError('Session not found');
 
-    // 3. Validate session and segment exist
-    const session = tryout.sessions.find((s: any) => s.id === sessionId);
-    if (!session) throw new NotFoundError('Session not found');
-
-    const segment = tryout.segments.find((s: any) => s.id === segmentId);
-    if (!segment) throw new NotFoundError('Segment not found');
-
-    // 4. Validate swimmer age fits segment
-    const swimmerAge = this.calculateAge(swimmer.birthDate);
-    if (swimmerAge < segment.minAge || swimmerAge > segment.maxAge) {
-      throw new BadRequestError(`Swimmer age ${swimmerAge} does not fit segment requirements (${segment.minAge}-${segment.maxAge})`);
+    // 3. Validate slot belongs to this session and has capacity
+    const slot = await this.slotRepo.findById(slotId);
+    if (!slot || slot.sessionId.toString() !== sessionId) throw new NotFoundError('Slot not found');
+    if (slot.registeredCount >= slot.capacity) {
+      throw new BadRequestError('This slot is full. Please choose another slot.');
     }
 
-    // 5. Check for existing registration (application-level validation)
-    const existingRegistration = await this.repo.findByTryoutAndSwimmer(tryoutId, swimmerId);
-    if (existingRegistration && existingRegistration.status !== 'cancelled') {
-      throw new ConflictError('Swimmer is already registered for this tryout');
+    // 4. Create or find swimmer record
+    const birthDate = new Date(swimmerDob);
+    let swimmer = await this.swimmerRepo.findByParentAndName(
+      parentId, swimmerFirstName, swimmerLastName
+    );
+    if (!swimmer) {
+      swimmer = await this.swimmerRepo.create({
+        parentId,
+        firstName: swimmerFirstName,
+        lastName: swimmerLastName,
+        birthDate,
+        usaMembershipId: hasUsaMembership ? usaMembershipId : undefined,
+        clubName: clubName || undefined,
+        isActive: true,
+      });
     }
 
-    // 6. Calculate capacity and determine status
-    const capacityInfo = await this.calculateSessionCapacity(tryoutId, sessionId, tryout);
+    // 5. Check for duplicate registration
+    const existing = await this.repo.findByTryoutAndSwimmer(tryoutId, swimmer._id);
+    if (existing && existing.status !== 'cancelled') {
+      throw new ConflictError('This swimmer is already registered for this tryout.');
+    }
+
+    // 6. Calculate waitlist position if needed
+    const capacityInfo = await this.calculateSessionCapacity(tryoutId, sessionId, session);
     const status = capacityInfo.hasCapacity ? 'registered' : 'waitlisted';
     const waitlistPosition = status === 'waitlisted' ? capacityInfo.nextWaitlistPosition : undefined;
 
-    // 7. Create registration
-    const registrationData = {
-      ...data,
+    // 7. Create registration with all form data embedded
+    const created = await this.repo.create({
+      tryoutId,
+      swimmerId: swimmer._id,
       parentId,
+      sessionId,
+      slotId,
+      segmentId,
+      emailSent: false,
+      swimmerDetails: {
+        firstName: swimmerFirstName,
+        lastName: swimmerLastName,
+        dob: swimmerDob,
+        ageOnTryoutDay,
+        hasUsaMembership,
+        usaMembershipId: hasUsaMembership ? usaMembershipId : '',
+        clubName: clubName || '',
+        swimTime50Free: swimTime50Free || '',
+        swimTime100Free: swimTime100Free || '',
+        strokes,
+        starts,
+        turns,
+        guardianName,
+        guardianEmail,
+      },
       status: status as PlainRegistration['status'],
       waitlistPosition,
       registeredAt: new Date(),
-    };
+    });
 
-    const created = await this.repo.create(registrationData);
+    // 8. Increment slot registered count
+    await this.slotRepo.incrementRegisteredCount(slotId);
 
-    // 8. Update tryout registration counts
+    // 9. Update tryout registration counts
     await this.tryoutRepo.updateRegistrationCounts(tryoutId);
 
-    logger.info({ 
-      registrationId: created._id, 
-      tryoutId, 
-      swimmerId, 
-      parentId, 
-      status 
+    logger.info({
+      registrationId: created._id,
+      tryoutId,
+      slotId,
+      swimmerId: swimmer._id,
+      parentId,
+      status,
     }, 'registration.created');
 
     return created;
@@ -132,20 +173,11 @@ export class RegistrationService {
   private async calculateSessionCapacity(
     tryoutId: string,
     sessionId: string,
-    tryout: any
+    session: { totalSlots: number; swimmersPerSlot: number }
   ): Promise<{ hasCapacity: boolean; nextWaitlistPosition: number }> {
-    // Count current registered swimmers in this session
     const registeredCount = await this.repo.countBySessionAndStatus(tryoutId, sessionId, 'registered');
-    
-    // Calculate session capacity
-    const session = tryout.sessions.find((s: any) => s.id === sessionId);
-    if (!session) throw new NotFoundError('Session not found');
 
-    const [startHour, startMin] = session.startTime.split(':').map(Number);
-    const [endHour, endMin] = session.endTime.split(':').map(Number);
-    const sessionDurationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-    
-    const sessionCapacity = Math.floor(sessionDurationMinutes / tryout.slotDuration) * tryout.swimmersPerSlot;
+    const sessionCapacity = session.totalSlots * session.swimmersPerSlot;
     const hasCapacity = registeredCount < sessionCapacity;
 
     // Calculate next waitlist position if needed

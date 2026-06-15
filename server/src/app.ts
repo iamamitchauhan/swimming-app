@@ -47,6 +47,7 @@ export function createApp(): express.Application {
   origin: [
     'http://localhost:3000',
     'http://localhost:5173', // Vite default port
+    'http://localhost:8000', // Landing page port
     config.CORS_ORIGIN
   ],
   credentials: true

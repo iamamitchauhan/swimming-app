@@ -7,6 +7,7 @@ import LoginPage from "@/pages/Login";
 import RegisterPage from "@/pages/Register";
 import VerifyOtpPage from "@/pages/VerifyOtp";
 import VerifyEmailPage from "@/pages/VerifyEmail";
+import AutoVerifyEmailPage from "@/pages/AutoVerifyEmail";
 import DashboardPage from "@/pages/Dashboard";
 import ChildrenPage from "@/pages/Children";
 import ProfilePage from "@/pages/Profile";
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-otp" element={<VerifyOtpPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/auth/verify-email" element={<AutoVerifyEmailPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/children" element={<ChildrenPage />} />
           <Route path="/profile" element={<ProfilePage />} />

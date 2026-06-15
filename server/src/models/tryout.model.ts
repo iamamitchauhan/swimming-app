@@ -2,20 +2,9 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 // ─── Subdocument schemas ───────────────────────────────────────────────────────
 
-const SessionSchema = new Schema(
-  {
-    id: { type: String, required: true }, // Stable ID for references
-    date: { type: String, required: true },
-    startTime: { type: String, required: true },
-    endTime: { type: String, required: true },
-    label: { type: String, default: '' },
-  },
-  { _id: false },
-);
-
 const SegmentSchema = new Schema(
   {
-    id: { type: String, required: true }, // Stable ID for references
+    id: { type: String },
     name: { type: String, required: true },
     minAge: { type: Number, required: true },
     maxAge: { type: Number, required: true },
@@ -64,7 +53,6 @@ const TryoutSchema = new Schema(
     registrationCount: { type: Number, default: 0 },
     waitlistCount: { type: Number, default: 0 },
     
-    sessions: { type: [SessionSchema], default: [] },
     segments: { type: [SegmentSchema], default: [] },
     steps: { type: [StepSchema], default: [] },
     faqs: { type: [FaqSchema], default: [] },
@@ -96,12 +84,6 @@ export type TryoutDocument = Document & {
   highlights: string;
   additionalInstructions: string;
   status: string;
-  sessions: Array<{
-    date: string;
-    startTime: string;
-    endTime: string;
-    label: string;
-  }>;
   segments: Array<{
     name: string;
     minAge: number;

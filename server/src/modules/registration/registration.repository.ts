@@ -3,13 +3,32 @@ import { RegistrationModel } from '../../models/registration.model';
 
 // ─── Plain domain types ───────────────────────────────────────────────────────
 
+export type SwimmerDetails = {
+  firstName: string;
+  lastName: string;
+  dob: string;
+  ageOnTryoutDay: number;
+  hasUsaMembership: boolean;
+  usaMembershipId?: string;
+  clubName?: string;
+  swimTime50Free?: string;
+  swimTime100Free?: string;
+  strokes: string[];
+  starts: string[];
+  turns: string[];
+  guardianName: string;
+  guardianEmail: string;
+};
+
 export type PlainRegistration = {
   _id: string;
   tryoutId: string;
   swimmerId: string;
   parentId: string;
   sessionId: string;
+  slotId: string;
   segmentId: string;
+  swimmerDetails: SwimmerDetails;
   status: 'registered' | 'waitlisted' | 'offered' | 'rejected' | 'cancelled';
   waitlistPosition?: number;
   registeredAt: Date;

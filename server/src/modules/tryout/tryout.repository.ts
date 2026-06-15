@@ -14,12 +14,6 @@ export type PlainTryout = {
   highlights: string;
   additionalInstructions: string;
   status: string;
-  sessions: Array<{
-    date: string;
-    startTime: string;
-    endTime: string;
-    label: string;
-  }>;
   segments: Array<{
     name: string;
     minAge: number;

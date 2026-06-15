@@ -7,6 +7,18 @@ import { availableSlotsCount, tryoutStatus } from "@/lib/api/tryouts";
 import { formatDate, relativeFromNow } from "@/lib/format";
 import type { Tryout } from "@/lib/types";
 
+const THEME_CLASSES: Record<string, string> = {
+  ocean:    "bg-gradient-to-br from-sky-500 to-blue-700",
+  sunset:   "bg-gradient-to-br from-orange-400 to-pink-600",
+  forest:   "bg-gradient-to-br from-emerald-500 to-teal-700",
+  midnight: "bg-gradient-to-br from-slate-700 to-slate-900",
+  coral:    "bg-gradient-to-br from-rose-400 to-orange-500",
+};
+
+function themeBg(theme: string) {
+  return THEME_CLASSES[theme] ?? "bg-gradient-to-br from-indigo-700 to-slate-900";
+}
+
 export function TryoutCard({ tryout }: { tryout: Tryout }) {
   const status = tryoutStatus(tryout);
   const slots = availableSlotsCount(tryout);
@@ -14,14 +26,18 @@ export function TryoutCard({ tryout }: { tryout: Tryout }) {
   return (
     <Card className="group overflow-hidden border-border/60 p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-lift">
       <div className="relative h-40 w-full overflow-hidden bg-muted">
-        <img
-          src={tryout.image}
-          alt={tryout.name}
-          loading="lazy"
-          width={800}
-          height={400}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        {tryout.image ? (
+          <img
+            src={tryout.image}
+            alt={tryout.name}
+            loading="lazy"
+            width={800}
+            height={400}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${themeBg(tryout.purpose)}`} />
+        )}
         <div className="absolute right-3 top-3">
           <TryoutStatusBadge status={status} />
         </div>

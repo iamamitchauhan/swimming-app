@@ -28,7 +28,7 @@ export default function VerifyEmailPage() {
   });
 
   const resendMut = useMutation({
-    mutationFn: resendVerification,
+    mutationFn: () => resendVerification("pending@example.com"), // TODO: Get actual email from pending registration
     onSuccess: () => toast.success("Verification email resent. Please check your inbox."),
     onError: (e: Error) => toast.error(e.message),
   });

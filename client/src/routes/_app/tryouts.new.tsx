@@ -46,6 +46,7 @@ export default function TryoutNewPage() {
     watch,
     setValue,
     trigger,
+    getValues,
     formState: { errors },
   } = useForm<TryoutFormValues>({
     resolver: zodResolver(tryoutSchema),
@@ -68,6 +69,9 @@ export default function TryoutNewPage() {
     },
   });
 
+
+    console.info('getValues() =>',getValues());
+  
   // ── Field arrays (owned here, passed down as props) ──────────────────────────
   const sessionsField = useFieldArray({ control, name: "sessions" });
   const segmentsField = useFieldArray({ control, name: "segments" });

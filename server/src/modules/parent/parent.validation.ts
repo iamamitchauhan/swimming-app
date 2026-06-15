@@ -11,6 +11,27 @@ export const parentRegisterSchema = z
   })
   .strict();
 
+/**
+ * POST /parent/auth/login — send OTP to parent email
+ */
+export const parentLoginSchema = z
+  .object({
+    email: z.string().email('Email must be a valid email address').toLowerCase(),
+  })
+  .strict();
+
+/**
+ * POST /parent/auth/verify-otp — verify OTP and login
+ */
+export const parentVerifyOtpSchema = z
+  .object({
+    email: z.string().email('Email must be a valid email address').toLowerCase(),
+    otp: z.string().length(6, 'OTP must be 6 digits'),
+  })
+  .strict();
+
 // ─── Inferred types ───────────────────────────────────────────────────────────
 
 export type ParentRegisterInput = z.infer<typeof parentRegisterSchema>;
+export type ParentLoginInput = z.infer<typeof parentLoginSchema>;
+export type ParentVerifyOtpInput = z.infer<typeof parentVerifyOtpSchema>;

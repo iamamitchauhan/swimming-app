@@ -1,12 +1,27 @@
-import { MOCK_TRYOUTS } from "../mock-data";
 import { db, uid, wait } from "../mock-db";
 import type { Registration } from "../types";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api/v1";
+
 export interface CreateRegistrationInput {
   tryoutId: string;
-  childId: string;
-  childName: string;
+  sessionId: string;
   slotId: string;
+  segmentId?: string;
+  swimmerFirstName: string;
+  swimmerLastName: string;
+  swimmerDob: string;
+  ageOnTryoutDay: number;
+  hasUsaMembership: boolean;
+  usaMembershipId?: string;
+  clubName?: string;
+  swimTime50Free?: string;
+  swimTime100Free?: string;
+  strokes: string[];
+  starts: string[];
+  turns: string[];
+  guardianName: string;
+  guardianEmail: string;
 }
 
 export async function fetchRegistrations(): Promise<Registration[]> {
@@ -23,42 +38,23 @@ export async function fetchRegistrationById(id: string): Promise<Registration | 
 
 export async function createRegistration(
   input: CreateRegistrationInput,
-): Promise<Registration> {
-  await wait(400);
-  const tryout = MOCK_TRYOUTS.find((t) => t.id === input.tryoutId);
-  const slot = tryout?.slots.find((s) => s.id === input.slotId);
-  if (!tryout || !slot) throw new Error("Tryout or slot not found");
-
-  const reg: Registration = {
-    id: uid("reg"),
-    tryoutId: tryout.id,
-    tryoutName: tryout.name,
-    childId: input.childId,
-    childName: input.childName,
-    slotId: slot.id,
-    slotLabel: slot.label,
-    slotTime: slot.time,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-    timeline: [
-      { status: "Submitted", at: new Date().toISOString() },
-      { status: "Under Review", at: new Date().toISOString() },
-    ],
-  };
-  db.setRegistrations([reg, ...db.getRegistrations()]);
-  // Mock notification
-  const notes = db.getNotifications();
-  db.setNotifications([
-    {
-      id: uid("ntf"),
-      title: "Registration Submitted",
-      body: `${input.childName} is registered for ${tryout.name}.`,
-      createdAt: new Date().toISOString(),
-      read: false,
+): Promise<{ id: string }> {
+  const token = localStorage.getItem("auth_token");
+  const res = await fetch(`${API_BASE}/registrations`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    ...notes,
-  ]);
-  return reg;
+    body: JSON.stringify(input),
+  });
+
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(body?.message ?? "Registration failed. Please try again.");
+  }
+
+  return { id: body.data?.registration?._id ?? "" };
 }
 
 export async function cancelRegistration(id: string): Promise<Registration> {

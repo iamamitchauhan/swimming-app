@@ -7,9 +7,28 @@ export interface IRegistration extends Document {
   swimmerId: mongoose.Types.ObjectId;
   parentId: mongoose.Types.ObjectId;
   
-  // References to embedded objects
-  sessionId: string;
+  // References to separate collections
+  sessionId: mongoose.Types.ObjectId;
+  slotId: mongoose.Types.ObjectId;
   segmentId: string;
+
+  // Swimmer details captured at registration time
+  swimmerDetails: {
+    firstName: string;
+    lastName: string;
+    dob: string;
+    ageOnTryoutDay: number;
+    hasUsaMembership: boolean;
+    usaMembershipId?: string;
+    clubName?: string;
+    swimTime50Free?: string;
+    swimTime100Free?: string;
+    strokes: string[];
+    starts: string[];
+    turns: string[];
+    guardianName: string;
+    guardianEmail: string;
+  };
   
   // Registration Management
   status: 'registered' | 'waitlisted' | 'offered' | 'rejected' | 'cancelled';
@@ -47,7 +66,14 @@ const registrationSchema = new Schema<IRegistration>(
       index: true,
     },
     sessionId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'TryoutSession',
+      required: true,
+      index: true,
+    },
+    slotId: {
+      type: Schema.Types.ObjectId,
+      ref: 'TryoutSlot',
       required: true,
       index: true,
     },
@@ -75,6 +101,22 @@ const registrationSchema = new Schema<IRegistration>(
     },
     lastCommunicationAt: {
       type: Date,
+    },
+    swimmerDetails: {
+      firstName: { type: String, required: true },
+      lastName: { type: String, required: true },
+      dob: { type: String, required: true },
+      ageOnTryoutDay: { type: Number, required: true },
+      hasUsaMembership: { type: Boolean, default: false },
+      usaMembershipId: { type: String },
+      clubName: { type: String },
+      swimTime50Free: { type: String },
+      swimTime100Free: { type: String },
+      strokes: [{ type: String }],
+      starts: [{ type: String }],
+      turns: [{ type: String }],
+      guardianName: { type: String, required: true },
+      guardianEmail: { type: String, required: true },
     },
   },
   {

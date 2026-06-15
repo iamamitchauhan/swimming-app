@@ -4,14 +4,18 @@ import { authorize } from '../../middleware/authorize.middleware';
 import { USER_ROLES } from '../../shared/constants/roles';
 import { RegistrationRepository } from './registration.repository';
 import { TryoutRepository } from '../tryout/tryout.repository';
+import { TryoutSessionRepository } from '../tryout/tryout-session.repository';
+import { TryoutSlotRepository } from '../tryout/tryout-slot.repository';
 import { SwimmerRepository } from '../swimmer/swimmer.repository';
 import { RegistrationService } from './registration.service';
 import { RegistrationController } from './registration.controller';
 
 const repository = new RegistrationRepository();
 const tryoutRepository = new TryoutRepository();
+const sessionRepository = new TryoutSessionRepository();
+const slotRepository = new TryoutSlotRepository();
 const swimmerRepository = new SwimmerRepository();
-const service = new RegistrationService(repository, tryoutRepository, swimmerRepository);
+const service = new RegistrationService(repository, tryoutRepository, sessionRepository, slotRepository, swimmerRepository);
 const controller = new RegistrationController(service);
 
 /**

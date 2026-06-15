@@ -67,4 +67,13 @@ export class TryoutService {
   async listActive(params: TryoutListParams = {}): Promise<TryoutListResult> {
     return this.repo.list({ ...params });
   }
+
+  /**
+   * Returns a single active tryout by ID for public landing page (no auth required).
+   */
+  async getPublicById(id: string): Promise<PlainTryout> {
+    const tryout = await this.repo.findById(id);
+    if (!tryout) throw new NotFoundError('Tryout not found');
+    return tryout;
+  }
 }

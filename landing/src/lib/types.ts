@@ -1,11 +1,37 @@
 export type TryoutStatus = "open" | "almost_full" | "closed";
 
+export interface TryoutSlot {
+  id: string;
+  sessionId: string;
+  slotIndex: number;
+  startTime: string;
+  endTime: string;
+  label: string;
+  capacity: number;
+  registeredCount: number;
+  availableSlots: number;
+}
+
+export interface TryoutSession {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  label: string;
+  slotDuration: number;
+  swimmersPerSlot: number;
+  totalSlots: number;
+  slots: TryoutSlot[];
+}
+
 export interface Slot {
   id: string;
+  sessionId: string;
   label: string;
   time: string;
   capacity: number;
   taken: number;
+  availableSlots: number;
 }
 
 export interface Tryout {
@@ -26,8 +52,17 @@ export interface Tryout {
   description: string;
   purpose: string;
   eligibility: string[];
+  segments: {
+    name: string;
+    minAge: number;
+    maxAge: number;
+    level: string;
+  }[];
+  steps: { title: string; description: string }[];
+  faqs: { question: string; answer: string }[];
   image: string;
   slots: Slot[];
+  sessions: TryoutSession[];
 }
 
 export interface Child {

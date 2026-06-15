@@ -94,6 +94,12 @@ export class SwimmerRepository {
     };
   }
 
+  async findByParentAndName(parentId: string, firstName: string, lastName: string): Promise<PlainSwimmer | null> {
+    return SwimmerModel.findOne({ parentId, firstName, lastName, isActive: true })
+      .lean<PlainSwimmer>()
+      .exec();
+  }
+
   async create(data: Omit<PlainSwimmer, '_id' | 'createdAt' | 'updatedAt'>): Promise<PlainSwimmer> {
     const doc = await new SwimmerModel(data).save();
     const plain = await SwimmerModel.findById(doc._id).lean<PlainSwimmer>().exec();

@@ -33,9 +33,6 @@ export default function LandingPage() {
               <Button asChild size="lg" className="btn-cta">
                 <Link to="/tryouts">View Tryouts <ArrowRight className="h-4 w-4" /></Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
-                <Link to="/register">Create Account</Link>
-              </Button>
             </div>
           </div>
           <div className="hidden lg:block" />

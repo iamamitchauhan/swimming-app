@@ -23,12 +23,7 @@ export class RegistrationController {
       if (!parentId) return next(new ForbiddenError('User not authenticated'));
 
       const validatedData = createRegistrationSchema.parse(req.body);
-      const registrationData = {
-        ...validatedData,
-        parentId,
-        emailSent: false,
-      };
-      const registration = await this.service.create(registrationData, parentId);
+      const registration = await this.service.create(validatedData, parentId);
       
       sendSuccess(res, { registration }, MESSAGES.CREATED, HTTP_STATUS.CREATED);
     } catch (err) {

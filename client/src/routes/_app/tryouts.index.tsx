@@ -22,6 +22,7 @@ import {
 import {
   Plus, Search, MoreHorizontal, Eye, Pencil, Trash2,
   ChevronLeft, ChevronRight, Loader2, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, X,
+  EyeIcon,
 } from "lucide-react";
 import { useTryouts, useDeleteTryout } from "@/hooks/use-tryouts";
 import type { Tryout, TryoutSortField, SortOrder } from "@/lib/api/tryouts.api";
@@ -333,6 +334,9 @@ export default function TryoutsList() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/tryouts/view/${t._id}`)}>
+                                <EyeIcon className="h-4 w-4 mr-2" /> View
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => navigate(`/tryouts/edit/${t._id}`)}>
                                 <Pencil className="h-4 w-4 mr-2" /> Edit
                               </DropdownMenuItem>

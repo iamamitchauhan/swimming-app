@@ -3,8 +3,9 @@ import { AuthRepository, PlainUser } from '../auth/auth.repository';
 import { ConflictError, NotFoundError } from '../../shared/errors/domain.errors';
 import { generateSecureToken, hashToken } from '../../shared/utils/token';
 import { USER_ROLES } from '../../shared/constants/roles';
-import { sendEmailVerification } from '../../shared/utils/mailer';
+import { sendEmailVerification, sendOtp } from '../../shared/utils/mailer';
 import { ParentRegisterInput } from './parent.validation';
+import crypto from 'crypto';
 import logger from '../../shared/utils/logger';
 import jwt from 'jsonwebtoken';
 
@@ -89,11 +90,11 @@ export class ParentService {
 
     await this.repository.createEmailVerification({ email, tokenHash, expiresAt });
 
-    // Parent registrations redirect to landing app (port 3000)
+    // Parent registrations redirect to landing app (port 8000)
     const verifyUrl = `${config.LANDING_BASE_URL}/auth/verify-email?token=${plainToken}`;
     await sendEmailVerification({ to: email, verifyUrl });
 
-    logger.info({ email }, 'parent.register.verification_sent');
+    logger.info({ email, verifyUrl: verifyUrl.substring(0, 50) + '...' }, 'parent.register.verification_sent');
   }
 
   /**
@@ -124,6 +125,66 @@ export class ParentService {
     });
 
     logger.info({ email: record.email }, 'parent.email.verified');
+
+    return { token: authToken, user: publicUser };
+  }
+
+  /**
+   * Sends a 6-digit OTP to the parent's email for login.
+   * Throws NotFoundError if the email is not registered and verified.
+   */
+  async requestLoginOtp(email: string): Promise<void> {
+    const user = await this.repository.findUserByEmail(email);
+
+    if (!user || !user.emailVerified) {
+      throw new NotFoundError('No verified account found with this email address.');
+    }
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const codeHash = hashToken(otp);
+    const expiresAt = new Date(Date.now() + config.OTP_EXPIRES_MINUTES * 60 * 1000);
+
+    await this.repository.createOtp({ email, codeHash, purpose: 'login', expiresAt });
+    await sendOtp({ to: email, otp });
+
+    logger.info({ email }, 'parent.login.otp_sent');
+  }
+
+  /**
+   * Verifies the OTP and returns a JWT + public user profile on success.
+   * Tracks attempts and rejects after too many failures.
+   */
+  async verifyLoginOtp(email: string, otp: string): Promise<{ token: string; user: PublicUser }> {
+    const record = await this.repository.findValidOtp(email, 'login');
+
+    if (!record) {
+      throw new ConflictError('OTP is invalid or has expired. Please request a new one.');
+    }
+
+    const attempts = await this.repository.incrementOtpAttempts(record._id.toString());
+    if (attempts > 5) {
+      throw new ConflictError('Too many failed attempts. Please request a new OTP.');
+    }
+
+    const isValid = hashToken(otp) === record.codeHash;
+    if (!isValid) {
+      throw new ConflictError('Incorrect OTP. Please try again.');
+    }
+
+    await this.repository.markOtpUsed(record._id.toString());
+
+    const user = await this.repository.findUserByEmail(email);
+    if (!user) throw new NotFoundError('User not found.');
+
+    const publicUser = toPublicUser(user);
+    const authToken = signToken({
+      id: publicUser.id,
+      email: publicUser.email,
+      role: publicUser.role,
+      clubId: publicUser.clubId,
+    });
+
+    logger.info({ email }, 'parent.login.otp_verified');
 
     return { token: authToken, user: publicUser };
   }

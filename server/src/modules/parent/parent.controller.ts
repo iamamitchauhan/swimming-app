@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ParentService } from './parent.service';
-import { ParentRegisterInput } from './parent.validation';
+import { ParentRegisterInput, ParentLoginInput, ParentVerifyOtpInput } from './parent.validation';
 import { sendSuccess } from '../../shared/utils/response';
 import { HTTP_STATUS } from '../../shared/constants/httpStatus';
 import { MESSAGES } from '../../shared/constants/messages';
@@ -48,6 +48,32 @@ export class ParentController {
       const result = await this.service.verifyEmail(token);
       
       sendSuccess(res, result, MESSAGES.INVITATION_ACCEPTED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * POST /parent/auth/login — send OTP to parent email
+   */
+  login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { email } = req.body as ParentLoginInput;
+      await this.service.requestLoginOtp(email);
+      sendSuccess(res, null, MESSAGES.EMAIL_SENT, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * POST /parent/auth/verify-otp — verify OTP and return JWT
+   */
+  verifyOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { email, otp } = req.body as ParentVerifyOtpInput;
+      const result = await this.service.verifyLoginOtp(email, otp);
+      sendSuccess(res, result, 'Login successful.', HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

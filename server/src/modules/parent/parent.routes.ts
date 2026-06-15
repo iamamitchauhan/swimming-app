@@ -28,5 +28,7 @@ const otpRateLimiter = rateLimit({
 
 router.post('/auth/register', otpRateLimiter, controller.register);
 router.get('/auth/verify-email', controller.verifyEmail);
+router.post('/auth/login', otpRateLimiter, controller.login);
+router.post('/auth/verify-otp', otpRateLimiter, controller.verifyOtp);
 
 export { router as parentRouter };

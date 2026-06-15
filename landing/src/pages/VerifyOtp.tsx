@@ -5,7 +5,7 @@ import { MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { resendOtp, verifyOtp } from "@/lib/api/auth";
+import { resendVerification, verifyEmail } from "@/lib/api/auth";
 import { qk } from "@/lib/queries";
 import { toast } from "sonner";
 
@@ -14,12 +14,12 @@ export default function VerifyOtpPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const verify = useMutation({
-    mutationFn: () => verifyOtp(code),
-    onSuccess: (parent) => { qc.setQueryData(qk.parent, parent); toast.success("Email verified!"); navigate("/dashboard"); },
+    mutationFn: () => verifyEmail(code),
+    onSuccess: ({ user }) => { qc.setQueryData(qk.parent, user); toast.success("Email verified!"); navigate("/dashboard"); },
     onError: (e: Error) => toast.error(e.message),
   });
   const resend = useMutation({
-    mutationFn: resendOtp,
+    mutationFn: () => resendVerification("pending@example.com"), // TODO: Get actual email from pending registration
     onSuccess: () => toast.success("Code resent. (Demo code is still 123456.)"),
     onError: (e: Error) => toast.error(e.message),
   });

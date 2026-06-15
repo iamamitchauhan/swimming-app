@@ -80,8 +80,8 @@ export function StepBranding({ watch, setValue, bannerFile, bannerPreview, onFil
       </FieldGroup>
 
       {/* Banner source */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <FieldGroup label="Upload Banner Image" hint="PNG, JPG, or WEBP. Clears the URL below.">
+      <div className="grid gap-4 sm:grid-cols-1">
+        {/* <FieldGroup label="Upload Banner Image" hint="PNG, JPG, or WEBP. Clears the URL below.">
           <div
             className={cn(
               "border-2 border-dashed rounded-xl p-5 flex flex-col items-center gap-2 cursor-pointer transition-colors",
@@ -107,9 +107,9 @@ export function StepBranding({ watch, setValue, bannerFile, bannerPreview, onFil
               onChange={handleFileChange}
             />
           </div>
-        </FieldGroup>
+        </FieldGroup> */}
 
-        <FieldGroup label="Or Image URL" hint="Paste a direct image URL. Clears uploaded file.">
+        <FieldGroup label="Image URL" hint="Paste a direct image URL. Clears uploaded file.">
           <div className="relative">
             <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
