@@ -32,6 +32,16 @@ export type PlainRegistration = {
   status: 'registered' | 'waitlisted' | 'offered' | 'rejected' | 'cancelled';
   waitlistPosition?: number;
   registeredAt: Date;
+  scores?: {
+    safetyEntryExit?: boolean;
+    safetyFloat?: boolean;
+    freestyle?: number;
+    backstroke?: number;
+    breaststroke?: number;
+    butterfly?: number;
+    totalScore?: number;
+  };
+  usaVerificationStatus?: 'pending' | 'needs_review' | 'verified' | 'rejected';
   emailSent: boolean;
   lastCommunicationAt?: Date;
   createdAt: Date;
@@ -113,6 +123,15 @@ export class RegistrationRepository {
       limit,
       totalPages: Math.ceil(total / limit)
     };
+  }
+
+  async findAllByParent(parentId: string): Promise<PlainRegistration[]> {
+    return RegistrationModel.find({ parentId })
+      .populate('tryoutId', 'name status location description bannerUrl createdAt')
+      .populate('swimmerId', 'firstName lastName birthDate')
+      .sort({ registeredAt: -1 })
+      .lean<PlainRegistration[]>()
+      .exec();
   }
 
   async create(data: Omit<PlainRegistration, '_id' | 'createdAt' | 'updatedAt'>): Promise<PlainRegistration> {

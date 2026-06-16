@@ -50,6 +50,24 @@ export class RegistrationController {
   };
 
   /**
+   * GET /registrations/my-tryouts
+   * Returns all tryouts where the parent registered children,
+   * with each child's status and scores.
+   */
+  listParentTryouts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parentId = req.user?.id;
+      if (!parentId) return next(new ForbiddenError('User not authenticated'));
+
+      const result = await this.service.listParentTryouts(parentId);
+      
+      sendSuccess(res, { tryouts: result }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
    * GET /registrations/:id
    * Returns a single registration by ID with ownership validation
    */

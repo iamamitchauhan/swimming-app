@@ -20,6 +20,8 @@ function themeBg(theme: string) {
 }
 
 export function TryoutCard({ tryout }: { tryout: Tryout }) {
+  console.info('tryout =>',tryout);
+  
   const status = tryoutStatus(tryout);
   const slots = availableSlotsCount(tryout);
 
@@ -39,7 +41,7 @@ export function TryoutCard({ tryout }: { tryout: Tryout }) {
           <div className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${themeBg(tryout.purpose)}`} />
         )}
         <div className="absolute right-3 top-3">
-          <TryoutStatusBadge status={status} />
+          {/* <TryoutStatusBadge status={status} /> */}
         </div>
         <div className="absolute bottom-3 left-3 rounded-md bg-background/90 px-2 py-1 text-xs font-semibold text-foreground backdrop-blur">
           Ages {tryout.ageGroup}
@@ -48,9 +50,9 @@ export function TryoutCard({ tryout }: { tryout: Tryout }) {
 
       <div className="flex flex-col gap-3 p-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-ocean">
+          {/* <p className="text-xs font-semibold uppercase tracking-wide text-ocean">
             {tryout.club}
-          </p>
+          </p> */}
           <h3 className="mt-1 line-clamp-2 font-display text-lg font-bold text-foreground">
             {tryout.name}
           </h3>

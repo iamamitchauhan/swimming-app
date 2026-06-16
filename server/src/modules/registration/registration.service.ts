@@ -24,6 +24,74 @@ export class RegistrationService {
   }
 
   /**
+   * Returns all tryouts where the parent registered their children,
+   * grouped by tryout with each child's status and scores.
+   */
+  async listParentTryouts(parentId: string): Promise<Array<{
+    tryout: {
+      _id: string;
+      name: string;
+      status: string;
+      location: string;
+      description: string;
+      bannerUrl: string;
+      createdAt: Date;
+    };
+    children: Array<{
+      registrationId: string;
+      swimmerId: string;
+      firstName: string;
+      lastName: string;
+      ageOnTryoutDay: number;
+      status: string;
+      scores: PlainRegistration['scores'];
+      registeredAt: Date;
+    }>;
+  }>> {
+    const registrations = await this.repo.findAllByParent(parentId);
+
+    const tryoutMap = new Map<string, {
+      tryout: any;
+      children: any[];
+    }>();
+
+    for (const reg of registrations) {
+      const tryout = reg.tryoutId as any;
+      const tryoutId = tryout._id?.toString?.() ?? tryout.toString?.() ?? tryout;
+
+      if (!tryoutMap.has(tryoutId)) {
+        tryoutMap.set(tryoutId, {
+          tryout: {
+            _id: tryoutId,
+            name: tryout.name ?? '',
+            status: tryout.status ?? '',
+            location: tryout.location ?? '',
+            description: tryout.description ?? '',
+            bannerUrl: tryout.bannerUrl ?? '',
+            createdAt: tryout.createdAt,
+          },
+          children: [],
+        });
+      }
+
+      const swimmer = reg.swimmerId as any;
+      const entry = tryoutMap.get(tryoutId)!;
+      entry.children.push({
+        registrationId: reg._id,
+        swimmerId: swimmer._id?.toString?.() ?? swimmer.toString?.() ?? swimmer,
+        firstName: reg.swimmerDetails.firstName,
+        lastName: reg.swimmerDetails.lastName,
+        ageOnTryoutDay: reg.swimmerDetails.ageOnTryoutDay,
+        status: reg.status,
+        scores: reg.scores,
+        registeredAt: reg.registeredAt,
+      });
+    }
+
+    return Array.from(tryoutMap.values());
+  }
+
+  /**
    * Returns a single registration by ID with ownership validation
    */
   async getById(id: string, parentId: string): Promise<PlainRegistration> {

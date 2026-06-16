@@ -54,9 +54,9 @@ export default function LandingPage() {
             <p className="text-sm font-semibold uppercase tracking-wider text-ocean">Now open</p>
             <h2 className="mt-1 font-display text-3xl font-bold sm:text-4xl">Tryouts taking registrations</h2>
           </div>
-          <Button asChild variant="ghost" className="hidden sm:inline-flex">
+          {/* <Button asChild variant="ghost" className="hidden sm:inline-flex">
             <Link to="/tryouts">See all <ArrowRight className="h-4 w-4" /></Link>
-          </Button>
+          </Button> */}
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((t) => <TryoutCard key={t.id} tryout={t} />)}

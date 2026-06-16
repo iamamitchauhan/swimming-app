@@ -26,6 +26,7 @@ const controller = new RegistrationController(service);
  *
  * POST /registrations           — Create registration
  * GET  /registrations/my-kids   — List parent's registrations
+ * GET  /registrations/my-tryouts — List tryouts with child status & scores
  * GET  /registrations/:id       — Get registration details
  * PUT  /registrations/:id       — Update registration status
  */
@@ -39,6 +40,7 @@ registrationRouter.use(authorize(USER_ROLES.PARENT));
 
 registrationRouter.post('/', controller.create);
 registrationRouter.get('/my-kids', controller.listByParent);
+registrationRouter.get('/my-tryouts', controller.listParentTryouts);
 registrationRouter.get('/:id', controller.getById);
 registrationRouter.put('/:id', controller.updateStatus);
 
