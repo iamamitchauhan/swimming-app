@@ -10,6 +10,8 @@ export const step1Schema = z
       .regex(/^[+\d\s\-().]+$/, 'Phone number is invalid')
       .trim(),
     logoUrl: z.string().url('Logo URL must be valid').optional(),
+    clubSize: z.string().optional(),
+    region: z.string().optional(),
   })
   .strict();
 

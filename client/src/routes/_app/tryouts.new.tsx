@@ -4,7 +4,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   tryoutSchema,
@@ -46,7 +46,6 @@ export default function TryoutNewPage() {
     watch,
     setValue,
     trigger,
-    getValues,
     formState: { errors },
   } = useForm<TryoutFormValues>({
     resolver: zodResolver(tryoutSchema),
@@ -69,9 +68,6 @@ export default function TryoutNewPage() {
     },
   });
 
-
-    console.info('getValues() =>',getValues());
-  
   // ── Field arrays (owned here, passed down as props) ──────────────────────────
   const sessionsField = useFieldArray({ control, name: "sessions" });
   const segmentsField = useFieldArray({ control, name: "segments" });
@@ -83,7 +79,12 @@ export default function TryoutNewPage() {
   async function goNext() {
     const stepKey = currentStep as keyof typeof STEP_FIELDS;
     const valid = await trigger(STEP_FIELDS[stepKey]);
-    if (valid) setCurrentStep((s) => Math.min(TOTAL_STEPS, s + 1));
+    if (!valid) return;
+    if (currentStep === 6) {
+      await handleSubmit(onSaveAsDraft)();
+      return;
+    }
+    setCurrentStep((s) => Math.min(TOTAL_STEPS, s + 1));
   }
 
   function goBack() {
@@ -92,15 +93,15 @@ export default function TryoutNewPage() {
 
   // ── Submission ───────────────────────────────────────────────────────────────
 
-  async function onSubmit(data: TryoutFormValues, status: "draft" | "open") {
+  async function onSaveAsDraft(data: TryoutFormValues) {
     setApiError("");
     try {
-      await createMutation.mutateAsync({
+      const created = await createMutation.mutateAsync({
         ...data,
-        status,
+        status: "draft",
         banner: bannerFile ?? undefined,
       });
-      navigate("/tryouts");
+      navigate(`/tryouts/edit/${created._id}?step=7`, { replace: true });
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     }
@@ -113,174 +114,136 @@ export default function TryoutNewPage() {
     <PageShell
       title="New Tryout"
       crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: "New" }]}
-      
     >
-      <div className="max-w-2xl mx-auto">
+      <div className="flex gap-0 min-h-[calc(100vh-200px)]">
 
-        {/* ── Stepper header ─────────────────────────────────────────────────── */}
-        <div className="sticky top-[60px] z-10 bg-background/95 backdrop-blur-sm py-4 mb-4 -mx-4 px-4 lg:-mx-8 lg:px-8">
-          {/* Progress bar */}
-          <div className="flex items-center gap-0 mb-6">
-            {WIZARD_STEPS.map((step, i) => {
-              const isDone = currentStep > step.id;
-              const isCurrent = currentStep === step.id;
-              const isLast = i === WIZARD_STEPS.length - 1;
-              return (
-                <div key={step.id} className="flex items-center flex-1 last:flex-none">
-                  {/* Circle */}
-                  <button
-                    type="button"
-                    onClick={() => isDone && setCurrentStep(step.id)}
-                    className={cn(
-                      "h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-all",
-                      isDone
-                        ? "bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90"
-                        : isCurrent
-                        ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
-                        : "bg-muted text-muted-foreground cursor-default",
-                    )}
-                  >
-                    {isDone ? <Check className="h-4 w-4" /> : step.id}
-                  </button>
-                  {/* Connector */}
-                  {!isLast && (
-                    <div
-                      className={cn(
-                        "h-0.5 flex-1 mx-1 transition-colors",
-                        isDone ? "bg-primary" : "bg-border",
-                      )}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        {/* ── Vertical tab sidebar ────────────────────────────────────────────── */}
+        <nav className="w-44 shrink-0 sticky top-[60px] self-start pt-2">
+          {WIZARD_STEPS.map((step) => {
+            const isDone = currentStep > step.id;
+            const isCurrent = currentStep === step.id;
+            return (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => (isDone || isCurrent) && setCurrentStep(step.id)}
+                className={cn(
+                  "w-full text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors border-l-2",
+                  isCurrent
+                    ? "border-l-primary text-primary"
+                    : isDone
+                    ? "border-l-transparent text-muted-foreground hover:text-foreground hover:border-l-border cursor-pointer"
+                    : "border-l-transparent text-muted-foreground/50 cursor-default",
+                )}
+              >
+                {step.label}
+              </button>
+            );
+          })}
+        </nav>
 
-          {/* Current step label */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Step {currentStep} of {TOTAL_STEPS}
-            </p>
-            <h2 className="text-xl font-bold text-foreground mt-0.5">
+        {/* ── Right panel ─────────────────────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col min-w-0 border-l border-border pl-8">
+
+          {/* Step heading */}
+          <div className="pt-2 pb-6">
+            <h2 className="text-xl font-bold text-foreground">
               {WIZARD_STEPS[currentStep - 1].label}
             </h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               {WIZARD_STEPS[currentStep - 1].description}
             </p>
           </div>
-        </div>
 
-        {/* ── API Error ──────────────────────────────────────────────────────── */}
-        {apiError && (
-          <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-6">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>{apiError}</span>
+          {/* ── API Error ────────────────────────────────────────────────────── */}
+          {apiError && (
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-6">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{apiError}</span>
+            </div>
+          )}
+
+          {/* ── Step content ─────────────────────────────────────────────────── */}
+          <div className="flex-1">
+            <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+              <form onSubmit={(e) => e.preventDefault()}>
+
+                {currentStep === 1 && (
+                  <StepBasics register={register} errors={errors} />
+                )}
+
+                {currentStep === 2 && (
+                  <StepBranding
+                    watch={watch}
+                    setValue={setValue}
+                    bannerFile={bannerFile}
+                    bannerPreview={bannerPreview}
+                    onFileChange={(file, preview) => {
+                      setBannerFile(file);
+                      setBannerPreview(preview);
+                    }}
+                  />
+                )}
+
+                {currentStep === 3 && (
+                  <StepSessions
+                    register={register}
+                    control={control}
+                    watch={watch}
+                    setValue={setValue}
+                    errors={errors}
+                    sessionsField={sessionsField}
+                  />
+                )}
+
+                {currentStep === 4 && (
+                  <StepSegments
+                    register={register}
+                    control={control}
+                    errors={errors}
+                    segmentsField={segmentsField}
+                  />
+                )}
+
+                {currentStep === 5 && (
+                  <StepHowItWorks
+                    register={register}
+                    stepsField={stepsField}
+                  />
+                )}
+
+                {currentStep === 6 && (
+                  <StepPresentation
+                    register={register}
+                    faqsField={faqsField}
+                  />
+                )}
+
+              </form>
+            </div>
           </div>
-        )}
 
-        {/* ── Step content card ──────────────────────────────────────────────── */}
-        <div className="min-h-[calc(100vh-525px)]"> 
-          <div className="bg-card rounded-xl border border-border p-6 shadow-sm ">
-          <form onSubmit={(e) => e.preventDefault()}>
+          {/* ── Footer nav ───────────────────────────────────────────────────── */}
+          <div className="py-4 flex items-center justify-between gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={currentStep === 1 ? () => navigate("/tryouts") : goBack}
+              disabled={isSubmitting}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              {currentStep === 1 ? "Cancel" : "Back"}
+            </Button>
 
-            {currentStep === 1 && (
-              <StepBasics register={register} errors={errors} />
-            )}
-
-            {currentStep === 2 && (
-              <StepBranding
-                watch={watch}
-                setValue={setValue}
-                bannerFile={bannerFile}
-                bannerPreview={bannerPreview}
-                onFileChange={(file, preview) => {
-                  setBannerFile(file);
-                  setBannerPreview(preview);
-                }}
-              />
-            )}
-
-            {currentStep === 3 && (
-              <StepSessions
-                register={register}
-                control={control}
-                watch={watch}
-                setValue={setValue}
-                errors={errors}
-                sessionsField={sessionsField}
-              />
-            )}
-
-            {currentStep === 4 && (
-              <StepSegments
-                register={register}
-                control={control}
-                errors={errors}
-                segmentsField={segmentsField}
-              />
-            )}
-
-            {currentStep === 5 && (
-              <StepHowItWorks
-                register={register}
-                stepsField={stepsField}
-              />
-            )}
-
-            {currentStep === 6 && (
-              <StepPresentation
-                register={register}
-                faqsField={faqsField}
-              />
-            )}
-
-          </form>
-        </div>
-        </div>
-
-      </div>
-
-      {/* ── Sticky footer ─────────────────────────────────────────────────────── */}
-      <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm py-4 mb-4 -mx-4 px-4 lg:-mx-8 lg:px-8">
-        <div className="max-w-2xl mx-auto px-4 lg:px-0 py-3 flex items-center justify-between gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={currentStep === 1 ? () => navigate("/tryouts") : goBack}
-            disabled={isSubmitting}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            {currentStep === 1 ? "Cancel" : "Back"}
-          </Button>
-
-          <div className="flex items-center gap-2">
-            {isLastStep ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isSubmitting}
-                  onClick={handleSubmit((d) => onSubmit(d, "draft"))}
-                >
-                  {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Save Draft
-                </Button>
-                <Button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleSubmit((d) => onSubmit(d, "open"))}
-                >
-                  {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Publish
-                </Button>
-              </>
-            ) : (
-              <Button type="button" onClick={goNext}>
-                Continue
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            )}
+            <Button type="button" onClick={goNext} disabled={isSubmitting}>
+              {currentStep === 6 && isSubmitting ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : null}
+              {currentStep === 6 ? "Save & Continue" : "Continue"}
+              {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
+            </Button>
           </div>
+
         </div>
       </div>
     </PageShell>

@@ -15,6 +15,7 @@ export type PlainTryout = {
   additionalInstructions: string;
   status: string;
   segments: Array<{
+    id?: string;
     name: string;
     minAge: number;
     maxAge: number;
@@ -32,6 +33,11 @@ export type PlainTryout = {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  // Computed aggregation fields (only present in list results)
+  sessionCount?: number;
+  startDate?: string | null;
+  totalSlots?: number;
+  registeredCount?: number;
 };
 
 export type TryoutSortField = 'name' | 'status' | 'createdAt' | 'updatedAt';
@@ -115,6 +121,30 @@ export class TryoutRepository {
             { $skip: skip },
             { $limit: limit },
             {
+              $lookup: {
+                from: 'tryout_sessions',
+                localField: '_id',
+                foreignField: 'tryoutId',
+                as: '_sessions',
+              },
+            },
+            {
+              $lookup: {
+                from: 'registrations',
+                let: { tid: '$_id' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: { $eq: ['$tryoutId', '$$tid'] },
+                      status: { $nin: ['cancelled'] },
+                    },
+                  },
+                  { $count: 'count' },
+                ],
+                as: '_regCount',
+              },
+            },
+            {
               $project: {
                 _id: 1,
                 name: 1,
@@ -128,20 +158,33 @@ export class TryoutRepository {
                 highlights: 1,
                 additionalInstructions: 1,
                 status: 1,
-                sessions: 1,
                 segments: 1,
                 steps: 1,
                 faqs: 1,
                 clubId: 1,
                 createdBy: 1,
                 createdAt: 1,
-                updatedAt: 1
-              }
-            }
+                updatedAt: 1,
+                sessionCount: { $size: '$_sessions' },
+                startDate: { $min: '$_sessions.date' },
+                totalSlots: {
+                  $sum: {
+                    $map: {
+                      input: '$_sessions',
+                      as: 's',
+                      in: '$$s.totalSlots',
+                    },
+                  },
+                },
+                registeredCount: {
+                  $ifNull: [{ $arrayElemAt: ['$_regCount.count', 0] }, 0],
+                },
+              },
+            },
           ],
-          totalCount: [{ $count: 'count' }]
-        }
-      }
+          totalCount: [{ $count: 'count' }],
+        },
+      },
     ];
 
     const [result] = await TryoutModel.aggregate(pipeline).exec();
@@ -228,6 +271,30 @@ export class TryoutRepository {
             { $skip: skip },
             { $limit: limit },
             {
+              $lookup: {
+                from: 'tryout_sessions',
+                localField: '_id',
+                foreignField: 'tryoutId',
+                as: '_sessions',
+              },
+            },
+            {
+              $lookup: {
+                from: 'registrations',
+                let: { tid: '$_id' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: { $eq: ['$tryoutId', '$$tid'] },
+                      status: { $nin: ['cancelled'] },
+                    },
+                  },
+                  { $count: 'count' },
+                ],
+                as: '_regCount',
+              },
+            },
+            {
               $project: {
                 _id: 1,
                 name: 1,
@@ -241,16 +308,29 @@ export class TryoutRepository {
                 highlights: 1,
                 additionalInstructions: 1,
                 status: 1,
-                sessions: 1,
                 segments: 1,
                 steps: 1,
                 faqs: 1,
                 clubId: 1,
                 createdBy: 1,
                 createdAt: 1,
-                updatedAt: 1
-              }
-            }
+                updatedAt: 1,
+                sessionCount: { $size: '$_sessions' },
+                startDate: { $min: '$_sessions.date' },
+                totalSlots: {
+                  $sum: {
+                    $map: {
+                      input: '$_sessions',
+                      as: 's',
+                      in: '$$s.totalSlots',
+                    },
+                  },
+                },
+                registeredCount: {
+                  $ifNull: [{ $arrayElemAt: ['$_regCount.count', 0] }, 0],
+                },
+              },
+            },
           ],
           totalCount: [{ $count: 'count' }]
         }

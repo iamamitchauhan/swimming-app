@@ -15,6 +15,8 @@ export interface IClub extends Document {
   ownerId: mongoose.Types.ObjectId;
   status: ClubStatus;
   rejectionReason: string | null;
+  clubSize: string | null;
+  region: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +57,14 @@ const clubSchema = new Schema<IClub>(
       index: true,
     },
     rejectionReason: {
+      type: String,
+      default: null,
+    },
+    clubSize: {
+      type: String,
+      default: null,
+    },
+    region: {
       type: String,
       default: null,
     },

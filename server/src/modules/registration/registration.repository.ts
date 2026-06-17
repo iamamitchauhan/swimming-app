@@ -127,7 +127,7 @@ export class RegistrationRepository {
 
   async findAllByParent(parentId: string): Promise<PlainRegistration[]> {
     return RegistrationModel.find({ parentId })
-      .populate('tryoutId', 'name status location description bannerUrl createdAt')
+      .populate('tryoutId', 'name status location description theme bannerUrl createdAt')
       .populate('swimmerId', 'firstName lastName birthDate')
       .sort({ registeredAt: -1 })
       .lean<PlainRegistration[]>()

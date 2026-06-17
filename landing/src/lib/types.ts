@@ -63,6 +63,7 @@ export interface Tryout {
   image: string;
   slots: Slot[];
   sessions: TryoutSession[];
+  sessionCount?: number;
 }
 
 export interface Child {
@@ -105,6 +106,30 @@ export interface Parent {
   phone?: string;
   address?: string;
   emailVerified: boolean;
+}
+
+export interface MyTryoutChild {
+  registrationId: string;
+  swimmerId: string;
+  firstName: string;
+  lastName: string;
+  ageOnTryoutDay: number;
+  status: string;
+  registeredAt: string;
+}
+
+export interface MyTryoutItem {
+  tryout: {
+    _id: string;
+    name: string;
+    status: string;
+    location: string;
+    description: string;
+    bannerUrl: string;
+    createdAt: string;
+    theme?: string;
+  };
+  children: MyTryoutChild[];
 }
 
 export interface Notification {

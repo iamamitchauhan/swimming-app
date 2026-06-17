@@ -57,15 +57,19 @@ export function StepHowItWorks({ register, stepsField }: Props) {
           type="button"
           variant="outline"
           size="sm"
-          className="w-full"
-          onClick={() => stepsField.append({ title: "", description: "" })}
+          className={`w-full ${stepsField.fields.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          onClick={() => {
+            if(stepsField.fields.length < 3) {
+              stepsField.append({ title: "", description: "" })
+            }
+          }}
         >
           <Plus className="h-4 w-4 mr-1.5" /> Add step
         </Button>
       </div>
 
       {/* Additional instructions */}
-      <div className="pt-4 border-t border-border">
+      {/* <div className="pt-4 border-t border-border">
         <FieldGroup
           label="Additional Instructions"
           hint="Shown below the steps — what to bring, parking info, dress code, etc."
@@ -76,7 +80,7 @@ export function StepHowItWorks({ register, stepsField }: Props) {
             {...register("additionalInstructions")}
           />
         </FieldGroup>
-      </div>
+      </div> */}
     </div>
   );
 }

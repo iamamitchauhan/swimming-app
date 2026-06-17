@@ -37,7 +37,6 @@ function mapSortToApi(sort: TryoutFilters["sort"]): { sortBy: string; sortOrder:
 // Maps backend PlainTryout shape to frontend Tryout interface
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapTryout(raw: any): Tryout {
-  const firstSession = raw.sessions?.[0];
   const firstSegment = raw.segments?.[0];
 
   const sessions = (raw.sessions ?? []).map((s: any) => ({
@@ -62,8 +61,9 @@ function mapTryout(raw: any): Tryout {
     })),
   }));
 
-  // Flatten all slots for legacy consumers (totalCap, totalOpen, openSlot)
-  const slots = sessions.flatMap((s: any) =>
+  // Flatten per-slot detail when sessions are embedded (detail endpoint)
+  // Fall back to aggregated totals from list endpoint (totalSlots / registeredCount)
+  let slots = sessions.flatMap((s: any) =>
     s.slots.map((sl: any) => ({
       id: sl.id,
       sessionId: sl.sessionId,
@@ -74,6 +74,25 @@ function mapTryout(raw: any): Tryout {
       availableSlots: sl.availableSlots,
     }))
   );
+
+  // When the list endpoint returns aggregated totals instead of embedded slots,
+  // synthesise a single summary slot so capacity/taken calculations work on the card.
+  if (slots.length === 0 && (raw.totalSlots ?? 0) > 0) {
+    slots = [{
+      id: `${raw._id ?? raw.id}-summary`,
+      sessionId: "",
+      label: "Summary",
+      time: "",
+      capacity: raw.totalSlots as number,
+      taken: raw.registeredCount ?? 0,
+      availableSlots: Math.max(0, (raw.totalSlots as number) - (raw.registeredCount ?? 0)),
+    }];
+  }
+
+  // Derive date/time: prefer aggregated startDate from list, then first embedded session
+  const firstSession = raw.sessions?.[0];
+  const date = raw.startDate ?? firstSession?.date ?? "";
+  const time = firstSession ? `${firstSession.startTime} – ${firstSession.endTime}` : "";
 
   return {
     id: raw._id ?? raw.id,
@@ -87,9 +106,9 @@ function mapTryout(raw: any): Tryout {
     poolName: raw.location ?? "",
     address: raw.location ?? "",
     coachName: "",
-    date: firstSession?.date ?? "",
-    time: firstSession ? `${firstSession.startTime} – ${firstSession.endTime}` : "",
-    deadline: firstSession?.date ?? "",
+    date,
+    time,
+    deadline: date,
     description: raw.description ?? "",
     purpose: raw.theme ?? "",
     eligibility: raw.segments?.map((s: any) => s.name) ?? [],
@@ -99,6 +118,7 @@ function mapTryout(raw: any): Tryout {
     image: raw.bannerUrl ?? "",
     slots,
     sessions,
+    sessionCount: raw.sessionCount ?? sessions.length,
   };
 }
 

@@ -65,7 +65,7 @@ export class TryoutService {
    * Lists all active tryouts for public landing page (no authentication required).
    */
   async listActive(params: TryoutListParams = {}): Promise<TryoutListResult> {
-    return this.repo.list({ ...params });
+    return this.repo.list({ ...params, status: 'open' });
   }
 
   /**

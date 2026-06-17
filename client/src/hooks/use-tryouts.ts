@@ -76,3 +76,14 @@ export function useDeleteTryout() {
     },
   });
 }
+
+export function usePublishTryout() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => tryoutsApi.publish(id),
+    onSuccess: (updated) => {
+      qc.setQueryData(tryoutKeys.detail(updated._id), updated);
+      qc.invalidateQueries({ queryKey: tryoutKeys.list() });
+    },
+  });
+}

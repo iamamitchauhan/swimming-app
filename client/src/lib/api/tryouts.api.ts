@@ -66,6 +66,11 @@ export interface Tryout {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  // Computed from aggregation
+  sessionCount: number;
+  startDate?: string;
+  totalSlots: number;
+  registeredCount: number;
 }
 
 // ─── List params / result ─────────────────────────────────────────────────────
@@ -185,6 +190,13 @@ export const tryoutsApi = {
    * Deletes a tryout
    */
   delete: (id: string) => apiClient.delete(`/tryouts/${id}`),
+
+  /**
+   * PATCH /tryouts/:id/publish
+   * Publishes a draft tryout (sets status to 'open')
+   */
+  publish: (id: string): Promise<Tryout> =>
+    api<{ tryout: Tryout }>(apiClient.patch(`/tryouts/${id}/publish`)).then((res) => res.tryout),
 
   /**
    * GET /tryouts/:id/slots

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, CheckCircle2, Loader2, Users, XCircle } from "lucide-react";
+import { AlertCircle, Building2, Calendar, CheckCircle2, Hash, Loader2, MapPin, Phone, Users, XCircle } from "lucide-react";
 import { useAllClubs, usePendingClubs, useApproveClub, useRejectClub } from "@/hooks/use-clubs";
 import { useAuthStore } from "@/lib/auth.store";
 import { useApiError } from "@/hooks/use-api-error";
@@ -92,9 +92,38 @@ function ClubCard({ club, isSuperAdmin }: { club: Club; isSuperAdmin: boolean })
           <h3 className="font-semibold">{club.name}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">{club.address}</p>
         </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Users className="h-3 w-3" /> {club.phone}
+        <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Phone className="h-3 w-3 shrink-0" />
+            <span>{club.phone || <em className="opacity-60">No phone</em>}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Hash className="h-3 w-3 shrink-0" />
+            <span className="font-mono truncate" title={club.ownerId}>{club.ownerId}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Calendar className="h-3 w-3 shrink-0" />
+            <span>{new Date(club.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</span>
+          </div>
+          {club.clubSize && (
+            <div className="flex items-center gap-1.5">
+              <Users className="h-3 w-3 shrink-0" />
+              <span>{club.clubSize} members</span>
+            </div>
+          )}
+          {club.region && (
+            <div className="flex items-center gap-1.5">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span>{club.region}</span>
+            </div>
+          )}
         </div>
+        {club.status === "rejected" && club.rejectionReason && (
+          <div className="flex items-start gap-1.5 text-xs text-destructive bg-destructive/8 rounded-lg px-2.5 py-2">
+            <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+            <span className="line-clamp-2">{club.rejectionReason}</span>
+          </div>
+        )}
 
         {isSuperAdmin && club.status === "pending_review" && (
           <div className="flex gap-2 pt-1 border-t border-border mt-auto">

@@ -125,7 +125,8 @@ export class TryoutController {
       if (!clubId) return next(new ForbiddenError('No club associated with user'));
 
       const tryout = await this.service.getById(id, clubId);
-      sendSuccess(res, { tryout }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+      const sessions = await sessionRepo.findByTryout(id);
+      sendSuccess(res, { tryout: { ...tryout, sessions } }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }
@@ -227,6 +228,24 @@ export class TryoutController {
         await syncSessionsAndSlots(id, rawSessions, effectiveSlotDuration, effectiveSwimmersPerSlot);
       }
 
+      const sessions = await sessionRepo.findByTryout(id);
+      sendSuccess(res, { tryout: { ...tryout, sessions } }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * PATCH /tryouts/:id/publish
+   * Publishes a draft tryout by setting status to 'open'.
+   */
+  publish = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const clubId = req.user?.clubId;
+      if (!clubId) return next(new ForbiddenError('No club associated with user'));
+
+      const tryout = await this.service.update(id, clubId, { status: 'open' });
       sendSuccess(res, { tryout }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);

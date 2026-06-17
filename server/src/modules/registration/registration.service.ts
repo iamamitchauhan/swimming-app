@@ -34,6 +34,7 @@ export class RegistrationService {
       status: string;
       location: string;
       description: string;
+      theme: string;
       bannerUrl: string;
       createdAt: Date;
     };
@@ -67,6 +68,7 @@ export class RegistrationService {
             status: tryout.status ?? '',
             location: tryout.location ?? '',
             description: tryout.description ?? '',
+            theme: tryout.theme ?? '',
             bannerUrl: tryout.bannerUrl ?? '',
             createdAt: tryout.createdAt,
           },

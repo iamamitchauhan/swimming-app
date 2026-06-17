@@ -62,6 +62,13 @@ tryoutRouter.put(
   controller.update,
 );
 
+tryoutRouter.patch(
+  '/:id/publish',
+  authenticate,
+  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
+  controller.publish,
+);
+
 tryoutRouter.delete(
   '/:id',
   authenticate,

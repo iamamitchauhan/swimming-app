@@ -64,6 +64,7 @@ export function StepSessions({
             ? calcSlots(sv.startTime, sv.endTime, slotDuration)
             : { slots: 0 };
           const capacity = slots * swimmersPerSlot;
+          const displayLabel = sv ? buildLabel(sv.date ?? "", sv.startTime ?? "", sv.endTime ?? "") : "";
 
           return (
             <div key={field.id} className="rounded-xl border border-border p-4 space-y-4">
@@ -75,9 +76,9 @@ export function StepSessions({
                   <span className="text-sm font-medium text-foreground">
                     Session {idx + 1}
                   </span>
-                  {sv?.label && (
+                  {displayLabel && (
                     <span className="text-xs text-muted-foreground hidden sm:inline">
-                      · {sv.label}
+                      · {displayLabel}
                     </span>
                   )}
                 </div>
@@ -138,7 +139,7 @@ export function StepSessions({
                 </FieldGroup>
               </div>
 
-              {sv?.startTime && sv?.endTime && sv.endTime > sv.startTime && (
+              {slots > 0 && (
                 <div className="flex items-center gap-5 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
                   <span className="flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />

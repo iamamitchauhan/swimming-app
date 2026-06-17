@@ -1,5 +1,5 @@
 import { db, uid, wait } from "../mock-db";
-import type { Registration } from "../types";
+import type { MyTryoutItem, Registration } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api/v1";
 
@@ -94,4 +94,14 @@ export async function fetchNotifications() {
 export async function markAllNotificationsRead() {
   await wait(100);
   db.setNotifications(db.getNotifications().map((n) => ({ ...n, read: true })));
+}
+
+export async function fetchMyTryouts(): Promise<MyTryoutItem[]> {
+  const token = localStorage.getItem("auth_token");
+  const res = await fetch(`${API_BASE}/registrations/my-tryouts`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Failed to fetch registrations");
+  const body = await res.json();
+  return body.data?.tryouts ?? [];
 }

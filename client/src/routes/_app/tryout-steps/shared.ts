@@ -112,6 +112,7 @@ export const WIZARD_STEPS = [
   { id: 4, label: "Segments", description: "Age groups & levels" },
   { id: 5, label: "How It Works", description: "Steps & instructions" },
   { id: 6, label: "Presentation", description: "Public card & FAQ" },
+  { id: 7, label: "Review & Publish", description: "Preview and publish your tryout" },
 ] as const;
 
 export type WizardStepId = (typeof WIZARD_STEPS)[number]["id"];
@@ -125,4 +126,5 @@ export const STEP_FIELDS: Record<WizardStepId, (keyof TryoutFormValues)[]> = {
   4: ["segments"],
   5: ["steps", "additionalInstructions"],
   6: ["ctaLabel", "highlights", "faqs"],
+  7: [],
 };

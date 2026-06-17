@@ -7,6 +7,7 @@ import {
 } from "./api/tryouts";
 import { fetchChildren } from "./api/children";
 import {
+  fetchMyTryouts,
   fetchNotifications,
   fetchRegistrationById,
   fetchRegistrations,
@@ -22,6 +23,7 @@ export const qk = {
   registrations: ["registrations"] as const,
   registration: (id: string) => ["registration", id] as const,
   notifications: ["notifications"] as const,
+  myTryouts: ["myTryouts"] as const,
 };
 
 export const parentQuery = () =>
@@ -47,3 +49,6 @@ export const registrationQuery = (id: string) =>
 
 export const notificationsQuery = () =>
   queryOptions({ queryKey: qk.notifications, queryFn: fetchNotifications });
+
+export const myTryoutsQuery = () =>
+  queryOptions({ queryKey: qk.myTryouts, queryFn: fetchMyTryouts });

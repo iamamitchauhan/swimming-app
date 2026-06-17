@@ -36,7 +36,7 @@ export function Header() {
         </Link>
         <nav className="hidden items-center gap-1 md:flex">
           <HeaderLink to="/" end>Home</HeaderLink>
-          <HeaderLink to="/tryouts">Tryouts</HeaderLink>
+          {/* <HeaderLink to="/tryouts">Tryouts</HeaderLink> */}
           {parent ? (
             <>
               <HeaderLink to="/dashboard">Dashboard</HeaderLink>

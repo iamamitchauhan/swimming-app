@@ -49,7 +49,13 @@ export default function OnboardingPage() {
     setStep1Errors(errs);
     if (Object.keys(errs).length) return;
     saveStep1.mutate(
-      { name: clubName.trim(), address: address.trim(), phone: phone.trim() },
+      {
+        name: clubName.trim(),
+        address: address.trim(),
+        phone: phone.trim(),
+        ...(clubSize ? { clubSize } : {}),
+        ...(region ? { region } : {}),
+      },
       { onSuccess: () => setStep(2), onError: toastError },
     );
   };

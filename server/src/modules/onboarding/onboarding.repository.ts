@@ -11,6 +11,8 @@ export type PlainClub = {
   ownerId: string;
   status: string;
   rejectionReason: string | null;
+  clubSize: string | null;
+  region: string | null;
 };
 
 export class OnboardingRepository {
@@ -26,7 +28,7 @@ export class OnboardingRepository {
 
   async upsertClubDraft(
     ownerId: string,
-    data: Partial<{ name: string; address: string; phone: string; logoUrl: string }>,
+    data: Partial<{ name: string; address: string; phone: string; logoUrl: string; clubSize: string; region: string }>,
   ): Promise<PlainClub> {
     const club = await ClubModel.findOneAndUpdate(
       { ownerId: new mongoose.Types.ObjectId(ownerId), status: 'draft' },
