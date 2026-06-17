@@ -7,6 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "ts-node src/scripts/seed.ts",
+    "seed:questions": "ts-node src/scripts/question-library.seed.ts",
     "lint": "eslint src --ext .ts",
     "test": "jest"
   },

@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Calendar, CheckCircle2, Clock, MapPin, Loader2, AlertCircle } from "lucide-react";
+import { RegistrationFormPreview } from "./tryout-steps/registration-form-preview";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTryout } from "@/hooks/use-tryouts";
@@ -76,9 +77,10 @@ export default function TryoutPreviewPage() {
     );
   }
 
-  const steps    = tryout.steps    ?? [];
-  const faqs     = tryout.faqs     ?? [];
-  const segments = tryout.segments ?? [];
+  const steps               = tryout.steps               ?? [];
+  const faqs                = tryout.faqs                ?? [];
+  const segments            = tryout.segments            ?? [];
+  const registrationQuestions = tryout.registrationQuestions ?? [];
 
   // Group slots by session
   const slotsBySession = slots.reduce<Record<string, TryoutSlot[]>>((acc, slot) => {
@@ -326,12 +328,7 @@ export default function TryoutPreviewPage() {
           </section>
         )}
 
-        {/* Registration placeholder */}
-        <section className="mt-10 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-10 text-center">
-          <p className="text-sm font-medium text-muted-foreground">
-            Registration form appears here for participants
-          </p>
-        </section>
+        <RegistrationFormPreview selectedQuestions={registrationQuestions} />
 
       </div>
     </div>

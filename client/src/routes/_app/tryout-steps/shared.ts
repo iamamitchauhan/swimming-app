@@ -57,7 +57,7 @@ export const faqSchema = z.object({
 
 export const tryoutSchema = z.object({
   name: z.string().min(1, "Tryout name is required"),
-  location: z.string().optional(),
+  location: z.string().min(5, "Minimum 5 characters required"),
   description: z.string().optional(),
   theme: z.enum(["ocean", "sunset", "forest", "midnight", "coral"]),
   bannerUrl: z.string().optional(),
@@ -79,7 +79,7 @@ export const tryoutSchema = z.object({
     }),
   slotDuration: z.coerce.number(),
   swimmersPerSlot: z.coerce.number(),
-  segments: z.array(segmentSchema),
+  segments: z.array(segmentSchema).min(1, "At least one segment is required"),
   steps: z.array(stepSchema),
   additionalInstructions: z.string().optional(),
   ctaLabel: z.string(),
@@ -146,7 +146,8 @@ export const WIZARD_STEPS = [
   { id: 4, label: "Segments", description: "Age groups & levels" },
   { id: 5, label: "How It Works", description: "Steps & instructions" },
   { id: 6, label: "Presentation", description: "Public card & FAQ" },
-  { id: 7, label: "Review & Publish", description: "Preview and publish your tryout" },
+  { id: 7, label: "Registration", description: "Choose questions for the parent registration form" },
+  { id: 8, label: "Review & Publish", description: "Preview and publish your tryout" },
 ] as const;
 
 export type WizardStepId = (typeof WIZARD_STEPS)[number]["id"];
@@ -161,4 +162,5 @@ export const STEP_FIELDS: Record<WizardStepId, (keyof TryoutFormValues)[]> = {
   5: ["steps", "additionalInstructions"],
   6: ["ctaLabel", "highlights", "faqs"],
   7: [],
+  8: [],
 };

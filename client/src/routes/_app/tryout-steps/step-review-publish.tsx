@@ -2,6 +2,8 @@ import { ArrowLeft, Calendar, CheckCircle2, Clock, Loader2, MapPin, Send } from 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TryoutFormValues, THEMES, calcSlots } from "./shared";
+import { SelectedQuestion } from "@/lib/api/question-library.api";
+import { RegistrationFormPreview } from "./registration-form-preview";
 
 interface Props {
   values: TryoutFormValues;
@@ -10,6 +12,7 @@ interface Props {
   onBack: () => void;
   isPending: boolean;
   canPublish: boolean;
+  selectedQuestions?: SelectedQuestion[];
 }
 
 function getThemeBg(theme: string): string {
@@ -25,7 +28,7 @@ function formatSessionDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, isPending, canPublish }: Props) {
+export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, isPending, canPublish, selectedQuestions = [] }: Props) {
   const activeBanner = bannerPreview || values.bannerUrl || "";
   const sessions = values.sessions ?? [];
   const steps = values.steps?.filter((s) => s.title.trim()) ?? [];
@@ -261,12 +264,7 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
           </section>
         )}
 
-        {/* Registration placeholder */}
-        <section className="rounded-xl border border-dashed border-border bg-muted/30 px-6 py-10 text-center">
-          <p className="text-sm font-medium text-muted-foreground">
-            Registration form appears here for participants
-          </p>
-        </section>
+        <RegistrationFormPreview selectedQuestions={selectedQuestions} />
 
       </div>
     </div>

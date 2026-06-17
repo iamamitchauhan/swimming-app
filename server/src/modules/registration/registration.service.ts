@@ -116,8 +116,8 @@ export class RegistrationService {
       tryoutId, sessionId, slotId, segmentId,
       swimmerFirstName, swimmerLastName, swimmerDob, ageOnTryoutDay,
       hasUsaMembership, usaMembershipId, clubName,
-      swimTime50Free, swimTime100Free, strokes, starts, turns,
       guardianName, guardianEmail,
+      dynamicAnswers,
     } = input;
 
     // 1. Validate tryout exists and is open
@@ -181,14 +181,10 @@ export class RegistrationService {
         hasUsaMembership,
         usaMembershipId: hasUsaMembership ? usaMembershipId : '',
         clubName: clubName || '',
-        swimTime50Free: swimTime50Free || '',
-        swimTime100Free: swimTime100Free || '',
-        strokes,
-        starts,
-        turns,
         guardianName,
         guardianEmail,
       },
+      dynamicAnswers: dynamicAnswers ?? [],
       status: status as PlainRegistration['status'],
       waitlistPosition,
       registeredAt: new Date(),

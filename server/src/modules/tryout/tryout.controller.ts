@@ -11,6 +11,7 @@ import multer from 'multer';
 import { RegistrationModel } from '../../models/registration.model';
 import { SwimmerModel } from '../../models/swimmer.model';
 import { UserModel } from '../../models/user.model';
+import { TryoutRegistrationQuestionModel } from '../../models/tryout-registration-question.model';
 
 // ─── Slot helpers ─────────────────────────────────────────────────────────────
 
@@ -555,6 +556,49 @@ export class TryoutController {
       ).lean().exec();
       if (!updated) throw new NotFoundError('Registration not found');
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /tryouts/public/:id/registration-questions
+   * Returns the custom registration questions for a tryout (no auth required).
+   */
+  getPublicRegistrationQuestions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const doc = await TryoutRegistrationQuestionModel.findOne({ tryoutId: id }).lean().exec();
+      const questions = doc?.questions ?? [];
+      sendSuccess(res, { questions }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * PUT /tryouts/:id/registration-questions
+   * Upserts the registration question list for a tryout (admin/coach only).
+   */
+  upsertRegistrationQuestions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const clubId = req.user?.clubId;
+      if (!clubId) return next(new ForbiddenError('No club associated with user'));
+
+      // Verify tryout belongs to user's club
+      const tryout = await this.service.getById(id, clubId);
+      if (!tryout) return next(new NotFoundError('Tryout not found'));
+
+      const questions = Array.isArray(req.body.questions) ? req.body.questions : [];
+
+      const doc = await TryoutRegistrationQuestionModel.findOneAndUpdate(
+        { tryoutId: id },
+        { $set: { tryoutId: id, questions } },
+        { upsert: true, new: true },
+      ).lean().exec();
+
+      sendSuccess(res, { questions: doc?.questions ?? [] }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

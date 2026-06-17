@@ -3,6 +3,33 @@ import type { MyTryoutItem, Registration } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api/v1";
 
+export type QuestionType = "text" | "textarea" | "radio" | "checkbox";
+
+export interface RegistrationQuestion {
+  categoryId: string;
+  category: string;
+  questionIndex: number;
+  type: QuestionType;
+  label: string;
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
+}
+
+export async function fetchTryoutRegistrationQuestions(
+  tryoutId: string,
+): Promise<RegistrationQuestion[]> {
+  const res = await fetch(`${API_BASE}/tryouts/public/${tryoutId}/registration-questions`);
+  if (!res.ok) return [];
+  const body = await res.json();
+  return body.data?.questions ?? [];
+}
+
+export interface DynamicAnswer {
+  label: string;
+  value: string | string[];
+}
+
 export interface CreateRegistrationInput {
   tryoutId: string;
   sessionId: string;
@@ -15,13 +42,9 @@ export interface CreateRegistrationInput {
   hasUsaMembership: boolean;
   usaMembershipId?: string;
   clubName?: string;
-  swimTime50Free?: string;
-  swimTime100Free?: string;
-  strokes: string[];
-  starts: string[];
-  turns: string[];
   guardianName: string;
   guardianEmail: string;
+  dynamicAnswers?: DynamicAnswer[];
 }
 
 export async function fetchRegistrations(): Promise<Registration[]> {

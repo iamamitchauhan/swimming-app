@@ -21,11 +21,6 @@ export interface IRegistration extends Document {
     hasUsaMembership: boolean;
     usaMembershipId?: string;
     clubName?: string;
-    swimTime50Free?: string;
-    swimTime100Free?: string;
-    strokes: string[];
-    starts: string[];
-    turns: string[];
     guardianName: string;
     guardianEmail: string;
   };
@@ -48,6 +43,12 @@ export interface IRegistration extends Document {
     butterfly?: number;
     totalScore?: number;
   };
+
+  // Dynamic registration question answers
+  dynamicAnswers?: Array<{
+    label: string;
+    value: string | string[];
+  }>;
 
   // Communication
   emailSent: boolean;
@@ -138,14 +139,15 @@ const registrationSchema = new Schema<IRegistration>(
       hasUsaMembership: { type: Boolean, default: false },
       usaMembershipId: { type: String },
       clubName: { type: String },
-      swimTime50Free: { type: String },
-      swimTime100Free: { type: String },
-      strokes: [{ type: String }],
-      starts: [{ type: String }],
-      turns: [{ type: String }],
       guardianName: { type: String, required: true },
       guardianEmail: { type: String, required: true },
     },
+    dynamicAnswers: [
+      {
+        label: { type: String, required: true },
+        value: { type: Schema.Types.Mixed },
+      },
+    ],
   },
   {
     collection: 'registrations',

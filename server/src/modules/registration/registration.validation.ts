@@ -5,6 +5,11 @@ import { z } from 'zod';
 /**
  * POST /registrations — create a new registration
  */
+export const dynamicAnswerSchema = z.object({
+  label: z.string().min(1),
+  value: z.union([z.string(), z.array(z.string())]),
+});
+
 export const createRegistrationSchema = z.object({
   tryoutId: z.string().min(1, 'Tryout ID is required'),
   sessionId: z.string().min(1, 'Session ID is required'),
@@ -14,21 +19,16 @@ export const createRegistrationSchema = z.object({
   swimmerFirstName: z.string().min(1, 'First name is required'),
   swimmerLastName: z.string().min(1, 'Last name is required'),
   swimmerDob: z.string().min(1, 'Date of birth is required'),
-  ageOnTryoutDay: z.coerce.number().int().min(4).max(18),
+  ageOnTryoutDay: z.coerce.number().int().min(1).max(30),
 
   hasUsaMembership: z.boolean().default(false),
   usaMembershipId: z.string().optional().default(''),
   clubName: z.string().optional().default(''),
 
-  swimTime50Free: z.string().optional().default(''),
-  swimTime100Free: z.string().optional().default(''),
-
-  strokes: z.array(z.string()).min(1, 'Select at least one stroke'),
-  starts: z.array(z.string()).min(1, 'Select at least one start option'),
-  turns: z.array(z.string()).min(1, 'Select at least one turn option'),
-
   guardianName: z.string().min(1, 'Guardian name is required'),
   guardianEmail: z.string().email('Valid guardian email is required'),
+
+  dynamicAnswers: z.array(dynamicAnswerSchema).optional().default([]),
 });
 
 /**

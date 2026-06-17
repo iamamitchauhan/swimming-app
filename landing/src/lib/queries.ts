@@ -11,6 +11,7 @@ import {
   fetchNotifications,
   fetchRegistrationById,
   fetchRegistrations,
+  fetchTryoutRegistrationQuestions,
 } from "./api/registrations";
 import { getCurrentParent } from "./api/auth";
 
@@ -24,6 +25,7 @@ export const qk = {
   registration: (id: string) => ["registration", id] as const,
   notifications: ["notifications"] as const,
   myTryouts: ["myTryouts"] as const,
+  registrationQuestions: (tryoutId: string) => ["registrationQuestions", tryoutId] as const,
 };
 
 export const parentQuery = () =>
@@ -52,3 +54,11 @@ export const notificationsQuery = () =>
 
 export const myTryoutsQuery = () =>
   queryOptions({ queryKey: qk.myTryouts, queryFn: fetchMyTryouts });
+
+export const registrationQuestionsQuery = (tryoutId: string) =>
+  queryOptions({
+    queryKey: qk.registrationQuestions(tryoutId),
+    queryFn: () => fetchTryoutRegistrationQuestions(tryoutId),
+    enabled: !!tryoutId,
+    staleTime: 5 * 60 * 1000,
+  });

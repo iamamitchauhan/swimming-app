@@ -19,7 +19,10 @@ import { StepSegments } from "./tryout-steps/step-segments";
 import { StepHowItWorks } from "./tryout-steps/step-how-it-works";
 import { StepPresentation } from "./tryout-steps/step-presentation";
 import { StepReviewPublish } from "./tryout-steps/step-review-publish";
+import { StepRegistration } from "./tryout-steps/step-registration";
 import { useTryout, useUpdateTryout, usePublishTryout } from "@/hooks/use-tryouts";
+import { SelectedQuestion } from "@/lib/api/question-library.api";
+import { tryoutsApi } from "@/lib/api/tryouts.api";
 import { useAuthStore } from "@/lib/auth.store";
 import { toast } from "sonner";
 
@@ -38,6 +41,9 @@ export default function TryoutEditPage() {
   // ── Banner state ─────────────────────────────────────────────────────────────
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string>("");
+
+  // ── Registration questions state ──────────────────────────────────────────────
+  const [registrationQuestions, setRegistrationQuestions] = useState<SelectedQuestion[]>([]);
 
   // ── Submission state ─────────────────────────────────────────────────────────
   const [apiError, setApiError] = useState<string>("");
@@ -102,7 +108,11 @@ export default function TryoutEditPage() {
       faqs: tryout.faqs ?? [],
     });
     if (tryout.bannerUrl) setBannerPreview(tryout.bannerUrl);
-  }, [tryout, reset]);
+    // Load existing registration questions from collection
+    tryoutsApi.getRegistrationQuestions(id).then((qs) => {
+      if (qs.length) setRegistrationQuestions(qs);
+    });
+  }, [tryout, reset, id]);
 
   // ── Field arrays ─────────────────────────────────────────────────────────────
   const sessionsField = useFieldArray({ control, name: "sessions" });
@@ -116,9 +126,13 @@ export default function TryoutEditPage() {
   // ── Navigation ───────────────────────────────────────────────────────────────
   async function goNext() {
     const stepKey = currentStep as keyof typeof STEP_FIELDS;
-    const valid = await trigger(STEP_FIELDS[stepKey]);
+    const fields = STEP_FIELDS[stepKey];
+    // Step 4 (segments) needs full-form trigger so nested array fields validate
+    const valid = await (fields.length === 0 || currentStep === 4
+      ? trigger()
+      : trigger(fields));
     if (!valid) return;
-    if (currentStep === 6) {
+    if (currentStep === 7) {
       await onSaveAndAdvance(formValues);
       return;
     }
@@ -134,7 +148,8 @@ export default function TryoutEditPage() {
     setApiError("");
     try {
       await updateMutation.mutateAsync({ ...data, status: "draft", banner: bannerFile ?? undefined });
-      setCurrentStep(7);
+      await tryoutsApi.saveRegistrationQuestions(id, registrationQuestions);
+      setCurrentStep(8);
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : "Something went wrong.");
     }
@@ -264,7 +279,7 @@ export default function TryoutEditPage() {
           )}
 
           {/* ── Step content ─────────────────────────────────────────────────── */}
-          <div className="flex-1">
+          <div className="flex-1 pb-5">
             <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
               <form onSubmit={(e) => e.preventDefault()}>
 
@@ -314,14 +329,22 @@ export default function TryoutEditPage() {
                 )}
 
                 {currentStep === 7 && (
+                  <StepRegistration
+                    selectedQuestions={registrationQuestions}
+                    onChange={setRegistrationQuestions}
+                  />
+                )}
+
+                {currentStep === 8 && (
                   canAccessReview ? (
                     <StepReviewPublish
                       values={formValues}
                       bannerPreview={bannerPreview}
                       onPublish={onPublish}
-                      onBack={() => setCurrentStep(6)}
+                      onBack={() => setCurrentStep(7)}
                       isPending={isSubmitting}
                       canPublish={canAccessReview}
+                      selectedQuestions={registrationQuestions}
                     />
                   ) : (
                     <div className="py-12 text-center text-sm text-muted-foreground">
@@ -335,8 +358,8 @@ export default function TryoutEditPage() {
           </div>
 
           {/* ── Footer nav ───────────────────────────────────────────────────── */}
-          {currentStep !== 7 && (
-            <div className="py-4 flex items-center justify-between gap-3">
+          {currentStep !== 8 && (
+            <div className="sticky bottom-0 z-10 bg-background border-t border-border py-4 flex items-center justify-between gap-3 -mx-4 px-4 sm:-mx-6 sm:px-6">
               <Button
                 type="button"
                 variant="ghost"
@@ -349,10 +372,10 @@ export default function TryoutEditPage() {
 
               {!isLastStep && (
                 <Button type="button" onClick={goNext} disabled={isSubmitting}>
-                  {currentStep === 6 && isSubmitting ? (
+                  {currentStep === 7 && isSubmitting ? (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                   ) : null}
-                  {currentStep === 6 ? "Save & Continue" : "Continue"}
+                  {currentStep === 7 ? "Save & Continue" : "Continue"}
                   {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
                 </Button>
               )}

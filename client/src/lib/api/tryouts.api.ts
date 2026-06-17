@@ -1,4 +1,5 @@
 import { apiClient, api } from "./client";
+import type { SelectedQuestion } from "./question-library.api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,7 @@ export interface Tryout {
   segments: Segment[];
   steps: Step[];
   faqs: Faq[];
+  registrationQuestions?: SelectedQuestion[];
   clubId: string;
   createdBy: string;
   createdAt: string;
@@ -197,6 +199,24 @@ export const tryoutsApi = {
    */
   publish: (id: string): Promise<Tryout> =>
     api<{ tryout: Tryout }>(apiClient.patch(`/tryouts/${id}/publish`)).then((res) => res.tryout),
+
+  /**
+   * GET /tryouts/public/:id/registration-questions
+   * Fetches saved registration questions for a tryout (no auth required).
+   */
+  getRegistrationQuestions: (id: string): Promise<SelectedQuestion[]> =>
+    fetch(`${apiClient.defaults.baseURL}/tryouts/public/${id}/registration-questions`)
+      .then((r) => r.json())
+      .then((body) => body.data?.questions ?? []),
+
+  /**
+   * PUT /tryouts/:id/registration-questions
+   * Saves the custom registration questions for a tryout.
+   */
+  saveRegistrationQuestions: (id: string, questions: SelectedQuestion[]): Promise<SelectedQuestion[]> =>
+    api<{ questions: SelectedQuestion[] }>(
+      apiClient.put(`/tryouts/${id}/registration-questions`, { questions }),
+    ).then((res) => res.questions),
 
   /**
    * GET /tryouts/:id/slots

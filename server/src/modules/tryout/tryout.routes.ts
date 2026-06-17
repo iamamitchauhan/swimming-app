@@ -38,6 +38,7 @@ const tryoutRouter = Router();
 tryoutRouter.get('/public', controller.listPublic);
 tryoutRouter.get('/public/:id/sessions', controller.getSessions);
 tryoutRouter.get('/public/:id/slots', controller.getSlots);
+tryoutRouter.get('/public/:id/registration-questions', controller.getPublicRegistrationQuestions);
 tryoutRouter.get('/public/:id', controller.getPublicById);
 tryoutRouter.get('/', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.list);
 tryoutRouter.get('/:id/sessions', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getSessions);
@@ -104,6 +105,13 @@ tryoutRouter.put(
   authenticate,
   authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
   controller.updateScore,
+);
+
+tryoutRouter.put(
+  '/:id/registration-questions',
+  authenticate,
+  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
+  controller.upsertRegistrationQuestions,
 );
 
 tryoutRouter.post(

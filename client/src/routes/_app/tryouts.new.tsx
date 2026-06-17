@@ -19,7 +19,10 @@ import { StepSessions } from "./tryout-steps/step-sessions";
 import { StepSegments } from "./tryout-steps/step-segments";
 import { StepHowItWorks } from "./tryout-steps/step-how-it-works";
 import { StepPresentation } from "./tryout-steps/step-presentation";
+import { StepRegistration } from "./tryout-steps/step-registration";
 import { useCreateTryout } from "@/hooks/use-tryouts";
+import { SelectedQuestion } from "@/lib/api/question-library.api";
+import { tryoutsApi } from "@/lib/api/tryouts.api";
 
 // ─── Main Component (Stepper Wizard Parent) ───────────────────────────────────
 
@@ -33,6 +36,9 @@ export default function TryoutNewPage() {
   // ── Banner state (owned here, passed to StepBranding) ────────────────────────
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string>("");
+
+  // ── Registration questions state ──────────────────────────────────────────────
+  const [registrationQuestions, setRegistrationQuestions] = useState<SelectedQuestion[]>([]);
 
   // ── Submission state ─────────────────────────────────────────────────────────
   const [apiError, setApiError] = useState<string>("");
@@ -78,9 +84,13 @@ export default function TryoutNewPage() {
 
   async function goNext() {
     const stepKey = currentStep as keyof typeof STEP_FIELDS;
-    const valid = await trigger(STEP_FIELDS[stepKey]);
+    const fields = STEP_FIELDS[stepKey];
+    // Step 4 (segments) needs full-form trigger so nested array fields validate
+    const valid = await (fields.length === 0 || currentStep === 4
+      ? trigger()
+      : trigger(fields));
     if (!valid) return;
-    if (currentStep === 6) {
+    if (currentStep === 7) {
       await handleSubmit(onSaveAsDraft)();
       return;
     }
@@ -101,7 +111,10 @@ export default function TryoutNewPage() {
         status: "draft",
         banner: bannerFile ?? undefined,
       });
-      navigate(`/tryouts/edit/${created._id}?step=7`, { replace: true });
+      if (registrationQuestions.length > 0) {
+        await tryoutsApi.saveRegistrationQuestions(created._id, registrationQuestions);
+      }
+      navigate(`/tryouts/edit/${created._id}?step=8`, { replace: true });
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     }
@@ -164,7 +177,7 @@ export default function TryoutNewPage() {
           )}
 
           {/* ── Step content ─────────────────────────────────────────────────── */}
-          <div className="flex-1">
+          <div className="flex-1  pb-5">
             <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
               <form onSubmit={(e) => e.preventDefault()}>
 
@@ -219,12 +232,19 @@ export default function TryoutNewPage() {
                   />
                 )}
 
+                {currentStep === 7 && (
+                  <StepRegistration
+                    selectedQuestions={registrationQuestions}
+                    onChange={setRegistrationQuestions}
+                  />
+                )}
+
               </form>
             </div>
           </div>
 
           {/* ── Footer nav ───────────────────────────────────────────────────── */}
-          <div className="py-4 flex items-center justify-between gap-3">
+          <div className="sticky bottom-0 z-10 bg-background border-t border-border py-4 flex items-center justify-between gap-3 -mx-4 px-4 sm:-mx-6 sm:px-6">
             <Button
               type="button"
               variant="ghost"
@@ -236,10 +256,10 @@ export default function TryoutNewPage() {
             </Button>
 
             <Button type="button" onClick={goNext} disabled={isSubmitting}>
-              {currentStep === 6 && isSubmitting ? (
+              {currentStep === 7 && isSubmitting ? (
                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />
               ) : null}
-              {currentStep === 6 ? "Save & Continue" : "Continue"}
+              {currentStep === 7 ? "Save & Continue" : "Continue"}
               {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
             </Button>
           </div>

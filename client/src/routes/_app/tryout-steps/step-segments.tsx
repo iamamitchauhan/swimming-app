@@ -1,9 +1,4 @@
-import {
-  UseFormRegister,
-  FieldErrors,
-  Control,
-  UseFieldArrayReturn,
-} from "react-hook-form";
+import { UseFormRegister, FieldErrors, Control, UseFieldArrayReturn } from "react-hook-form";
 import { Controller } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,6 +21,8 @@ interface Props {
 }
 
 export function StepSegments({ register, control, errors, segmentsField }: Props) {
+  console.info("errors =>", errors);
+
   return (
     <div className="space-y-6">
       <div>
@@ -45,14 +42,9 @@ export function StepSegments({ register, control, errors, segmentsField }: Props
           {segmentsField.fields.map((field, idx) => {
             const segErr = errors.segments?.[idx];
             return (
-              <div
-                key={field.id}
-                className="rounded-xl border border-border p-4 space-y-4"
-              >
+              <div key={field.id} className="rounded-xl border border-border p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">
-                    Segment {idx + 1}
-                  </span>
+                  <span className="text-sm font-medium text-foreground">Segment {idx + 1}</span>
                   <Button
                     type="button"
                     variant="ghost"
@@ -66,11 +58,7 @@ export function StepSegments({ register, control, errors, segmentsField }: Props
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="sm:col-span-2">
-                    <FieldGroup
-                      label="Segment Name"
-                      required
-                      error={segErr?.name?.message}
-                    >
+                    <FieldGroup label="Segment Name" required error={segErr?.name?.message}>
                       <Input
                         placeholder="e.g. U12 Competitive"
                         {...register(`segments.${idx}.name`)}
@@ -130,13 +118,21 @@ export function StepSegments({ register, control, errors, segmentsField }: Props
         </div>
       )}
 
+      {Array.isArray(errors.segments) && errors.segments.length === 0 && (
+        <p className="text-xs text-destructive mb-2">At least one segment is required</p>
+      )}
       <Button
         type="button"
         variant="outline"
         size="sm"
         className="w-full"
         onClick={() =>
-          segmentsField.append({ name: "", minAge: "" as unknown as number, maxAge: "" as unknown as number, level: "" })
+          segmentsField.append({
+            name: "",
+            minAge: "5" as unknown as number,
+            maxAge: "10" as unknown as number,
+            level: LEVELS[0],
+          })
         }
       >
         <Plus className="h-4 w-4 mr-1.5" /> Add segment

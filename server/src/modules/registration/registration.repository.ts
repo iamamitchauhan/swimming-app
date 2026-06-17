@@ -11,13 +11,13 @@ export type SwimmerDetails = {
   hasUsaMembership: boolean;
   usaMembershipId?: string;
   clubName?: string;
-  swimTime50Free?: string;
-  swimTime100Free?: string;
-  strokes: string[];
-  starts: string[];
-  turns: string[];
   guardianName: string;
   guardianEmail: string;
+};
+
+export type DynamicAnswer = {
+  label: string;
+  value: string | string[];
 };
 
 export type PlainRegistration = {
@@ -29,6 +29,7 @@ export type PlainRegistration = {
   slotId: string;
   segmentId: string;
   swimmerDetails: SwimmerDetails;
+  dynamicAnswers?: DynamicAnswer[];
   status: 'registered' | 'waitlisted' | 'offered' | 'rejected' | 'cancelled';
   waitlistPosition?: number;
   registeredAt: Date;

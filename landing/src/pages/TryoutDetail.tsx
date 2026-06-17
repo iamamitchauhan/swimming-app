@@ -42,12 +42,18 @@ export default function TryoutDetailPage() {
   }
   if (!tryout) return null;
 
+  console.info('tryout =>',tryout);
+  
+
   const slots       = tryout.slots       ?? [];
   const sessions    = tryout.sessions    ?? [];
   const steps       = tryout.steps       ?? [];
   const faqs        = tryout.faqs        ?? [];
   const eligibility = tryout.eligibility ?? [];
   const segments    = tryout.segments    ?? [];
+
+  console.info('segments =>',segments);
+  
 
   const status    = tryoutStatus({ ...tryout, slots });
   const totalCap  = slots.reduce((s, x) => s + x.capacity, 0);
@@ -84,13 +90,13 @@ export default function TryoutDetailPage() {
           <img src={tryout.image} alt={tryout.name} className="absolute inset-0 h-full w-full object-cover opacity-30" />
         )}
         <div className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-          <Link to="/tryouts" className="mb-6 inline-flex items-center gap-1.5 text-sm text-white/70 hover:text-white">
+          {/* <Link to="/tryouts" className="mb-6 inline-flex items-center gap-1.5 text-sm text-white/70 hover:text-white">
             <ArrowLeft className="h-4 w-4" /> Back to tryouts
-          </Link>
+          </Link> */}
 
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur">
+          {/* <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur">
             ≈ Swim Team Tryout
-          </span>
+          </span> */}
 
           <h1 className="mt-3 font-display text-4xl font-extrabold text-white sm:text-5xl">{tryout.name}</h1>
 
@@ -260,14 +266,15 @@ export default function TryoutDetailPage() {
         </section>
 
         {/* Segments / Who can participate */}
-        {eligibility.length > 0 && (
+        {segments.length > 0 && (
           <section className="mt-10">
             <h2 className="mb-5 font-display text-xl font-bold">Who Can Participate?</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {eligibility.map((seg) => (
-                <div key={seg} className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
+              {segments.map((seg) => (
+                <div key={seg.name} className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
                   <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
-                  <span className="text-sm font-medium">{seg}</span>
+                  <span className="text-sm font-medium">{seg.name}</span>
+                  <span className="text-xs text-muted-foreground">{seg.minAge} - {seg.maxAge} years</span>
                 </div>
               ))}
             </div>
