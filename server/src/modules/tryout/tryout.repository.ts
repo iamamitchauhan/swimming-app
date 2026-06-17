@@ -33,6 +33,8 @@ export type PlainTryout = {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  startAt?: Date | null;
+  endAt?: Date | null;
   // Computed aggregation fields (only present in list results)
   sessionCount?: number;
   startDate?: string | null;
@@ -165,6 +167,8 @@ export class TryoutRepository {
                 createdBy: 1,
                 createdAt: 1,
                 updatedAt: 1,
+                startAt: 1,
+                endAt: 1,
                 sessionCount: { $size: '$_sessions' },
                 startDate: { $min: '$_sessions.date' },
                 totalSlots: {
@@ -315,6 +319,8 @@ export class TryoutRepository {
                 createdBy: 1,
                 createdAt: 1,
                 updatedAt: 1,
+                startAt: 1,
+                endAt: 1,
                 sessionCount: { $size: '$_sessions' },
                 startDate: { $min: '$_sessions.date' },
                 totalSlots: {

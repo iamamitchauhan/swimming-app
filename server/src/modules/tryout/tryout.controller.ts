@@ -27,6 +27,28 @@ function calcSlots(startTime: string, endTime: string, slotDuration: number): nu
 const slotRepo = new TryoutSlotRepository();
 const sessionRepo = new TryoutSessionRepository();
 
+function computeTryoutBounds(
+  rawSessions: Array<{ date: string; startTime: string; endTime: string }>,
+): { startAt: Date | null; endAt: Date | null } {
+  if (!rawSessions || rawSessions.length === 0) {
+    return { startAt: null, endAt: null };
+  }
+
+  const sorted = [...rawSessions].sort((a, b) => {
+    const ad = a.date.localeCompare(b.date);
+    if (ad !== 0) return ad;
+    return a.startTime.localeCompare(b.startTime);
+  });
+
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+
+  const startAt = new Date(`${first.date}T${first.startTime}`);
+  const endAt = new Date(`${last.date}T${last.endTime}`);
+
+  return { startAt, endAt };
+}
+
 async function syncSessionsAndSlots(
   tryoutId: string,
   rawSessions: Array<{ date: string; startTime: string; endTime: string; label: string }>,
@@ -156,6 +178,8 @@ export class TryoutController {
       let bannerUrl = req.body.bannerUrl || '';
       // if (req.file) { bannerUrl = await uploadToS3(req.file); }
 
+      const { startAt, endAt } = computeTryoutBounds(rawSessions);
+
       const tryout = await this.service.create({
         name: req.body.name,
         location: req.body.location || '',
@@ -171,6 +195,8 @@ export class TryoutController {
         segments,
         steps,
         faqs,
+        startAt,
+        endAt,
         clubId,
         createdBy: userId,
       });
@@ -206,6 +232,8 @@ export class TryoutController {
       let bannerUrl = req.body.bannerUrl;
       // if (req.file) { bannerUrl = await uploadToS3(req.file); }
 
+      const { startAt, endAt } = rawSessions !== undefined ? computeTryoutBounds(rawSessions) : { startAt: undefined, endAt: undefined };
+
       const tryout = await this.service.update(id, clubId, {
         ...(req.body.name !== undefined && { name: req.body.name }),
         ...(req.body.location !== undefined && { location: req.body.location }),
@@ -221,6 +249,8 @@ export class TryoutController {
         ...(segments !== undefined && { segments }),
         ...(steps !== undefined && { steps }),
         ...(faqs !== undefined && { faqs }),
+        ...(startAt !== undefined && { startAt }),
+        ...(endAt !== undefined && { endAt }),
       });
 
       if (tryout && rawSessions !== undefined) {
@@ -632,6 +662,33 @@ export class TryoutController {
         'Communication sent successfully',
         HTTP_STATUS.OK,
       );
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /tryouts/:id/registrations/:regId
+   * Returns a single registration with full details for admin/coach.
+   */
+  getRegistrationDetail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id, regId } = req.params;
+      const clubId = req.user?.clubId;
+      if (!clubId) return next(new ForbiddenError('No club associated with user'));
+
+      // Verify tryout belongs to user's club
+      await this.service.getById(id, clubId);
+
+      const registration = await RegistrationModel.findOne({ _id: regId, tryoutId: id })
+        .populate('swimmerId', 'firstName lastName birthDate')
+        .populate('parentId', 'firstName lastName email')
+        .lean()
+        .exec();
+
+      if (!registration) throw new NotFoundError('Registration not found');
+
+      sendSuccess(res, { registration }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

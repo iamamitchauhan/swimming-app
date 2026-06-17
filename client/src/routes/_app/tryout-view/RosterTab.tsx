@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Registration, Tryout } from "@/lib/api/tryouts.api";
+import { RegistrationDetailModal } from "./RegistrationDetailModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -63,6 +64,8 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
   const [search, setSearch]           = useState("");
   const [segFilter, setSegFilter]     = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [modalOpen, setModalOpen]     = useState(false);
+  const [selectedRegId, setSelectedRegId] = useState<string | null>(null);
 
   const filteredRoster = registered.filter((r) => {
     const q = search.toLowerCase();
@@ -117,7 +120,7 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
         <table className="w-full text-sm">
           <thead className="bg-gray-900 text-white text-xs uppercase tracking-wide">
             <tr>
-              {["Swimmer", "Age", "Segment", "When", "USA-S ID", "Parent", "Status", "Avg"].map((h) => (
+              {["Swimmer", "Age", "Segment", "When", "USA-S ID", "Parent", "Status", "Avg Score"].map((h) => (
                 <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>
               ))}
             </tr>
@@ -134,7 +137,15 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
               const verSt = r.usa_verification_status || "pending";
               return (
                 <tr key={r.id} className="hover:bg-gray-50 transition">
-                  <td className="px-4 py-3 font-medium text-gray-900">{r.swimmer_name}</td>
+                  <td
+                    className="px-4 py-3 font-medium text-blue-700 cursor-pointer hover:underline"
+                    onClick={() => {
+                      setSelectedRegId(r.id);
+                      setModalOpen(true);
+                    }}
+                  >
+                    {r.swimmer_name}
+                  </td>
                   <td className="px-4 py-3 text-gray-500">{r.swimmer_age}</td>
                   <td className="px-4 py-3 text-gray-600">{r.segment_name || "—"}</td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
@@ -189,6 +200,13 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
           </tbody>
         </table>
       </div>
+
+      <RegistrationDetailModal
+        tryoutId={tryout._id}
+        registrationId={selectedRegId}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
     </div>
   );
 }

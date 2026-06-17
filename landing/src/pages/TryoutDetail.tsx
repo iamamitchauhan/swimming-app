@@ -80,6 +80,7 @@ export default function TryoutDetailPage() {
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
   const openSlot = slots.find((s) => s.capacity - s.taken > 0) ?? slots[0];
+console.info('tryout.startAt =>',tryout.startAt);
 
   return (
     <div className="min-h-screen bg-background">
@@ -103,7 +104,7 @@ export default function TryoutDetailPage() {
           <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-white/80">
             {tryout.date && (
               <span className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" />{formatDate(tryout.date)}
+                <Calendar className="h-4 w-4" />{formatDate(tryout.startAt)}
               </span>
             )}
             {tryout.location && (

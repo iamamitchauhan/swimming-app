@@ -83,7 +83,7 @@ export function TryoutHero({ tryout, onRegister }: Props) {
 
           <div className="mt-5">
             <Button size="lg" disabled={disabled} onClick={onRegister} className="shadow-lg">
-              {disabled ? "Registration closed" : tryout.ctaLabel || "Sign up today"}
+              {disabled ? "Registration closed" : tryout.ctaLabel || "Reserve your slot"}
             </Button>
           </div>
         </div>

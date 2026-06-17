@@ -8,7 +8,7 @@ import heroImg from "@/assets/hero-pool.jpg";
 
 export default function LandingPage() {
   const { data: stats } = useQuery(statsQuery());
-  const { data: tryouts = [] } = useQuery(tryoutsQuery({ sort: "earliest" }));
+  const { data: tryouts = [] } = useQuery(tryoutsQuery({ sort: "latest" }));
   const featured = tryouts.slice(0, 6);
 
   return (

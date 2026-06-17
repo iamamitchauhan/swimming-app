@@ -109,6 +109,8 @@ function mapTryout(raw: any): Tryout {
     date,
     time,
     deadline: date,
+    startAt: raw.startAt ?? "",
+    endAt: raw.endAt ?? "",
     description: raw.description ?? "",
     purpose: raw.theme ?? "",
     eligibility: raw.segments?.map((s: any) => s.name) ?? [],

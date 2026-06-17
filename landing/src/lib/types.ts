@@ -49,6 +49,8 @@ export interface Tryout {
   date: string;
   time: string;
   deadline: string;
+  startAt: string;
+  endAt: string;
   description: string;
   purpose: string;
   eligibility: string[];

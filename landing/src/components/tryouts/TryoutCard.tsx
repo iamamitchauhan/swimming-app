@@ -106,7 +106,7 @@ export function TryoutCard({ tryout }: { tryout: Tryout }) {
         )}
 
         <p className="mb-3 text-xs text-muted-foreground">
-          Registration closes {relativeFromNow(tryout.deadline)}
+          Registration closes {relativeFromNow(tryout.startAt)}
         </p>
 
         {/* Action buttons */}

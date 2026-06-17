@@ -80,7 +80,7 @@ export default function TryoutEditPage() {
       segments: [],
       steps: [],
       additionalInstructions: "",
-      ctaLabel: "Sign up today",
+      ctaLabel: "Reserve your slot",
       highlights: "",
       faqs: [],
     },

@@ -68,6 +68,9 @@ export interface Tryout {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  // Computed from sessions
+  startAt?: string | null;
+  endAt?: string | null;
   // Computed from aggregation
   sessionCount: number;
   startDate?: string;
@@ -231,6 +234,15 @@ export const tryoutsApi = {
    */
   getSessions: (id: string): Promise<TryoutSession[]> =>
     api<{ sessions: TryoutSession[] }>(apiClient.get(`/tryouts/${id}/sessions`)).then((res) => res.sessions),
+
+  /**
+   * GET /tryouts/:id/registrations/:regId
+   * Returns full registration detail (admin/coach view)
+   */
+  getRegistrationDetail: (tryoutId: string, regId: string): Promise<RegistrationDetail> =>
+    api<{ registration: RegistrationDetail }>(apiClient.get(`/tryouts/${tryoutId}/registrations/${regId}`)).then(
+      (res) => res.registration,
+    ),
 };
 
 // ─── Admin View Types ─────────────────────────────────────────────────────────
@@ -299,4 +311,42 @@ export interface LeaderboardEntry {
   age_segment?: string;
   total_score: number | string;
   status: string;
+}
+
+export interface RegistrationDetail {
+  _id: string;
+  tryoutId: string;
+  swimmerId: { firstName: string; lastName: string; birthDate?: string };
+  parentId: { firstName: string; lastName: string; email: string };
+  sessionId: string;
+  slotId: string;
+  segmentId?: string;
+  status: string;
+  swimmerDetails: {
+    firstName: string;
+    lastName: string;
+    dob?: string;
+    ageOnTryoutDay: number;
+    hasUsaMembership: boolean;
+    usaMembershipId?: string;
+    clubName?: string;
+    guardianName: string;
+    guardianEmail: string;
+  };
+  dynamicAnswers?: { label: string; value: string | string[] }[];
+  scores?: {
+    safetyEntryExit?: boolean;
+    safetyFloat?: boolean;
+    freestyle?: number;
+    backstroke?: number;
+    breaststroke?: number;
+    butterfly?: number;
+    totalScore?: number;
+  };
+  usaVerificationStatus?: string;
+  waitlistPosition?: number;
+  registeredAt?: string;
+  emailSent?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }

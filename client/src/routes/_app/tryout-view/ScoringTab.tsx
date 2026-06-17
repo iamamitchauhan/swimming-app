@@ -105,7 +105,7 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
               <th className="px-3 py-3 text-center">Backstroke</th>
               <th className="px-3 py-3 text-center">Breaststroke</th>
               <th className="px-3 py-3 text-center">Butterfly</th>
-              <th className="px-3 py-3 text-center">Avg</th>
+              <th className="px-3 py-3 text-center">Avg Score</th>
               <th className="px-3 py-3 text-center">Save</th>
             </tr>
           </thead>

@@ -26,14 +26,21 @@ function getThemeBg(theme: string): string {
     : "bg-gradient-to-br from-indigo-700 to-slate-900";
 }
 
-function formatDate(dateStr: string): string {
-  if (!dateStr) return "";
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
+function formatDate(dateString: string) {
+  // expected dateString is "2026-06-17T14:50:00.000Z"
+  if (!dateString) return "";
+  
+  return new Date(dateString).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC'
   });
 }
+
+console.log(formatDate('2026-06-17T14:50:00.000Z'));
+// Wed, 17 Jun 2026
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
@@ -53,6 +60,14 @@ export default function TryoutPreviewPage() {
   const { data: slots = [] } = useQuery<TryoutSlot[]>({
     queryKey: [...tryoutKeys.detail(id), "slots"],
     queryFn: () => tryoutsApi.getSlots(id),
+    enabled: !!id,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // fetch questions
+  const { data: registrationQuestions = [] } = useQuery<any[]>({
+    queryKey: [...tryoutKeys.detail(id), "registrationQuestions"],
+    queryFn: () => tryoutsApi.getRegistrationQuestions(id),
     enabled: !!id,
     staleTime: 2 * 60 * 1000,
   });
@@ -80,7 +95,6 @@ export default function TryoutPreviewPage() {
   const steps               = tryout.steps               ?? [];
   const faqs                = tryout.faqs                ?? [];
   const segments            = tryout.segments            ?? [];
-  const registrationQuestions = tryout.registrationQuestions ?? [];
 
   // Group slots by session
   const slotsBySession = slots.reduce<Record<string, TryoutSlot[]>>((acc, slot) => {
@@ -113,17 +127,13 @@ export default function TryoutPreviewPage() {
           />
         )}
         <div className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur">
-            Swim Team Tryout
-          </span>
-
           <h1 className="mt-3 text-4xl font-extrabold text-white sm:text-5xl">{tryout.name}</h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-white/80">
-            {tryout.startDate && (
+            {tryout.startAt && (
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" />
-                {formatDate(tryout.startDate)}
+                {formatDate(tryout.startAt)}
               </span>
             )}
             {tryout.location && (
@@ -144,7 +154,7 @@ export default function TryoutPreviewPage() {
               className="bg-white font-semibold text-slate-900 hover:bg-white/90"
               disabled
             >
-              {tryout.ctaLabel || "Reserve your slot →"}
+              {"Reserve your slot →"}
             </Button>
             <div>
               <span className="text-2xl font-extrabold text-white">{tryout.totalSlots ?? 0} slots</span>

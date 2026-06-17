@@ -72,10 +72,6 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
           />
         )}
         <div className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur">
-            Swim Team Tryout
-          </span>
-
           <h1 className="mt-3 text-4xl font-extrabold text-white sm:text-5xl">
             {values.name || <span className="opacity-50 italic">Untitled Tryout</span>}
           </h1>

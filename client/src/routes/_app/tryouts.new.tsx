@@ -68,7 +68,7 @@ export default function TryoutNewPage() {
       segments: [],
       steps: DEFAULT_STEPS,
       additionalInstructions: "",
-      ctaLabel: "Sign up today",
+      ctaLabel: "Reserve your slot",
       highlights: "",
       faqs: [],
     },
