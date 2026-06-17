@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   UseFormRegister,
   UseFormWatch,
@@ -7,8 +8,11 @@ import {
   UseFieldArrayReturn,
 } from "react-hook-form";
 import { Controller } from "react-hook-form";
+import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -16,9 +20,76 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Clock, Users } from "lucide-react";
+import { Plus, Trash2, Clock, Users, CalendarIcon } from "lucide-react";
 import { TryoutFormValues, SLOT_DURATIONS, calcSlots, buildLabel } from "./shared";
 import { FieldGroup } from "./field-group";
+
+interface DatePickerFieldProps {
+  value: string;
+  onChange: (iso: string) => void;
+  hasError?: boolean;
+  startTime?: string;
+  endTime?: string;
+  onLabelChange: (iso: string) => void;
+  minDate?: Date;
+}
+
+function DatePickerField({
+  value,
+  onChange,
+  hasError,
+  startTime,
+  endTime,
+  onLabelChange,
+  minDate,
+}: DatePickerFieldProps) {
+  const [open, setOpen] = React.useState(false);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const lowerBound = minDate && minDate > today ? minDate : today;
+  const selectedDate = value ? new Date(value + "T00:00:00") : undefined;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={[
+            "w-full justify-start font-normal",
+            hasError ? "border-destructive" : "",
+            !value ? "text-muted-foreground" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+          {value ? format(new Date(value + "T00:00:00"), "MMM d, yyyy") : "Select date"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          captionLayout="dropdown"
+          defaultMonth={selectedDate ?? lowerBound}
+          disabled={(d) => {
+            const day = new Date(d);
+            day.setHours(0, 0, 0, 0);
+            return day < lowerBound;
+          }}
+          onSelect={(d) => {
+            if (!d) return;
+            const iso = format(d, "yyyy-MM-dd");
+            onChange(iso);
+            onLabelChange(buildLabel(iso, startTime ?? "", endTime ?? ""));
+            setOpen(false);
+          }}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 interface Props {
   register: UseFormRegister<TryoutFormValues>;
@@ -96,45 +167,80 @@ export function StepSessions({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
+                {/* Date picker */}
                 <FieldGroup label="Date" required error={sessionErrors?.date?.message}>
-                  <Input
-                    type="date"
-                    {...register(`sessions.${idx}.date`, {
-                      onChange: (e) =>
-                        setValue(
-                          `sessions.${idx}.label`,
-                          buildLabel(e.target.value, sv?.startTime ?? "", sv?.endTime ?? ""),
-                        ),
-                    })}
-                    className={sessionErrors?.date ? "border-destructive" : ""}
+                  <Controller
+                    control={control}
+                    name={`sessions.${idx}.date`}
+                    render={({ field }) => {
+                      const prevDate = idx > 0 ? watchedSessions?.[idx - 1]?.date : undefined;
+                      const minDate = prevDate ? new Date(prevDate + "T00:00:00") : undefined;
+                      return (
+                        <DatePickerField
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          hasError={!!sessionErrors?.date}
+                          startTime={sv?.startTime}
+                          endTime={sv?.endTime}
+                          onLabelChange={(label) => setValue(`sessions.${idx}.label`, label)}
+                          minDate={minDate}
+                        />
+                      );
+                    }}
                   />
                 </FieldGroup>
 
+                {/* Start Time */}
                 <FieldGroup label="Start Time" required error={sessionErrors?.startTime?.message}>
-                  <Input
-                    type="time"
-                    {...register(`sessions.${idx}.startTime`, {
-                      onChange: (e) =>
-                        setValue(
-                          `sessions.${idx}.label`,
-                          buildLabel(sv?.date ?? "", e.target.value, sv?.endTime ?? ""),
-                        ),
-                    })}
-                    className={sessionErrors?.startTime ? "border-destructive" : ""}
+                  <Controller
+                    control={control}
+                    name={`sessions.${idx}.startTime`}
+                    render={({ field }) => (
+                      <Input
+                        type="time"
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          field.onChange(e.target.value);
+                          setValue(
+                            `sessions.${idx}.label`,
+                            buildLabel(sv?.date ?? "", e.target.value, sv?.endTime ?? ""),
+                          );
+                        }}
+                        className={[
+                          "appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none",
+                          sessionErrors?.startTime ? "border-destructive" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      />
+                    )}
                   />
                 </FieldGroup>
 
+                {/* End Time */}
                 <FieldGroup label="End Time" required error={sessionErrors?.endTime?.message}>
-                  <Input
-                    type="time"
-                    {...register(`sessions.${idx}.endTime`, {
-                      onChange: (e) =>
-                        setValue(
-                          `sessions.${idx}.label`,
-                          buildLabel(sv?.date ?? "", sv?.startTime ?? "", e.target.value),
-                        ),
-                    })}
-                    className={sessionErrors?.endTime ? "border-destructive" : ""}
+                  <Controller
+                    control={control}
+                    name={`sessions.${idx}.endTime`}
+                    render={({ field }) => (
+                      <Input
+                        type="time"
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          field.onChange(e.target.value);
+                          setValue(
+                            `sessions.${idx}.label`,
+                            buildLabel(sv?.date ?? "", sv?.startTime ?? "", e.target.value),
+                          );
+                        }}
+                        className={[
+                          "appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none",
+                          sessionErrors?.endTime ? "border-destructive" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      />
+                    )}
                   />
                 </FieldGroup>
               </div>

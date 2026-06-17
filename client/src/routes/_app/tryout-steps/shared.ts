@@ -9,10 +9,29 @@ export const sessionSchema = z
     endTime: z.string().min(1, "End time is required"),
     label: z.string(),
   })
+  .refine(
+    (s) => {
+      if (!s.date) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selected = new Date(s.date + "T00:00:00");
+      return selected >= today;
+    },
+    { message: "Date cannot be in the past", path: ["date"] },
+  )
   .refine((s) => !s.startTime || !s.endTime || s.endTime > s.startTime, {
     message: "End time must be after start time",
     path: ["endTime"],
-  });
+  })
+  .refine(
+    (s) => {
+      if (!s.startTime || !s.endTime) return true;
+      const [sh, sm] = s.startTime.split(":").map(Number);
+      const [eh, em] = s.endTime.split(":").map(Number);
+      return eh * 60 + em - (sh * 60 + sm) >= 15;
+    },
+    { message: "End time must be at least 15 minutes after start time", path: ["endTime"] },
+  );
 
 export const segmentSchema = z
   .object({
@@ -42,7 +61,22 @@ export const tryoutSchema = z.object({
   description: z.string().optional(),
   theme: z.enum(["ocean", "sunset", "forest", "midnight", "coral"]),
   bannerUrl: z.string().optional(),
-  sessions: z.array(sessionSchema).min(1, "At least one session is required"),
+  sessions: z
+    .array(sessionSchema)
+    .min(1, "At least one session is required")
+    .superRefine((sessions, ctx) => {
+      for (let i = 1; i < sessions.length; i++) {
+        const prev = sessions[i - 1].date;
+        const curr = sessions[i].date;
+        if (prev && curr && curr < prev) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Date must not be before session ${i}'s date`,
+            path: [i, "date"],
+          });
+        }
+      }
+    }),
   slotDuration: z.coerce.number(),
   swimmersPerSlot: z.coerce.number(),
   segments: z.array(segmentSchema),
