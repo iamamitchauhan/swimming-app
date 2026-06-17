@@ -42,7 +42,6 @@ interface Props {
 const fixedSchema = z.object({
   swimmerFirstName: z.string().min(1, "First name is required"),
   swimmerLastName: z.string().min(1, "Last name is required"),
-  swimmerDob: z.string().min(1, "Date of birth is required"),
   ageOnTryoutDay: z.coerce
     .number({ invalid_type_error: "Age is required" })
     .int()
@@ -138,7 +137,6 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
     defaultValues: {
       swimmerFirstName: "",
       swimmerLastName: "",
-      swimmerDob: "",
       ageOnTryoutDay: undefined,
       segment: "",
       hasUsaMembership: false,
@@ -189,12 +187,6 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
         .filter(([, v]) => (Array.isArray(v) ? v.length > 0 : String(v).trim() !== ""))
         .map(([label, value]) => ({ label, value }));
 
-      // Derive DOB from age if not provided
-      let swimmerDob = fixed.swimmerDob;
-      if (!swimmerDob) {
-        const birthYear = new Date().getFullYear() - Number(fixed.ageOnTryoutDay);
-        swimmerDob = `${birthYear}-06-15`;
-      }
 
       return createRegistration({
         tryoutId,
@@ -203,7 +195,6 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
         segmentId: fixed.segment,
         swimmerFirstName: fixed.swimmerFirstName,
         swimmerLastName: fixed.swimmerLastName,
-        swimmerDob,
         ageOnTryoutDay: Number(fixed.ageOnTryoutDay),
         hasUsaMembership: fixed.hasUsaMembership,
         usaMembershipId: fixed.usaMembershipId,

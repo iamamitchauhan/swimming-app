@@ -37,7 +37,6 @@ export interface CreateRegistrationInput {
   segmentId?: string;
   swimmerFirstName: string;
   swimmerLastName: string;
-  swimmerDob: string;
   ageOnTryoutDay: number;
   hasUsaMembership: boolean;
   usaMembershipId?: string;

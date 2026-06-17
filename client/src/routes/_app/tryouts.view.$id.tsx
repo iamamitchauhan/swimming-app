@@ -203,7 +203,7 @@ export default function TryoutViewPage() {
     { key: "usa-verify",  label: "USA-S Verify", badge: needsReviewCount > 0 ? needsReviewCount : null },
     { key: "scoring",     label: "Scoring" },
     { key: "leaderboard", label: "Leaderboard" },
-    { key: "comms",       label: "Comms" },
+    // { key: "comms",       label: "Comms" },
   ];
 
   // ── Loading / error states ────────────────────────────────────────────────
