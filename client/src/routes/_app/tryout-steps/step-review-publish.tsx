@@ -28,7 +28,15 @@ function formatSessionDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, isPending, canPublish, selectedQuestions = [] }: Props) {
+export function StepReviewPublish({
+  values,
+  bannerPreview,
+  onPublish,
+  onBack,
+  isPending,
+  canPublish,
+  selectedQuestions = [],
+}: Props) {
   const activeBanner = bannerPreview || values.bannerUrl || "";
   const sessions = values.sessions ?? [];
   const steps = values.steps?.filter((s) => s.title.trim()) ?? [];
@@ -37,7 +45,6 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
-
       {/* ── Preview mode header ───────────────────────────────────────────── */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-amber-500/30 bg-white px-6 py-2.5">
         <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
@@ -47,11 +54,7 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
           <Button size="sm" variant="ghost" onClick={onBack} disabled={isPending}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
-          <Button
-            size="sm"
-            onClick={onPublish}
-            disabled={isPending || !canPublish}
-          >
+          <Button size="sm" onClick={onPublish} disabled={isPending || !canPublish}>
             {isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -109,17 +112,18 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
 
       {/* ── Body ──────────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 space-y-10">
-
         {/* How it works */}
         {steps.length > 0 && (
           <section>
-            <h2 className="mb-5 text-xl font-bold">How it works</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <h2 className="mb-5 font-display text-xl font-bold">How it works</h2>
+
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(250px,1fr))]">
               {steps.map((step, i) => (
                 <div key={i} className="rounded-xl border border-border bg-card p-5">
                   <div className="mb-3 grid h-10 w-10 place-items-center rounded-lg bg-muted text-sm font-extrabold text-muted-foreground">
                     {i + 1}
                   </div>
+
                   <h3 className="font-semibold">{step.title}</h3>
                   <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
                 </div>
@@ -147,7 +151,11 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
               <div>
                 {sessions.map((session, idx) => {
                   const sessionDate = session.date ? new Date(session.date + "T00:00:00") : null;
-                  const { slots: totalSlots } = calcSlots(session.startTime, session.endTime, values.slotDuration);
+                  const { slots: totalSlots } = calcSlots(
+                    session.startTime,
+                    session.endTime,
+                    values.slotDuration,
+                  );
                   const slotRows = Array.from({ length: totalSlots }, (_, i) => i);
                   return (
                     <div key={idx}>
@@ -155,7 +163,9 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
                       <div className="flex items-center gap-4 border-b border-border bg-muted/40 px-5 py-3">
                         <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-slate-800 text-white">
                           <span className="text-[10px] font-semibold uppercase leading-none">
-                            {sessionDate ? sessionDate.toLocaleString("en", { weekday: "short" }) : "—"}
+                            {sessionDate
+                              ? sessionDate.toLocaleString("en", { weekday: "short" })
+                              : "—"}
                           </span>
                           <span className="text-lg font-extrabold leading-none">
                             {sessionDate ? sessionDate.getDate() : "—"}
@@ -166,7 +176,8 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
                             {session.date ? formatSessionDate(session.date) : "—"}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {session.startTime} – {session.endTime} · {values.slotDuration} min slots
+                            {session.startTime} – {session.endTime} · {values.slotDuration} min
+                            slots
                           </div>
                         </div>
                         <span className="ml-auto rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold">
@@ -176,11 +187,16 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
 
                       {/* Slot rows */}
                       {slotRows.map((i) => (
-                        <div key={i} className="flex items-center gap-4 border-b border-border px-5 py-3 last:border-b-0">
+                        <div
+                          key={i}
+                          className="flex items-center gap-4 border-b border-border px-5 py-3 last:border-b-0"
+                        >
                           <span className="w-8 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">
                             #{i + 1}
                           </span>
-                          <span className="text-xs font-bold uppercase tracking-wide text-emerald-600">Open</span>
+                          <span className="text-xs font-bold uppercase tracking-wide text-emerald-600">
+                            Open
+                          </span>
                           <span className="ml-auto mr-4 text-xs text-muted-foreground tabular-nums">
                             0 / {values.swimmersPerSlot}
                             <br />
@@ -204,7 +220,9 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
                 </p>
               </div>
             ) : (
-              <p className="px-5 py-8 text-center text-sm text-muted-foreground">No sessions configured.</p>
+              <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+                No sessions configured.
+              </p>
             )}
           </div>
         </section>
@@ -215,7 +233,10 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
             <h2 className="mb-5 text-xl font-bold">Who Can Participate?</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {segments.map((seg, i) => (
-                <div key={i} className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
+                <div
+                  key={i}
+                  className="flex items-center gap-3 rounded-xl border border-border bg-card p-4"
+                >
                   <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{seg.name}</p>
@@ -261,7 +282,6 @@ export function StepReviewPublish({ values, bannerPreview, onPublish, onBack, is
         )}
 
         <RegistrationFormPreview selectedQuestions={selectedQuestions} />
-
       </div>
     </div>
   );

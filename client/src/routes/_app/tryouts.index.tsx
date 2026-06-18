@@ -5,24 +5,51 @@ import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 // import {
 //   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 // } from "@/components/ui/select";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus, Search, MoreHorizontal, Pencil, Trash2,
-  ChevronLeft, ChevronRight, Loader2, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, X,
-  Eye, Rocket,
+  Plus,
+  Search,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  X,
+  Eye,
+  Rocket,
   LayoutDashboard,
 } from "lucide-react";
 import { useTryouts, useDeleteTryout, usePublishTryout } from "@/hooks/use-tryouts";
@@ -31,10 +58,11 @@ import type { Tryout, TryoutSortField, SortOrder } from "@/lib/api/tryouts.api";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const statusVariant: Record<string, string> = {
-  open:      "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400",
-  draft:     "bg-muted text-muted-foreground border-border",
-  closed:    "bg-destructive/10 text-destructive border-destructive/20",
-  published: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400",
+  open: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400",
+  draft: "bg-muted text-muted-foreground border-border",
+  closed: "bg-destructive/10 text-destructive border-destructive/20",
+  published:
+    "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400",
 };
 
 function statusLabel(s: string) {
@@ -46,22 +74,24 @@ function firstSessionDate(t: Tryout) {
   const d = t.startDate ?? t.sessions?.[0]?.date;
   if (!d) return "—";
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
 const SORT_OPTIONS: { value: TryoutSortField; label: string }[] = [
   { value: "createdAt", label: "Created" },
   { value: "updatedAt", label: "Updated" },
-  { value: "name",      label: "Name" },
-  { value: "status",    label: "Status" },
+  { value: "name", label: "Name" },
+  { value: "status", label: "Status" },
 ];
 
 const STATUS_TABS: { label: string; value: string; apiValue?: string }[] = [
-  { label: "All",       value: "all" },
-  { label: "Draft",     value: "draft" },
+  { label: "All", value: "all" },
+  { label: "Draft", value: "draft" },
   { label: "Published", value: "published", apiValue: "open" },
-  { label: "Closed",    value: "closed" },
+  { label: "Closed", value: "closed" },
   { label: "Completed", value: "completed" },
 ];
 
@@ -73,14 +103,14 @@ export default function TryoutsList() {
   const navigate = useNavigate();
 
   // ── Filter / sort / pagination state ────────────────────────────────────────
-  const [searchInput, setSearchInput]   = useState("");
-  const [search, setSearch]             = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFrom, setDateFrom]         = useState("");
-  const [dateTo, setDateTo]             = useState("");
-  const [sortBy, setSortBy]             = useState<TryoutSortField>("createdAt");
-  const [sortOrder, setSortOrder]       = useState<SortOrder>("desc");
-  const [page, setPage]                 = useState(1);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [sortBy, setSortBy] = useState<TryoutSortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [page, setPage] = useState(1);
 
   const [deleteTarget, setDeleteTarget] = useState<Tryout | null>(null);
 
@@ -96,13 +126,19 @@ export default function TryoutsList() {
   }, []);
 
   // Reset page when any filter/sort changes
-  useEffect(() => { setPage(1); }, [statusFilter, dateFrom, dateTo, sortBy, sortOrder]);
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, dateFrom, dateTo, sortBy, sortOrder]);
 
   const hasActiveFilters = search || statusFilter !== "all" || dateFrom || dateTo;
 
   function clearFilters() {
-    setSearchInput(""); setSearch(""); setStatusFilter("all");
-    setDateFrom(""); setDateTo(""); setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setStatusFilter("all");
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
   }
 
   // ── Data ─────────────────────────────────────────────────────────────────────
@@ -110,15 +146,18 @@ export default function TryoutsList() {
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
-    status: statusFilter !== "all" ? (STATUS_TABS.find(t => t.value === statusFilter)?.apiValue ?? statusFilter) : undefined,
+    status:
+      statusFilter !== "all"
+        ? (STATUS_TABS.find((t) => t.value === statusFilter)?.apiValue ?? statusFilter)
+        : undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
     sortBy,
     sortOrder,
   });
 
-  const tryouts    = data?.tryouts    ?? [];
-  const total      = data?.total      ?? 0;
+  const tryouts = data?.tryouts ?? [];
+  const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
   const deleteMutation = useDeleteTryout();
@@ -152,9 +191,11 @@ export default function TryoutsList() {
 
   function SortIcon({ field }: { field: TryoutSortField }) {
     if (sortBy !== field) return <ArrowUpDown className="h-3.5 w-3.5 ml-1 opacity-40" />;
-    return sortOrder === "asc"
-      ? <ArrowUp   className="h-3.5 w-3.5 ml-1 text-primary" />
-      : <ArrowDown className="h-3.5 w-3.5 ml-1 text-primary" />;
+    return sortOrder === "asc" ? (
+      <ArrowUp className="h-3.5 w-3.5 ml-1 text-primary" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5 ml-1 text-primary" />
+    );
   }
 
   // ── Delete handler ───────────────────────────────────────────────────────────
@@ -192,7 +233,10 @@ export default function TryoutsList() {
                 return (
                   <button
                     key={tab.value}
-                    onClick={() => { setStatusFilter(tab.value); setPage(1); }}
+                    onClick={() => {
+                      setStatusFilter(tab.value);
+                      setPage(1);
+                    }}
                     className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       active
                         ? "bg-foreground text-background shadow-sm"
@@ -213,8 +257,6 @@ export default function TryoutsList() {
                 onChange={(e) => handleSearchChange(e.target.value)}
               />
             </div>
-
-            
 
             {/* <Select value={sortBy} onValueChange={(v) => setSortBy(v as TryoutSortField)}>
               <SelectTrigger className="h-9 w-full sm:w-40">
@@ -286,7 +328,9 @@ export default function TryoutsList() {
         {/* ── Table ───────────────────────────────────────────────────────── */}
         {!isLoading && !isError && (
           <>
-            <div className={`overflow-x-auto transition-opacity duration-150 ${isFetching ? "opacity-60" : ""}`}>
+            <div
+              className={`overflow-x-auto transition-opacity duration-150 ${isFetching ? "opacity-60" : ""}`}
+            >
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -318,7 +362,10 @@ export default function TryoutsList() {
                 <TableBody>
                   {tryouts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-12 text-sm">
+                      <TableCell
+                        colSpan={9}
+                        className="text-center text-muted-foreground py-12 text-sm"
+                      >
                         {hasActiveFilters
                           ? "No tryouts match your filters."
                           : "No tryouts yet. Create your first one!"}
@@ -336,20 +383,22 @@ export default function TryoutsList() {
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={statusVariant[t.status] ?? ""}
-                          >
+                          <Badge variant="outline" className={statusVariant[t.status] ?? ""}>
                             {statusLabel(t.status)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {firstSessionDate(t)}
                         </TableCell>
-                        <TableCell className="text-muted-foreground max-w-[140px] truncate" title={t.location}>
-                          {t.location ? (
-                            t.location.length > 18 ? t.location.slice(0, 18) + "…" : t.location
-                          ) : "—"}
+                        <TableCell
+                          className="text-muted-foreground max-w-[140px] truncate"
+                          title={t.location}
+                        >
+                          {t.location
+                            ? t.location.length > 18
+                              ? t.location.slice(0, 18) + "…"
+                              : t.location
+                            : "—"}
                         </TableCell>
                         <TableCell className="text-center font-medium">
                           {t.sessionCount ?? t.sessions?.length ?? 0}
@@ -377,7 +426,9 @@ export default function TryoutsList() {
                               })
                             )}
                             {(t.segments ?? []).length > 3 && (
-                              <span className="text-[10px] text-muted-foreground">+{t.segments.length - 3}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                +{t.segments.length - 3}
+                              </span>
                             )}
                           </div>
                         </TableCell>
@@ -398,15 +449,46 @@ export default function TryoutsList() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/tryouts/preview/${t._id}`)}>
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={() => navigate(`/tryouts/preview/${t._id}`)}
+                              >
                                 <Eye className="h-4 w-4 mr-2" /> Preview
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/tryouts/view/${t._id}`)}>
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={() => navigate(`/tryouts/view/${t._id}`)}
+                              >
                                 <LayoutDashboard className="h-4 w-4 mr-2" /> Manage
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/tryouts/edit/${t._id}`)}>
-                                <Pencil className="h-4 w-4 mr-2" /> Edit
-                              </DropdownMenuItem>
+                              {(() => {
+                                const isEditDisabled =
+                                  ["open", "published"].includes(t.status) &&
+                                  (t.registeredCount ?? 0) >= 1;
+                                const editItem = (
+                                  <DropdownMenuItem
+                                    className="cursor-pointer"
+                                    disabled={isEditDisabled}
+                                    onClick={() => navigate(`/tryouts/edit/${t._id}`)}
+                                  >
+                                    <Pencil className="h-4 w-4 mr-2" /> Edit
+                                  </DropdownMenuItem>
+                                );
+                                return isEditDisabled ? (
+                                  <TooltipProvider delayDuration={0}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="block">{editItem}</span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left">
+                                        Cannot edit tryouts that already have registrations.
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ) : (
+                                  editItem
+                                );
+                              })()}
                               {t.status === "draft" && (
                                 <DropdownMenuItem
                                   className="text-emerald-600 focus:text-emerald-600"
@@ -416,12 +498,32 @@ export default function TryoutsList() {
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive cursor-pointer"
-                                onClick={() => setDeleteTarget(t)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" /> Delete
-                              </DropdownMenuItem>
+                              {(() => {
+                                const isDeleteDisabled = t.status !== "published";
+                                const deleteItem = (
+                                  <DropdownMenuItem
+                                    disabled={isDeleteDisabled}
+                                    className="text-destructive focus:text-destructive cursor-pointer"
+                                    onClick={() => setDeleteTarget(t)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                  </DropdownMenuItem>
+                                );
+                                return isDeleteDisabled ? (
+                                  <TooltipProvider delayDuration={0}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="block">{deleteItem}</span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left">
+                                        Only published tryouts can be deleted.
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ) : (
+                                  deleteItem
+                                );
+                              })()}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -442,7 +544,9 @@ export default function TryoutsList() {
               {totalPages > 1 && (
                 <div className="flex items-center gap-1">
                   <Button
-                    variant="outline" size="icon" className="h-8 w-8"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
                     disabled={page <= 1 || isFetching}
                     onClick={() => setPage((p) => p - 1)}
                   >
@@ -457,7 +561,9 @@ export default function TryoutsList() {
                     }, [])
                     .map((p, i) =>
                       p === "…" ? (
-                        <span key={`ellipsis-${i}`} className="px-1">…</span>
+                        <span key={`ellipsis-${i}`} className="px-1">
+                          …
+                        </span>
                       ) : (
                         <Button
                           key={p}
@@ -469,10 +575,12 @@ export default function TryoutsList() {
                         >
                           {p}
                         </Button>
-                      )
+                      ),
                     )}
                   <Button
-                    variant="outline" size="icon" className="h-8 w-8"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
                     disabled={page >= totalPages || isFetching}
                     onClick={() => setPage((p) => p + 1)}
                   >

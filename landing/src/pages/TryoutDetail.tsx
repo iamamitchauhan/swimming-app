@@ -3,6 +3,12 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Calendar, CheckCircle2, Clock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { RegistrationForm } from "@/components/registrations/RegistrationForm";
 import { parentQuery, tryoutQuery } from "@/lib/queries";
 import { tryoutStatus } from "@/lib/api/tryouts";
@@ -176,12 +182,14 @@ export default function TryoutDetailPage() {
           {steps.length > 0 && (
             <section>
               <h2 className="mb-5 font-display text-xl font-bold">How it works</h2>
-              <div className="grid gap-4 sm:grid-cols-3">
+
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(250px,1fr))]">
                 {steps.map((step, i) => (
                   <div key={i} className="rounded-xl border border-border bg-card p-5">
                     <div className="mb-3 grid h-10 w-10 place-items-center rounded-lg bg-muted text-sm font-extrabold text-muted-foreground">
                       {i + 1}
                     </div>
+
                     <h3 className="font-semibold">{step.title}</h3>
                     <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
                   </div>
@@ -353,19 +361,22 @@ export default function TryoutDetailPage() {
           {faqs.length > 0 && (
             <section className="mt-10">
               <h2 className="mb-5 text-center font-display text-xl font-bold">Common questions</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <Accordion
+                type="single"
+                collapsible
+                className="rounded-xl border border-border bg-card px-5"
+              >
                 {faqs.map((f) => (
-                  <div key={f.question} className="rounded-xl border border-border bg-card p-5">
-                    <div className="mb-2 flex items-start gap-2">
-                      <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                        <Clock className="h-3 w-3" />
-                      </span>
-                      <h3 className="text-sm font-semibold">{f.question}</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground pl-7">{f.answer}</p>
-                  </div>
+                  <AccordionItem key={f.question} value={f.question}>
+                    <AccordionTrigger className="text-sm font-semibold">
+                      {f.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-sm text-muted-foreground">
+                      {f.answer}
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </div>
+              </Accordion>
             </section>
           )}
         </div>

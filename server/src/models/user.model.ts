@@ -1,9 +1,9 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-import { USER_ROLES, UserRole } from '../shared/constants/roles';
+import mongoose, { Schema, Document, Model } from "mongoose";
+import { USER_ROLES, UserRole } from "../shared/constants/roles";
 
 // ─── User Status ──────────────────────────────────────────────────────────────
 
-export const USER_STATUSES = ['pending_verification', 'active', 'suspended'] as const;
+export const USER_STATUSES = ["pending_verification", "active", "suspended"] as const;
 export type UserStatus = (typeof USER_STATUSES)[number];
 
 // ─── Interface ────────────────────────────────────────────────────────────────
@@ -40,11 +40,11 @@ const userSchema = new Schema<IUser>(
     status: {
       type: String,
       enum: USER_STATUSES,
-      default: 'pending_verification',
+      default: "pending_verification",
     },
     clubId: {
       type: Schema.Types.ObjectId,
-      ref: 'Club',
+      ref: "Club",
       default: null,
     },
     onboardingStep: {
@@ -60,21 +60,20 @@ const userSchema = new Schema<IUser>(
     firstName: {
       type: String,
       trim: true,
-      default: '',
+      default: "",
     },
     lastName: {
       type: String,
       trim: true,
-      default: '',
+      default: "",
     },
   },
   {
-    collection: 'users',
+    collection: "users",
     timestamps: true,
   },
 );
 
-userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ clubId: 1, role: 1 });
 
-export const UserModel: Model<IUser> = mongoose.model<IUser>('User', userSchema);
+export const UserModel: Model<IUser> = mongoose.model<IUser>("User", userSchema);

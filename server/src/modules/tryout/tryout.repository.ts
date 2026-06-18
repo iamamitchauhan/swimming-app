@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { TryoutModel } from "../../models/tryout.model";
+import { RegistrationModel } from "../../models/registration.model";
 
 export type PlainTryout = {
   _id: string;
@@ -377,6 +378,53 @@ export class TryoutRepository {
       registeredCount: 0,
       waitlistCount: 0,
       totalCount: 0,
+    };
+  }
+
+  async getPlatformStats(): Promise<{
+    openTryouts: number;
+    availableSlots: number;
+    registeredFamilies: number;
+    participatingClubs: number;
+  }> {
+    const [openTryoutsResult, slotsResult, familiesResult, clubsResult] = await Promise.all([
+      TryoutModel.countDocuments({ status: "open" }).exec(),
+      TryoutModel.aggregate([
+        { $match: { status: "open" } },
+        {
+          $lookup: {
+            from: "tryout_slots",
+            localField: "_id",
+            foreignField: "tryoutId",
+            as: "_slots",
+          },
+        },
+        {
+          $project: {
+            totalCapacity: { $sum: "$_slots.capacity" },
+            totalRegistered: { $sum: "$_slots.registeredCount" },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalCapacity: { $sum: "$totalCapacity" },
+            totalRegistered: { $sum: "$totalRegistered" },
+          },
+        },
+      ]).exec(),
+      RegistrationModel.distinct("parentId", { status: { $nin: ["cancelled"] } }).exec(),
+      TryoutModel.distinct("clubId", { status: "open" }).exec(),
+    ]);
+
+    const totalCapacity = slotsResult[0]?.totalCapacity ?? 0;
+    const totalRegistered = slotsResult[0]?.totalRegistered ?? 0;
+
+    return {
+      openTryouts: openTryoutsResult,
+      availableSlots: Math.max(0, totalCapacity - totalRegistered),
+      registeredFamilies: familiesResult.length,
+      participatingClubs: clubsResult.length,
     };
   }
 }

@@ -414,6 +414,7 @@ export class TryoutController {
       const registrations = await RegistrationModel.find({ tryoutId: id })
         .populate("swimmerId", "firstName lastName birthDate")
         .populate("parentId", "firstName lastName email")
+        .populate("slotId", "startTime endTime")
         .lean()
         .exec();
 
@@ -428,9 +429,11 @@ export class TryoutController {
       const data = registrations.map((r: any) => {
         const swimmer = r.swimmerId as any;
         const parent = r.parentId as any;
+        const swimmerSlot = r.slotId as any;
         const session = sessionMap.get(r.sessionId?.toString?.() ?? r.sessionId);
         const slot = slotMap.get(r.slotId?.toString?.() ?? r.slotId);
         const scores = r.scores || {};
+        console.info("swimmerSlot => ", swimmerSlot);
 
         return {
           id: r._id.toString(),
@@ -441,6 +444,9 @@ export class TryoutController {
           session_date: session?.date,
           slot_start: slot?.startTime,
           slot_end: slot?.endTime,
+          slot_id: r.slotId,
+          startTime: swimmerSlot?.startTime,
+          endTime: swimmerSlot?.endTime,
           usa_membership_id: r.swimmerDetails?.usaMembershipId || null,
           usa_verification_status: r.usaVerificationStatus || "pending",
           club_name: r.swimmerDetails?.clubName || null,
@@ -525,14 +531,13 @@ export class TryoutController {
         const swimmerName = `${updated.swimmerDetails.firstName} ${updated.swimmerDetails.lastName}`.trim();
         const parentName = `${user.firstName} ${user.lastName}`.trim();
         const parentEmail = user.email;
+        const tryout = await this.service.getPublicById(updated.tryoutId.toString());
+        // fetch slot detail by slot Id
+        const slot = await TryoutSlotModel.findById({ _id: updated.slotId }).lean();
 
         switch (status) {
           case "offered": {
             // fetch tryout detail by Id
-
-            const tryout = await this.service.getPublicById(updated.tryoutId.toString());
-            // fetch slot detail by slot Id
-            const slot = await TryoutSlotModel.findById({ _id: updated.slotId }).lean();
 
             sendRegistrationOffer({
               to: parentEmail,
@@ -548,11 +553,15 @@ export class TryoutController {
           }
 
           case "rejected":
-            sendRegistrationReject({
-              to: parentEmail,
-              swimmerName,
-              parentName,
-            });
+            {
+              sendRegistrationReject({
+                to: parentEmail,
+                swimmerName,
+                parentName,
+                tryoutName: tryout.name,
+                sessionDate: slot?.sessionDate || "",
+              });
+            }
             break;
 
           default:

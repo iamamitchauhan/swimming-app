@@ -1,6 +1,6 @@
-import { Router } from 'express';
-import { TryoutRepository } from '../tryout/tryout.repository';
-import { PublicController } from './public.controller';
+import { Router } from "express";
+import { TryoutRepository } from "../tryout/tryout.repository";
+import { PublicController } from "./public.controller";
 
 const tryoutRepository = new TryoutRepository();
 const controller = new PublicController(tryoutRepository);
@@ -11,12 +11,14 @@ const controller = new PublicController(tryoutRepository);
  * No authentication required for these endpoints
  * Only open tryouts are accessible to the public
  *
+ * GET /public/stats         — Platform-wide stats for landing page
  * GET /public/tryouts       — List open tryouts
  * GET /public/tryouts/:id   — Get tryout details
  */
 const publicRouter = Router();
 
-publicRouter.get('/tryouts', controller.listTryouts);
-publicRouter.get('/tryouts/:id', controller.getTryoutById);
+publicRouter.get("/stats", controller.getStats);
+publicRouter.get("/tryouts", controller.listTryouts);
+publicRouter.get("/tryouts/:id", controller.getTryoutById);
 
 export { publicRouter };

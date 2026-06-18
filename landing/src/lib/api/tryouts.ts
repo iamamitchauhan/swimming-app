@@ -1,6 +1,5 @@
 import { MOCK_TRYOUTS, PLATFORM_STATS } from "../mock-data";
 import type { Tryout, TryoutStatus } from "../types";
-import { wait } from "../mock-db";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api/v1";
 
@@ -166,8 +165,10 @@ export async function fetchTryoutById(id: string): Promise<Tryout | null> {
 }
 
 export async function fetchStats() {
-  await wait(150);
-  return PLATFORM_STATS;
+  const response = await fetch(`${API_BASE}/public/stats`);
+  if (!response.ok) throw new Error("Failed to fetch stats");
+  const body = await response.json();
+  return body.data ?? PLATFORM_STATS;
 }
 
 export function uniqueValues<K extends keyof Tryout>(key: K): string[] {

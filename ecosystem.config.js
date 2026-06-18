@@ -3,14 +3,17 @@ module.exports = {
     {
       name: "server",
       cwd: "./server",
-      script: "./start.sh",
-      instances: "max",
-      exec_mode: "cluster",
+      script: "npx",
+      args: "ts-node src/server.ts",
+      instances: 1,
+      exec_mode: "fork",
       env: {
         NODE_ENV: "production",
+        PORT: "5000",
       },
       env_production: {
         NODE_ENV: "production",
+        PORT: "5000",
       },
       max_memory_restart: "1G",
       restart_delay: 3000,

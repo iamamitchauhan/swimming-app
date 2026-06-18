@@ -1,29 +1,31 @@
 import { useState } from "react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import type { Registration, Tryout } from "@/lib/api/tryouts.api";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<string, string> = {
   registered: "bg-blue-100 text-blue-700",
-  offered:    "bg-green-100 text-green-700",
-  rejected:   "bg-red-100 text-red-500",
+  offered: "bg-green-100 text-green-700",
+  rejected: "bg-red-100 text-red-500",
   waitlisted: "bg-yellow-100 text-yellow-700",
-  cancelled:  "bg-gray-100 text-gray-500",
+  cancelled: "bg-gray-100 text-gray-500",
 };
 
 const VERIFY_COLORS: Record<string, string> = {
-  pending:      "bg-gray-100 text-gray-500",
+  pending: "bg-gray-100 text-gray-500",
   needs_review: "bg-yellow-100 text-yellow-700",
-  verified:     "bg-green-100 text-green-700",
-  rejected:     "bg-red-100 text-red-500",
+  verified: "bg-green-100 text-green-700",
+  rejected: "bg-red-100 text-red-500",
 };
 
 const VERIFY_LABELS: Record<string, string> = {
-  pending:      "Pending",
+  pending: "Pending",
   needs_review: "Needs review",
-  verified:     "Verified",
-  rejected:     "Rejected",
+  verified: "Verified",
+  rejected: "Rejected",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -31,7 +33,9 @@ const VERIFY_LABELS: Record<string, string> = {
 function fmtDate(d?: string) {
   if (!d) return "—";
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -61,10 +65,10 @@ interface Props {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function RosterTab({ tryout, registered, onDecision }: Props) {
-  const [search, setSearch]           = useState("");
-  const [segFilter, setSegFilter]     = useState("");
+  const [search, setSearch] = useState("");
+  const [segFilter, setSegFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [modalOpen, setModalOpen]     = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [selectedRegId, setSelectedRegId] = useState<string | null>(null);
 
   const filteredRoster = registered.filter((r) => {
@@ -73,8 +77,8 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
       !q ||
       r.swimmer_name.toLowerCase().includes(q) ||
       (r.guardian_email || r.parent_email || "").toLowerCase().includes(q);
-    const matchSeg    = !segFilter    || r.segment_id === segFilter;
-    const matchStatus = !statusFilter || r.status     === statusFilter;
+    const matchSeg = !segFilter || r.segment_id === segFilter;
+    const matchStatus = !statusFilter || r.status === statusFilter;
     return matchSearch && matchSeg && matchStatus;
   });
 
@@ -107,7 +111,9 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
         >
           <option value="">All statuses</option>
           {["registered", "offered", "rejected"].map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
         <span className="text-xs text-gray-400 ml-auto">
@@ -120,8 +126,20 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
         <table className="w-full text-sm">
           <thead className="bg-gray-900 text-white text-xs uppercase tracking-wide">
             <tr>
-              {["Swimmer", "Age", "Segment", "When", "USA-S ID", "Parent", "Status", "Avg Score"].map((h) => (
-                <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>
+              {[
+                "Swimmer",
+                "Age",
+                "Segment",
+                "When",
+                "USA-S ID",
+                "Parent",
+                "Status",
+                "Avg Score",
+                "Action",
+              ].map((h) => (
+                <th key={h} className="px-4 py-3 text-left font-semibold">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -152,7 +170,8 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
                     {r.session_date ? fmtDate(r.session_date) : "—"}
                     {r.slot_start && (
                       <span className="text-gray-400">
-                        {" "}· {fmtTime(r.slot_start)}–{fmtTime(r.slot_end)}
+                        {" "}
+                        · {fmtTime(r.slot_start)}–{fmtTime(r.slot_end)}
                       </span>
                     )}
                   </td>
@@ -160,40 +179,90 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
                     {r.usa_membership_id ? (
                       <div>
                         <div className="font-mono text-xs text-gray-700">{r.usa_membership_id}</div>
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${VERIFY_COLORS[verSt]}`}>
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded-full ${VERIFY_COLORS[verSt]}`}
+                        >
                           {VERIFY_LABELS[verSt]}
                         </span>
                       </div>
-                    ) : "—"}
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-gray-700">{r.guardian_name || r.parent_name}</div>
-                    <div className="text-xs text-gray-400">{r.guardian_email || r.parent_email}</div>
+                    <div className="text-xs text-gray-400">
+                      {r.guardian_email || r.parent_email}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status]}`}>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status]}`}
+                      >
                         {r.status}
                       </span>
-                      {r.status === "registered" && (
-                        <>
-                          <button
-                            onClick={() => onDecision(r.id, "offered")}
-                            className="text-xs text-green-600 hover:underline"
-                          >
-                            Offer
-                          </button>
-                          <button
-                            onClick={() => onDecision(r.id, "rejected")}
-                            className="text-xs text-red-500 hover:underline"
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 font-semibold text-blue-700">{avg(r) || "—"}</td>
+                  <td>
+                    {(() => {
+                      if (r.status !== "registered") {
+                        return <div className="flex items-center gap-2 pl-4">-</div>;
+                      }
+                      const hasAvg = !!avg(r);
+                      const offerBtn = (
+                        <button
+                          disabled={!hasAvg}
+                          onClick={() => onDecision(r.id, "offered")}
+                          className="text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Offer
+                        </button>
+                      );
+                      const rejectBtn = (
+                        <button
+                          disabled={!hasAvg}
+                          onClick={() => onDecision(r.id, "rejected")}
+                          className="text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <XCircle className="h-3.5 w-3.5" /> Reject
+                        </button>
+                      );
+                      return (
+                        <div className="flex items-center gap-2 pl-4">
+                          {hasAvg ? (
+                            offerBtn
+                          ) : (
+                            <TooltipProvider delayDuration={0}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block">{offerBtn}</span>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  Cannot offer without an average score.
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          {hasAvg ? (
+                            rejectBtn
+                          ) : (
+                            <TooltipProvider delayDuration={0}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block">{rejectBtn}</span>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  Cannot reject without an average score.
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </td>
                 </tr>
               );
             })}
