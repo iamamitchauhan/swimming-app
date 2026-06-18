@@ -11,7 +11,7 @@ export default defineConfig({
   },
   server: {
     host: "::",
-    port: 8000,
+    port: 3002,
     strictPort: true,
   },
 });

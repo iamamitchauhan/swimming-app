@@ -1,27 +1,27 @@
-import express, { Request, Response } from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import swaggerUi from 'swagger-ui-express';
-import { config } from './config/env';
-import { swaggerSpec } from './config/swagger';
-import { requestId } from './middleware/requestId.middleware';
-import { errorHandler } from './middleware/error.middleware';
-import { HTTP_STATUS } from './shared/constants/httpStatus';
-import { MESSAGES } from './shared/constants/messages';
-import { sendError } from './shared/utils/response';
-import { API_PREFIX } from './shared/constants/routes';
-import { authRouter } from './modules/auth/auth.routes';
-import { onboardingRouter } from './modules/onboarding/onboarding.routes';
-import { clubRouter } from './modules/club/club.routes';
-import { invitationRouter } from './modules/invitation/invitation.routes';
-import { userRouter } from './modules/user/user.routes';
-import { tryoutRouter } from './modules/tryout/tryout.routes';
-import { swimmerRouter } from './modules/swimmer/swimmer.routes';
-import { registrationRouter } from './modules/registration/registration.routes';
-import { publicRouter } from './modules/public/public.routes';
-import { parentRouter } from './modules/parent/parent.routes';
-import { questionLibraryRouter } from './modules/question-library/question-library.routes';
+import express, { Request, Response } from "express";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
+import swaggerUi from "swagger-ui-express";
+import { config } from "./config/env";
+import { swaggerSpec } from "./config/swagger";
+import { requestId } from "./middleware/requestId.middleware";
+import { errorHandler } from "./middleware/error.middleware";
+import { HTTP_STATUS } from "./shared/constants/httpStatus";
+import { MESSAGES } from "./shared/constants/messages";
+import { sendError } from "./shared/utils/response";
+import { API_PREFIX } from "./shared/constants/routes";
+import { authRouter } from "./modules/auth/auth.routes";
+import { onboardingRouter } from "./modules/onboarding/onboarding.routes";
+import { clubRouter } from "./modules/club/club.routes";
+import { invitationRouter } from "./modules/invitation/invitation.routes";
+import { userRouter } from "./modules/user/user.routes";
+import { tryoutRouter } from "./modules/tryout/tryout.routes";
+import { swimmerRouter } from "./modules/swimmer/swimmer.routes";
+import { registrationRouter } from "./modules/registration/registration.routes";
+import { publicRouter } from "./modules/public/public.routes";
+import { parentRouter } from "./modules/parent/parent.routes";
+import { questionLibraryRouter } from "./modules/question-library/question-library.routes";
 
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -29,8 +29,7 @@ const rateLimiter = rateLimit({
   statusCode: HTTP_STATUS.TOO_MANY_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (_req, res) =>
-    sendError(res, 'Too many requests. Please try again later.', HTTP_STATUS.TOO_MANY_REQUESTS, MESSAGES.RATE_LIMIT_EXCEEDED),
+  handler: (_req, res) => sendError(res, "Too many requests. Please try again later.", HTTP_STATUS.TOO_MANY_REQUESTS, MESSAGES.RATE_LIMIT_EXCEEDED),
 });
 
 /**
@@ -44,15 +43,12 @@ export function createApp(): express.Application {
 
   // Security & parsing middleware
   app.use(helmet());
-  app.use(cors({ 
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:5173', // Vite default port
-    'http://localhost:8000', // Landing page port
-    config.CORS_ORIGIN
-  ],
-  credentials: true
-}));
+  app.use(
+    cors({
+      origin: "*",
+      credentials: true,
+    }),
+  );
   app.use(express.json());
   app.use(requestId);
   // app.use(rateLimiter);
@@ -60,26 +56,26 @@ export function createApp(): express.Application {
   // Swagger UI — available in all environments for this project
   // Helmet's default CSP blocks swagger-ui inline scripts, so we override it for this path only.
   app.use(
-    '/api-docs',
+    "/api-docs",
     helmet({
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "'unsafe-inline'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
+          imgSrc: ["'self'", "data:", "https:"],
         },
       },
     }),
     swaggerUi.serve,
     swaggerUi.setup(swaggerSpec, {
-      customSiteTitle: 'Swimming Club API Docs',
+      customSiteTitle: "Swimming Club API Docs",
       swaggerOptions: { persistAuthorization: true },
     }),
   );
   // Raw OpenAPI JSON spec (useful for code generation / Postman import)
-  app.get('/api-docs.json', (_req: Request, res: Response) => {
-    res.setHeader('Content-Type', 'application/json');
+  app.get("/api-docs.json", (_req: Request, res: Response) => {
+    res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
   });
 
@@ -87,7 +83,7 @@ export function createApp(): express.Application {
   app.get(`${API_PREFIX}/health`, (_req: Request, res: Response) => {
     res.status(HTTP_STATUS.OK).json({
       success: true,
-      message: 'OK',
+      message: "OK",
       data: { uptime: process.uptime() },
       error: null,
     });
