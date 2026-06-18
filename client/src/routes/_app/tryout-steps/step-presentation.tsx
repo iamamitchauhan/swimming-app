@@ -16,10 +16,10 @@ interface Props {
 
 export function StepPresentation({ register, faqsField }: Props) {
   return (
-    <div className="space-y-10">
+    <div className="space-y-2">
 
       {/* Public website card */}
-      <div className="space-y-5">
+      <div className="">
         <div>
           <h3 className="text-base font-semibold text-foreground">Public Website Card</h3>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -27,14 +27,14 @@ export function StepPresentation({ register, faqsField }: Props) {
           </p>
         </div>
 
-        <FieldGroup label="CTA Button Label">
+        {/* <FieldGroup label="CTA Button Label">
           <Input
             placeholder="Sign up today"
             {...register("ctaLabel")}
           />
-        </FieldGroup>
+        </FieldGroup> */}
 
-        <FieldGroup
+        {/* <FieldGroup
           label="Highlights"
           hint="One highlight per line — displayed as bullet points on the public card."
         >
@@ -43,11 +43,11 @@ export function StepPresentation({ register, faqsField }: Props) {
             rows={5}
             {...register("highlights")}
           />
-        </FieldGroup>
+        </FieldGroup> */}
       </div>
 
       {/* FAQ */}
-      <div className="space-y-4 pt-4 border-t border-border">
+      <div className="space-y-4 pt-4">
         <div>
           <h3 className="text-base font-semibold text-foreground">FAQ</h3>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -103,8 +103,12 @@ export function StepPresentation({ register, faqsField }: Props) {
           type="button"
           variant="outline"
           size="sm"
-          className="w-full"
-          onClick={() => faqsField.append({ question: "", answer: "" })}
+          className={`w-full ${faqsField.fields.length >= 10 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          onClick={() => {
+            if(faqsField.fields.length < 10) {
+              faqsField.append({ question: "", answer: "" })
+            }
+          }}
         >
           <Plus className="h-4 w-4 mr-1.5" /> Add FAQ
         </Button>

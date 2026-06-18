@@ -37,7 +37,7 @@ export class OnboardingService {
    */
   async saveStep1(
     userId: string,
-    data: { name: string; address: string; phone: string; logoUrl?: string },
+    data: { name: string; address: string; phone: string; logoUrl?: string; clubSize?: string; region?: string },
   ): Promise<PlainClub> {
     const existingClub = await this.repo.findClubByOwner(userId);
 
@@ -53,6 +53,8 @@ export class OnboardingService {
       address: data.address,
       phone: data.phone,
       ...(data.logoUrl ? { logoUrl: data.logoUrl } : {}),
+      ...(data.clubSize ? { clubSize: data.clubSize } : {}),
+      ...(data.region ? { region: data.region } : {}),
     });
 
     await this.repo.setUserClub(userId, club._id.toString());

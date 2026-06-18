@@ -162,7 +162,6 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Club Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   {(isAdmin || isSuperAdmin) && <TableHead className="w-16">Actions</TableHead>}
@@ -256,7 +255,6 @@ export default function UsersPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                      <TableCell className="text-muted-foreground">{u.club?.name || '—'}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{ROLE_LABEL[u.role] ?? u.role}</Badge>
                       </TableCell>
@@ -433,12 +431,16 @@ function ChangeRoleDialog({
   onSave: (role: string) => void;
   isPending: boolean;
 }) {
-  const ALL_ROLES = ["admin", "coach"];
+  const ALL_ROLES = ["admin", "coach", "parent"];
   const available = ALL_ROLES.filter((r) => r !== user?.role);
-  const newRole = available[0];
+  const [selectedRole, setSelectedRole] = useState<string>(available[0] ?? "");
+
+  useEffect(() => {
+    setSelectedRole(available[0] ?? "");
+  }, [user?.role]);
 
   const handleSave = () => {
-    if (newRole) onSave(newRole);
+    if (selectedRole) onSave(selectedRole);
   };
 
   return (
@@ -456,14 +458,25 @@ function ChangeRoleDialog({
           <div className="flex items-center justify-center gap-3 py-4">
             <Badge variant="secondary" className="capitalize text-sm px-3 py-1">{user?.role}</Badge>
             <span className="text-muted-foreground">→</span>
-            <Badge variant="default" className="capitalize text-sm px-3 py-1">{newRole}</Badge>
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                {available.map((role) => (
+                  <SelectItem key={role} value={role} className="capitalize">
+                    {role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isPending || !newRole}>
+          <Button onClick={handleSave} disabled={isPending || !selectedRole}>
             {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…</> : "Save"}
           </Button>
         </DialogFooter>

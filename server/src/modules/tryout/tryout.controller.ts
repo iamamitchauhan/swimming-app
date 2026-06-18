@@ -1,23 +1,27 @@
-import { Request, Response, NextFunction } from 'express';
-import { TryoutService } from './tryout.service';
-import { TryoutSlotRepository } from './tryout-slot.repository';
-import { TryoutSessionRepository } from './tryout-session.repository';
-import { RegistrationRepository } from '../registration/registration.repository';
-import { HTTP_STATUS } from '../../shared/constants/httpStatus';
-import { MESSAGES } from '../../shared/constants/messages';
-import { sendSuccess } from '../../shared/utils/response';
-import { NotFoundError, ForbiddenError } from '../../shared/errors/domain.errors';
-import multer from 'multer';
-import { RegistrationModel } from '../../models/registration.model';
-import { SwimmerModel } from '../../models/swimmer.model';
-import { UserModel } from '../../models/user.model';
+import { Request, Response, NextFunction } from "express";
+import { TryoutService } from "./tryout.service";
+import { TryoutSlotRepository } from "./tryout-slot.repository";
+import { TryoutSessionRepository } from "./tryout-session.repository";
+import { RegistrationRepository } from "../registration/registration.repository";
+import { HTTP_STATUS } from "../../shared/constants/httpStatus";
+import { MESSAGES } from "../../shared/constants/messages";
+import { sendSuccess } from "../../shared/utils/response";
+import { NotFoundError, ForbiddenError } from "../../shared/errors/domain.errors";
+import multer from "multer";
+import { RegistrationModel } from "../../models/registration.model";
+import { SwimmerModel } from "../../models/swimmer.model";
+import { UserModel } from "../../models/user.model";
+import { TryoutRegistrationQuestionModel } from "../../models/tryout-registration-question.model";
+import { sendRegistrationOffer, sendRegistrationReject } from "../../shared/utils/mailer";
+import { UserService } from "../user/user.service";
+import { TryoutSlotModel } from "../../models/tryout-slot.model";
 
 // ─── Slot helpers ─────────────────────────────────────────────────────────────
 
 function calcSlots(startTime: string, endTime: string, slotDuration: number): number {
   if (!startTime || !endTime || !slotDuration) return 0;
-  const [sh, sm] = startTime.split(':').map(Number);
-  const [eh, em] = endTime.split(':').map(Number);
+  const [sh, sm] = startTime.split(":").map(Number);
+  const [eh, em] = endTime.split(":").map(Number);
   const durationMin = eh * 60 + em - (sh * 60 + sm);
   if (durationMin <= 0) return 0;
   return Math.floor(durationMin / slotDuration);
@@ -25,6 +29,26 @@ function calcSlots(startTime: string, endTime: string, slotDuration: number): nu
 
 const slotRepo = new TryoutSlotRepository();
 const sessionRepo = new TryoutSessionRepository();
+
+function computeTryoutBounds(rawSessions: Array<{ date: string; startTime: string; endTime: string }>): { startAt: Date | null; endAt: Date | null } {
+  if (!rawSessions || rawSessions.length === 0) {
+    return { startAt: null, endAt: null };
+  }
+
+  const sorted = [...rawSessions].sort((a, b) => {
+    const ad = a.date.localeCompare(b.date);
+    if (ad !== 0) return ad;
+    return a.startTime.localeCompare(b.startTime);
+  });
+
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+
+  const startAt = new Date(`${first.date}T${first.startTime}`);
+  const endAt = new Date(`${last.date}T${last.endTime}`);
+
+  return { startAt, endAt };
+}
 
 async function syncSessionsAndSlots(
   tryoutId: string,
@@ -60,7 +84,7 @@ async function syncSessionsAndSlots(
       slotIndex: i,
       capacity: swimmersPerSlot,
       registeredCount: 0,
-    }))
+    })),
   );
 
   if (slots.length > 0) await slotRepo.createMany(slots);
@@ -73,10 +97,10 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'));
+      cb(new Error("Only image files are allowed"));
     }
   },
 });
@@ -91,21 +115,30 @@ export class TryoutController {
   list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const clubId = req.user?.clubId;
-      if (!clubId) return next(new ForbiddenError('No club associated with user'));
+      if (!clubId) return next(new ForbiddenError("No club associated with user"));
 
-      const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
-      const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 10));
-      const search = (req.query['search'] as string | undefined)?.trim() || undefined;
-      const status = (req.query['status'] as string | undefined)?.trim() || undefined;
-      const dateFrom = (req.query['dateFrom'] as string | undefined)?.trim() || undefined;
-      const dateTo = (req.query['dateTo'] as string | undefined)?.trim() || undefined;
-      const sortBy = (['name', 'status', 'createdAt', 'updatedAt'].includes(req.query['sortBy'] as string)
-        ? req.query['sortBy']
-        : 'createdAt') as 'name' | 'status' | 'createdAt' | 'updatedAt';
-      const sortOrder = (req.query['sortOrder'] === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc';
+      const page = Math.max(1, parseInt(req.query["page"] as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query["limit"] as string) || 10));
+      const search = (req.query["search"] as string | undefined)?.trim() || undefined;
+      const status = (req.query["status"] as string | undefined)?.trim() || undefined;
+      const dateFrom = (req.query["dateFrom"] as string | undefined)?.trim() || undefined;
+      const dateTo = (req.query["dateTo"] as string | undefined)?.trim() || undefined;
+      const sortBy = (["name", "status", "createdAt", "updatedAt"].includes(req.query["sortBy"] as string) ? req.query["sortBy"] : "createdAt") as
+        | "name"
+        | "status"
+        | "createdAt"
+        | "updatedAt";
+      const sortOrder = (req.query["sortOrder"] === "asc" ? "asc" : "desc") as "asc" | "desc";
 
       const result = await this.service.listByClub(clubId, {
-        page, limit, search, status, dateFrom, dateTo, sortBy, sortOrder,
+        page,
+        limit,
+        search,
+        status,
+        dateFrom,
+        dateTo,
+        sortBy,
+        sortOrder,
       });
 
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
@@ -122,10 +155,11 @@ export class TryoutController {
     try {
       const { id } = req.params;
       const clubId = req.user?.clubId;
-      if (!clubId) return next(new ForbiddenError('No club associated with user'));
+      if (!clubId) return next(new ForbiddenError("No club associated with user"));
 
       const tryout = await this.service.getById(id, clubId);
-      sendSuccess(res, { tryout }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+      const sessions = await sessionRepo.findByTryout(id);
+      sendSuccess(res, { tryout: { ...tryout, sessions } }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }
@@ -139,36 +173,41 @@ export class TryoutController {
     try {
       const clubId = req.user?.clubId;
       const userId = req.user?.id;
-      if (!clubId || !userId) return next(new ForbiddenError('No club or user associated'));
+      if (!clubId || !userId) return next(new ForbiddenError("No club or user associated"));
 
       // Parse JSON fields from form data
       const slotDuration = parseInt(req.body.slotDuration) || 30;
       const swimmersPerSlot = parseInt(req.body.swimmersPerSlot) || 4;
-      const rawSessions: Array<{ date: string; startTime: string; endTime: string; label: string }> =
-        req.body.sessions ? JSON.parse(req.body.sessions) : [];
+      const rawSessions: Array<{ date: string; startTime: string; endTime: string; label: string }> = req.body.sessions
+        ? JSON.parse(req.body.sessions)
+        : [];
       const segments = req.body.segments ? JSON.parse(req.body.segments) : [];
       const steps = req.body.steps ? JSON.parse(req.body.steps) : [];
       const faqs = req.body.faqs ? JSON.parse(req.body.faqs) : [];
 
       // TODO: Upload banner file to S3/cloud storage and get URL
-      let bannerUrl = req.body.bannerUrl || '';
+      let bannerUrl = req.body.bannerUrl || "";
       // if (req.file) { bannerUrl = await uploadToS3(req.file); }
+
+      const { startAt, endAt } = computeTryoutBounds(rawSessions);
 
       const tryout = await this.service.create({
         name: req.body.name,
-        location: req.body.location || '',
-        description: req.body.description || '',
-        theme: req.body.theme || 'ocean',
+        location: req.body.location || "",
+        description: req.body.description || "",
+        theme: req.body.theme || "ocean",
         bannerUrl,
         slotDuration,
         swimmersPerSlot,
-        ctaLabel: req.body.ctaLabel || 'Sign up today',
-        highlights: req.body.highlights || '',
-        additionalInstructions: req.body.additionalInstructions || '',
-        status: req.body.status || 'draft',
+        ctaLabel: req.body.ctaLabel || "Sign up today",
+        highlights: req.body.highlights || "",
+        additionalInstructions: req.body.additionalInstructions || "",
+        status: req.body.status || "draft",
         segments,
         steps,
         faqs,
+        startAt,
+        endAt,
         clubId,
         createdBy: userId,
       });
@@ -189,13 +228,14 @@ export class TryoutController {
     try {
       const { id } = req.params;
       const clubId = req.user?.clubId;
-      if (!clubId) return next(new ForbiddenError('No club associated with user'));
+      if (!clubId) return next(new ForbiddenError("No club associated with user"));
 
       // Parse JSON fields from form data if present
       const slotDuration = req.body.slotDuration !== undefined ? parseInt(req.body.slotDuration) : undefined;
       const swimmersPerSlot = req.body.swimmersPerSlot !== undefined ? parseInt(req.body.swimmersPerSlot) : undefined;
-      const rawSessions: Array<{ date: string; startTime: string; endTime: string; label: string }> | undefined =
-        req.body.sessions ? JSON.parse(req.body.sessions) : undefined;
+      const rawSessions: Array<{ date: string; startTime: string; endTime: string; label: string }> | undefined = req.body.sessions
+        ? JSON.parse(req.body.sessions)
+        : undefined;
       const segments = req.body.segments ? JSON.parse(req.body.segments) : undefined;
       const steps = req.body.steps ? JSON.parse(req.body.steps) : undefined;
       const faqs = req.body.faqs ? JSON.parse(req.body.faqs) : undefined;
@@ -203,6 +243,8 @@ export class TryoutController {
       // TODO: Upload banner file to S3/cloud storage and get URL
       let bannerUrl = req.body.bannerUrl;
       // if (req.file) { bannerUrl = await uploadToS3(req.file); }
+
+      const { startAt, endAt } = rawSessions !== undefined ? computeTryoutBounds(rawSessions) : { startAt: undefined, endAt: undefined };
 
       const tryout = await this.service.update(id, clubId, {
         ...(req.body.name !== undefined && { name: req.body.name }),
@@ -219,6 +261,8 @@ export class TryoutController {
         ...(segments !== undefined && { segments }),
         ...(steps !== undefined && { steps }),
         ...(faqs !== undefined && { faqs }),
+        ...(startAt !== undefined && { startAt }),
+        ...(endAt !== undefined && { endAt }),
       });
 
       if (tryout && rawSessions !== undefined) {
@@ -227,6 +271,24 @@ export class TryoutController {
         await syncSessionsAndSlots(id, rawSessions, effectiveSlotDuration, effectiveSwimmersPerSlot);
       }
 
+      const sessions = await sessionRepo.findByTryout(id);
+      sendSuccess(res, { tryout: { ...tryout, sessions } }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * PATCH /tryouts/:id/publish
+   * Publishes a draft tryout by setting status to 'open'.
+   */
+  publish = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const clubId = req.user?.clubId;
+      if (!clubId) return next(new ForbiddenError("No club associated with user"));
+
+      const tryout = await this.service.update(id, clubId, { status: "open" });
       sendSuccess(res, { tryout }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -241,7 +303,7 @@ export class TryoutController {
     try {
       const { id } = req.params;
       const clubId = req.user?.clubId;
-      if (!clubId) return next(new ForbiddenError('No club associated with user'));
+      if (!clubId) return next(new ForbiddenError("No club associated with user"));
 
       await this.service.delete(id, clubId);
       sendSuccess(res, null, MESSAGES.DELETED, HTTP_STATUS.OK);
@@ -271,10 +333,8 @@ export class TryoutController {
   getSlots = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
-      const sessionId = req.query['sessionId'] as string | undefined;
-      const slots = sessionId
-        ? await slotRepo.findBySession(sessionId)
-        : await slotRepo.findByTryout(id);
+      const sessionId = req.query["sessionId"] as string | undefined;
+      const slots = sessionId ? await slotRepo.findBySession(sessionId) : await slotRepo.findByTryout(id);
       sendSuccess(res, { slots }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -317,16 +377,21 @@ export class TryoutController {
    */
   listPublic = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
-      const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 10));
-      const search = (req.query['search'] as string | undefined)?.trim() || undefined;
-      const sortBy = (['name', 'createdAt', 'updatedAt'].includes(req.query['sortBy'] as string)
-        ? req.query['sortBy']
-        : 'createdAt') as 'name' | 'createdAt' | 'updatedAt';
-      const sortOrder = (req.query['sortOrder'] === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc';
+      const page = Math.max(1, parseInt(req.query["page"] as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query["limit"] as string) || 10));
+      const search = (req.query["search"] as string | undefined)?.trim() || undefined;
+      const sortBy = (["name", "createdAt", "updatedAt"].includes(req.query["sortBy"] as string) ? req.query["sortBy"] : "createdAt") as
+        | "name"
+        | "createdAt"
+        | "updatedAt";
+      const sortOrder = (req.query["sortOrder"] === "asc" ? "asc" : "desc") as "asc" | "desc";
 
       const result = await this.service.listActive({
-        page, limit, search, sortBy, sortOrder,
+        page,
+        limit,
+        search,
+        sortBy,
+        sortOrder,
       });
 
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
@@ -347,12 +412,12 @@ export class TryoutController {
     try {
       const { id } = req.params;
       const registrations = await RegistrationModel.find({ tryoutId: id })
-        .populate('swimmerId', 'firstName lastName birthDate')
-        .populate('parentId', 'firstName lastName email')
+        .populate("swimmerId", "firstName lastName birthDate")
+        .populate("parentId", "firstName lastName email")
         .lean()
         .exec();
 
-      const tryout = await this.service.getById(id, req.user?.clubId ?? '');
+      const tryout = await this.service.getById(id, req.user?.clubId ?? "");
       const sessions = await sessionRepo.findByTryout(id);
       const slots = await slotRepo.findByTryout(id);
 
@@ -369,7 +434,7 @@ export class TryoutController {
 
         return {
           id: r._id.toString(),
-          swimmer_name: swimmer ? `${swimmer.firstName} ${swimmer.lastName}` : 'Unknown',
+          swimmer_name: swimmer ? `${swimmer.firstName} ${swimmer.lastName}` : "Unknown",
           swimmer_age: r.swimmerDetails?.ageOnTryoutDay ?? 0,
           segment_name: segmentMap.get(r.segmentId) || r.segmentId,
           segment_id: r.segmentId,
@@ -377,7 +442,7 @@ export class TryoutController {
           slot_start: slot?.startTime,
           slot_end: slot?.endTime,
           usa_membership_id: r.swimmerDetails?.usaMembershipId || null,
-          usa_verification_status: r.usaVerificationStatus || 'pending',
+          usa_verification_status: r.usaVerificationStatus || "pending",
           club_name: r.swimmerDetails?.clubName || null,
           guardian_name: r.swimmerDetails?.guardianName || null,
           guardian_email: r.swimmerDetails?.guardianEmail || null,
@@ -410,21 +475,21 @@ export class TryoutController {
       const { id } = req.params;
       const registrations = await RegistrationModel.find({
         tryoutId: id,
-        status: { $nin: ['cancelled'] },
-        'scores.totalScore': { $exists: true, $ne: null },
+        status: { $nin: ["cancelled"] },
+        "scores.totalScore": { $exists: true, $ne: null },
       })
-        .populate('swimmerId', 'firstName lastName birthDate')
+        .populate("swimmerId", "firstName lastName birthDate")
         .lean()
         .exec();
 
-      const tryout = await this.service.getById(id, req.user?.clubId ?? '');
+      const tryout = await this.service.getById(id, req.user?.clubId ?? "");
       const segmentMap = new Map((tryout.segments || []).map((s: any) => [s.id || s.name, s.name]));
 
       const data = registrations.map((r: any) => {
         const swimmer = r.swimmerId as any;
         return {
           registration_id: r._id.toString(),
-          swimmer_name: swimmer ? `${swimmer.firstName} ${swimmer.lastName}` : 'Unknown',
+          swimmer_name: swimmer ? `${swimmer.firstName} ${swimmer.lastName}` : "Unknown",
           swimmer_age: r.swimmerDetails?.ageOnTryoutDay ?? 0,
           segment_name: segmentMap.get(r.segmentId) || r.segmentId,
           age_segment: r.segmentId,
@@ -449,12 +514,52 @@ export class TryoutController {
     try {
       const { regId } = req.params;
       const { status } = req.body;
-      const updated = await RegistrationModel.findByIdAndUpdate(
-        regId,
-        { $set: { status } },
-        { new: true },
-      ).lean().exec();
-      if (!updated) throw new NotFoundError('Registration not found');
+      const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: { status } }, { new: true }).lean().exec();
+      if (!updated) throw new NotFoundError("Registration not found");
+
+      const users = await UserModel.find({ _id: updated.parentId }).lean().exec();
+      const user = users[0];
+
+      if (user) {
+        // send mail based on status
+        const swimmerName = `${updated.swimmerDetails.firstName} ${updated.swimmerDetails.lastName}`.trim();
+        const parentName = `${user.firstName} ${user.lastName}`.trim();
+        const parentEmail = user.email;
+
+        switch (status) {
+          case "offered": {
+            // fetch tryout detail by Id
+
+            const tryout = await this.service.getPublicById(updated.tryoutId.toString());
+            // fetch slot detail by slot Id
+            const slot = await TryoutSlotModel.findById({ _id: updated.slotId }).lean();
+
+            sendRegistrationOffer({
+              to: parentEmail,
+              swimmerName,
+              parentName,
+              tryoutName: tryout.name,
+              location: tryout.location,
+              sessionDate: slot?.sessionDate || "",
+              startTime: slot?.startTime || "",
+              endTime: slot?.endTime || "",
+            });
+            break;
+          }
+
+          case "rejected":
+            sendRegistrationReject({
+              to: parentEmail,
+              swimmerName,
+              parentName,
+            });
+            break;
+
+          default:
+            break;
+        }
+      }
+
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -468,12 +573,10 @@ export class TryoutController {
   promoteWaitlist = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { regId } = req.params;
-      const updated = await RegistrationModel.findByIdAndUpdate(
-        regId,
-        { $set: { status: 'registered', waitlistPosition: null } },
-        { new: true },
-      ).lean().exec();
-      if (!updated) throw new NotFoundError('Registration not found');
+      const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: { status: "registered", waitlistPosition: null } }, { new: true })
+        .lean()
+        .exec();
+      if (!updated) throw new NotFoundError("Registration not found");
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -488,12 +591,10 @@ export class TryoutController {
     try {
       const { regId } = req.params;
       const { status } = req.body;
-      const updated = await RegistrationModel.findByIdAndUpdate(
-        regId,
-        { $set: { usaVerificationStatus: status } },
-        { new: true },
-      ).lean().exec();
-      if (!updated) throw new NotFoundError('Registration not found');
+      const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: { usaVerificationStatus: status } }, { new: true })
+        .lean()
+        .exec();
+      if (!updated) throw new NotFoundError("Registration not found");
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -510,32 +611,73 @@ export class TryoutController {
       const body = req.body;
 
       const scoreUpdate: any = {};
-      if (body.safety_entry_exit !== undefined) scoreUpdate['scores.safetyEntryExit'] = body.safety_entry_exit;
-      if (body.safety_float !== undefined)      scoreUpdate['scores.safetyFloat'] = body.safety_float;
-      if (body.freestyle !== undefined)           scoreUpdate['scores.freestyle'] = Number(body.freestyle) || null;
-      if (body.backstroke !== undefined)        scoreUpdate['scores.backstroke'] = Number(body.backstroke) || null;
-      if (body.breaststroke !== undefined)      scoreUpdate['scores.breaststroke'] = Number(body.breaststroke) || null;
-      if (body.butterfly !== undefined)         scoreUpdate['scores.butterfly'] = Number(body.butterfly) || null;
+      if (body.safety_entry_exit !== undefined) scoreUpdate["scores.safetyEntryExit"] = body.safety_entry_exit;
+      if (body.safety_float !== undefined) scoreUpdate["scores.safetyFloat"] = body.safety_float;
+      if (body.freestyle !== undefined) scoreUpdate["scores.freestyle"] = Number(body.freestyle) || null;
+      if (body.backstroke !== undefined) scoreUpdate["scores.backstroke"] = Number(body.backstroke) || null;
+      if (body.breaststroke !== undefined) scoreUpdate["scores.breaststroke"] = Number(body.breaststroke) || null;
+      if (body.butterfly !== undefined) scoreUpdate["scores.butterfly"] = Number(body.butterfly) || null;
 
-      const strokes = ['freestyle', 'backstroke', 'breaststroke', 'butterfly'] as const;
+      const strokes = ["freestyle", "backstroke", "breaststroke", "butterfly"] as const;
       const scores: number[] = [];
       for (const k of strokes) {
-        if (body[k] !== undefined && body[k] !== '' && !isNaN(Number(body[k]))) {
+        if (body[k] !== undefined && body[k] !== "" && !isNaN(Number(body[k]))) {
           scores.push(Number(body[k]));
         }
       }
       if (scores.length > 0) {
         const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-        scoreUpdate['scores.totalScore'] = parseFloat(avg.toFixed(1));
+        scoreUpdate["scores.totalScore"] = parseFloat(avg.toFixed(1));
       }
 
-      const updated = await RegistrationModel.findByIdAndUpdate(
-        regId,
-        { $set: scoreUpdate },
-        { new: true },
-      ).lean().exec();
-      if (!updated) throw new NotFoundError('Registration not found');
+      const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: scoreUpdate }, { new: true }).lean().exec();
+      if (!updated) throw new NotFoundError("Registration not found");
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /tryouts/public/:id/registration-questions
+   * Returns the custom registration questions for a tryout (no auth required).
+   */
+  getPublicRegistrationQuestions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const doc = await TryoutRegistrationQuestionModel.findOne({ tryoutId: id }).lean().exec();
+      const questions = doc?.questions ?? [];
+      sendSuccess(res, { questions }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * PUT /tryouts/:id/registration-questions
+   * Upserts the registration question list for a tryout (admin/coach only).
+   */
+  upsertRegistrationQuestions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const clubId = req.user?.clubId;
+      if (!clubId) return next(new ForbiddenError("No club associated with user"));
+
+      // Verify tryout belongs to user's club
+      const tryout = await this.service.getById(id, clubId);
+      if (!tryout) return next(new NotFoundError("Tryout not found"));
+
+      const questions = Array.isArray(req.body.questions) ? req.body.questions : [];
+
+      const doc = await TryoutRegistrationQuestionModel.findOneAndUpdate(
+        { tryoutId: id },
+        { $set: { tryoutId: id, questions } },
+        { upsert: true, new: true },
+      )
+        .lean()
+        .exec();
+
+      sendSuccess(res, { questions: doc?.questions ?? [] }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }
@@ -550,11 +692,13 @@ export class TryoutController {
       const { id } = req.params;
       const { audience, subject, body } = req.body;
 
-      const statusFilter = audience === 'all' ? ['registered', 'offered', 'rejected', 'waitlisted'] : [audience];
+      const statusFilter = audience === "all" ? ["registered", "offered", "rejected", "waitlisted"] : [audience];
       const registrations = await RegistrationModel.find({
         tryoutId: id,
         status: { $in: statusFilter },
-      }).lean().exec();
+      })
+        .lean()
+        .exec();
 
       // TODO: integrate with actual email service (SendGrid, AWS SES, etc.)
       // For now, just mark lastCommunicationAt
@@ -563,12 +707,34 @@ export class TryoutController {
         { $set: { lastCommunicationAt: new Date(), emailSent: true } },
       );
 
-      sendSuccess(
-        res,
-        { sentCount: registrations.length, audience, subject },
-        'Communication sent successfully',
-        HTTP_STATUS.OK,
-      );
+      sendSuccess(res, { sentCount: registrations.length, audience, subject }, "Communication sent successfully", HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /tryouts/:id/registrations/:regId
+   * Returns a single registration with full details for admin/coach.
+   */
+  getRegistrationDetail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id, regId } = req.params;
+      const clubId = req.user?.clubId;
+      if (!clubId) return next(new ForbiddenError("No club associated with user"));
+
+      // Verify tryout belongs to user's club
+      await this.service.getById(id, clubId);
+
+      const registration = await RegistrationModel.findOne({ _id: regId, tryoutId: id })
+        .populate("swimmerId", "firstName lastName birthDate")
+        .populate("parentId", "firstName lastName email")
+        .lean()
+        .exec();
+
+      if (!registration) throw new NotFoundError("Registration not found");
+
+      sendSuccess(res, { registration }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

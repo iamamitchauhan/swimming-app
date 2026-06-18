@@ -52,8 +52,11 @@ export function LeaderboardTab({ leaderboard, onDecision }: Props) {
                     <span className="font-medium text-gray-900">{l.swimmer_name}</span>
                     <span className="text-gray-400 text-sm ml-2">age {l.swimmer_age}</span>
                   </div>
-                  <div className="text-xl font-bold text-gray-900 w-12 text-right">
-                    {parseFloat(String(l.total_score)).toFixed(1)}
+                  <div className="w-12 text-right">
+                    <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Score</div>
+                    <div className="text-xl font-bold text-gray-900">
+                      {parseFloat(String(l.total_score)).toFixed(1)}
+                    </div>
                   </div>
                   <div className="flex gap-1.5 ml-3">
                     {l.status !== "offered" ? (

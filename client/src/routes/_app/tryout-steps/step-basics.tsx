@@ -28,7 +28,7 @@ export function StepBasics({ register, errors }: Props) {
           />
         </FieldGroup>
 
-        <FieldGroup label="Location" error={errors.location?.message}>
+        <FieldGroup label="Location" required error={errors.location?.message}>
           <Input
             placeholder="e.g. Pacific Wave Aquatic Center"
             {...register("location")}

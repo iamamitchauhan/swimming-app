@@ -48,7 +48,11 @@ const TryoutSchema = new Schema(
     highlights: { type: String, default: '' },
     additionalInstructions: { type: String, default: '' },
     status: { type: String, enum: ['draft', 'open', 'closed'], default: 'draft' },
-    
+
+    // Computed from sessions
+    startAt: { type: Date, default: null },
+    endAt: { type: Date, default: null },
+
     // Registration tracking
     registrationCount: { type: Number, default: 0 },
     waitlistCount: { type: Number, default: 0 },
@@ -98,6 +102,8 @@ export type TryoutDocument = Document & {
     question: string;
     answer: string;
   }>;
+  startAt: Date | null;
+  endAt: Date | null;
   clubId: string;
   createdBy: string;
   createdAt: Date;

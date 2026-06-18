@@ -21,6 +21,7 @@ import { swimmerRouter } from './modules/swimmer/swimmer.routes';
 import { registrationRouter } from './modules/registration/registration.routes';
 import { publicRouter } from './modules/public/public.routes';
 import { parentRouter } from './modules/parent/parent.routes';
+import { questionLibraryRouter } from './modules/question-library/question-library.routes';
 
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -103,6 +104,7 @@ export function createApp(): express.Application {
   app.use(`${API_PREFIX}/registrations`, registrationRouter);
   app.use(`${API_PREFIX}/public`, publicRouter);
   app.use(`${API_PREFIX}/parent`, parentRouter);
+  app.use(`${API_PREFIX}/question-library`, questionLibraryRouter);
 
   // Global error handler — must be last
   app.use(errorHandler);

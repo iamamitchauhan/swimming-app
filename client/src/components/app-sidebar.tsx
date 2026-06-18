@@ -42,7 +42,7 @@ const MENUS: Record<string, Item[]> = {
   ],
   admin: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Coaches", url: "/users", icon: UserCog },
+    { title: "Users", url: "/users", icon: UserCog },
     { title: "Tryouts", url: "/tryouts", icon: Waves },
     // { title: "Profile", url: "/profile", icon: UserIcon },
   ],

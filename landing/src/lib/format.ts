@@ -1,4 +1,8 @@
 export function formatDate(iso: string) {
+
+  console.info('iso => ',iso);
+  
+  
   return new Date(iso).toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
@@ -14,12 +18,33 @@ export function formatDateShort(iso: string) {
   });
 }
 
-export function relativeFromNow(iso: string) {
-  const diff = +new Date(iso) - Date.now();
-  const days = Math.round(diff / 86400000);
-  if (days < -1) return `${Math.abs(days)} days ago`;
-  if (days === -1) return "yesterday";
-  if (days === 0) return "today";
-  if (days === 1) return "tomorrow";
-  return `in ${days} days`;
+export function relativeFromNow(iso: string): string {
+  const target = new Date(iso);
+  console.info('target => ',target);
+  
+  const now = new Date();
+
+  // Normalize both dates to local midnight
+  const targetDate = new Date(
+    target.getFullYear(),
+    target.getMonth(),
+    target.getDate()
+  );
+
+  const todayDate = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
+
+  const diffDays = Math.round(
+    (targetDate.getTime() - todayDate.getTime()) / 86400000
+  );
+
+  if (diffDays < -1) return `${Math.abs(diffDays)} days ago`;
+  if (diffDays === -1) return "yesterday";
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "tomorrow";
+
+  return `in ${diffDays} days`;
 }

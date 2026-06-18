@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   tryoutSchema,
@@ -18,21 +18,32 @@ import { StepSessions } from "./tryout-steps/step-sessions";
 import { StepSegments } from "./tryout-steps/step-segments";
 import { StepHowItWorks } from "./tryout-steps/step-how-it-works";
 import { StepPresentation } from "./tryout-steps/step-presentation";
-import { useTryout, useUpdateTryout } from "@/hooks/use-tryouts";
+import { StepReviewPublish } from "./tryout-steps/step-review-publish";
+import { StepRegistration } from "./tryout-steps/step-registration";
+import { useTryout, useUpdateTryout, usePublishTryout } from "@/hooks/use-tryouts";
+import { SelectedQuestion } from "@/lib/api/question-library.api";
+import { tryoutsApi } from "@/lib/api/tryouts.api";
+import { useAuthStore } from "@/lib/auth.store";
+import { toast } from "sonner";
 
 // ─── Edit Page ────────────────────────────────────────────────────────────────
 
 export default function TryoutEditPage() {
   const { id = "" } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // ── Wizard state ─────────────────────────────────────────────────────────────
-  const [currentStep, setCurrentStep] = useState<number>(1);
+  const initialStep = Number(searchParams.get("step")) || 1;
+  const [currentStep, setCurrentStep] = useState<number>(initialStep);
   const TOTAL_STEPS = WIZARD_STEPS.length;
 
   // ── Banner state ─────────────────────────────────────────────────────────────
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string>("");
+
+  // ── Registration questions state ──────────────────────────────────────────────
+  const [registrationQuestions, setRegistrationQuestions] = useState<SelectedQuestion[]>([]);
 
   // ── Submission state ─────────────────────────────────────────────────────────
   const [apiError, setApiError] = useState<string>("");
@@ -40,6 +51,9 @@ export default function TryoutEditPage() {
   // ── Fetch existing tryout ────────────────────────────────────────────────────
   const { data: tryout, isLoading, isError, error } = useTryout(id);
   const updateMutation = useUpdateTryout(id);
+  const publishMutation = usePublishTryout();
+  const userRole = useAuthStore((s) => s.user?.role);
+  const canAccessReview = userRole === "admin" || userRole === "super_admin" || userRole === "coach";
 
   // ── Form ─────────────────────────────────────────────────────────────────────
   const {
@@ -66,7 +80,7 @@ export default function TryoutEditPage() {
       segments: [],
       steps: [],
       additionalInstructions: "",
-      ctaLabel: "Sign up today",
+      ctaLabel: "Reserve your slot",
       highlights: "",
       faqs: [],
     },
@@ -94,7 +108,11 @@ export default function TryoutEditPage() {
       faqs: tryout.faqs ?? [],
     });
     if (tryout.bannerUrl) setBannerPreview(tryout.bannerUrl);
-  }, [tryout, reset]);
+    // Load existing registration questions from collection
+    tryoutsApi.getRegistrationQuestions(id).then((qs) => {
+      if (qs.length) setRegistrationQuestions(qs);
+    });
+  }, [tryout, reset, id]);
 
   // ── Field arrays ─────────────────────────────────────────────────────────────
   const sessionsField = useFieldArray({ control, name: "sessions" });
@@ -102,15 +120,39 @@ export default function TryoutEditPage() {
   const stepsField = useFieldArray({ control, name: "steps" });
   const faqsField = useFieldArray({ control, name: "faqs" });
 
+  // ── Form values for preview ──────────────────────────────────────────────────
+  const formValues = watch();
+
   // ── Navigation ───────────────────────────────────────────────────────────────
   async function goNext() {
     const stepKey = currentStep as keyof typeof STEP_FIELDS;
-    const valid = await trigger(STEP_FIELDS[stepKey]);
-    if (valid) setCurrentStep((s) => Math.min(TOTAL_STEPS, s + 1));
+    const fields = STEP_FIELDS[stepKey];
+    // Step 4 (segments) needs full-form trigger so nested array fields validate
+    const valid = await (fields.length === 0 || currentStep === 4
+      ? trigger()
+      : trigger(fields));
+    if (!valid) return;
+    if (currentStep === 7) {
+      await onSaveAndAdvance(formValues);
+      return;
+    }
+    setCurrentStep((s) => Math.min(TOTAL_STEPS, s + 1));
   }
 
   function goBack() {
     setCurrentStep((s) => Math.max(1, s - 1));
+  }
+
+  // ── Save & advance to Review step ────────────────────────────────────────────
+  async function onSaveAndAdvance(data: TryoutFormValues) {
+    setApiError("");
+    try {
+      await updateMutation.mutateAsync({ ...data, status: "draft", banner: bannerFile ?? undefined });
+      await tryoutsApi.saveRegistrationQuestions(id, registrationQuestions);
+      setCurrentStep(8);
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Something went wrong.");
+    }
   }
 
   // ── Submit (update) ──────────────────────────────────────────────────────────
@@ -126,8 +168,20 @@ export default function TryoutEditPage() {
     );
   }
 
+  // ── Publish ──────────────────────────────────────────────────────────────────
+  async function onPublish() {
+    setApiError("");
+    try {
+      await publishMutation.mutateAsync(id);
+      toast.success("Tryout published successfully!");
+      navigate("/tryouts");
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Failed to publish. Please try again.");
+    }
+  }
+
   const isLastStep = currentStep === TOTAL_STEPS;
-  const isSubmitting = updateMutation.isPending;
+  const isSubmitting = updateMutation.isPending || publishMutation.isPending;
 
   // ── Loading skeleton ─────────────────────────────────────────────────────────
   if (isLoading) {
@@ -176,160 +230,158 @@ export default function TryoutEditPage() {
         </div>
       }
     >
-      <div className="max-w-2xl mx-auto pb-28">
+      <div className="flex gap-0 min-h-[calc(100vh-200px)]">
 
-        {/* ── Stepper header ─────────────────────────────────────────────────── */}
-        <div className="mb-8">
-          <div className="flex items-center gap-0 mb-6">
-            {WIZARD_STEPS.map((step, i) => {
-              const isDone = currentStep > step.id;
-              const isCurrent = currentStep === step.id;
-              const isLast = i === WIZARD_STEPS.length - 1;
-              return (
-                <div key={step.id} className="flex items-center flex-1 last:flex-none">
-                  <button
-                    type="button"
-                    onClick={() => isDone && setCurrentStep(step.id)}
-                    className={cn(
-                      "h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-all",
-                      isDone
-                        ? "bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90"
-                        : isCurrent
-                        ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
-                        : "bg-muted text-muted-foreground cursor-default",
-                    )}
-                  >
-                    {isDone ? <Check className="h-4 w-4" /> : step.id}
-                  </button>
-                  {!isLast && (
-                    <div
-                      className={cn(
-                        "h-0.5 flex-1 mx-1 transition-colors",
-                        isDone ? "bg-primary" : "bg-border",
-                      )}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        {/* ── Vertical tab sidebar ────────────────────────────────────────────── */}
+        <nav className="w-44 shrink-0 sticky top-[60px] self-start pt-2">
+          {WIZARD_STEPS.map((step) => {
+            const isDone = currentStep > step.id;
+            const isCurrent = currentStep === step.id;
+            return (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => (isDone || isCurrent) && setCurrentStep(step.id)}
+                className={cn(
+                  "w-full text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors border-l-2",
+                  isCurrent
+                    ? "border-l-primary text-primary"
+                    : isDone
+                    ? "border-l-transparent text-muted-foreground hover:text-foreground hover:border-l-border cursor-pointer"
+                    : "border-l-transparent text-muted-foreground/50 cursor-default",
+                )}
+              >
+                {step.label}
+              </button>
+            );
+          })}
+        </nav>
 
-          <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Step {currentStep} of {TOTAL_STEPS}
-            </p>
-            <h2 className="text-xl font-bold text-foreground mt-0.5">
+        {/* ── Right panel ─────────────────────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col min-w-0 border-l border-border pl-8">
+
+          {/* Step heading */}
+          <div className="pt-2 pb-6">
+            <h2 className="text-xl font-bold text-foreground">
               {WIZARD_STEPS[currentStep - 1].label}
             </h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               {WIZARD_STEPS[currentStep - 1].description}
             </p>
           </div>
-        </div>
 
-        {/* ── API Error ──────────────────────────────────────────────────────── */}
-        {apiError && (
-          <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-6">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>{apiError}</span>
+          {/* ── API Error ────────────────────────────────────────────────────── */}
+          {apiError && (
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-6">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{apiError}</span>
+            </div>
+          )}
+
+          {/* ── Step content ─────────────────────────────────────────────────── */}
+          <div className="flex-1 pb-5">
+            <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+              <form onSubmit={(e) => e.preventDefault()}>
+
+                {currentStep === 1 && (
+                  <StepBasics register={register} errors={errors} />
+                )}
+
+                {currentStep === 2 && (
+                  <StepBranding
+                    watch={watch}
+                    setValue={setValue}
+                    bannerFile={bannerFile}
+                    bannerPreview={bannerPreview}
+                    onFileChange={(file, preview) => {
+                      setBannerFile(file);
+                      setBannerPreview(preview);
+                    }}
+                  />
+                )}
+
+                {currentStep === 3 && (
+                  <StepSessions
+                    register={register}
+                    control={control}
+                    watch={watch}
+                    setValue={setValue}
+                    errors={errors}
+                    sessionsField={sessionsField}
+                  />
+                )}
+
+                {currentStep === 4 && (
+                  <StepSegments
+                    register={register}
+                    control={control}
+                    errors={errors}
+                    segmentsField={segmentsField}
+                  />
+                )}
+
+                {currentStep === 5 && (
+                  <StepHowItWorks register={register} stepsField={stepsField} />
+                )}
+
+                {currentStep === 6 && (
+                  <StepPresentation register={register} faqsField={faqsField} />
+                )}
+
+                {currentStep === 7 && (
+                  <StepRegistration
+                    selectedQuestions={registrationQuestions}
+                    onChange={setRegistrationQuestions}
+                  />
+                )}
+
+                {currentStep === 8 && (
+                  canAccessReview ? (
+                    <StepReviewPublish
+                      values={formValues}
+                      bannerPreview={bannerPreview}
+                      onPublish={onPublish}
+                      onBack={() => setCurrentStep(7)}
+                      isPending={isSubmitting}
+                      canPublish={canAccessReview}
+                      selectedQuestions={registrationQuestions}
+                    />
+                  ) : (
+                    <div className="py-12 text-center text-sm text-muted-foreground">
+                      You do not have permission to publish tryouts.
+                    </div>
+                  )
+                )}
+
+              </form>
+            </div>
           </div>
-        )}
 
-        {/* ── Step content ───────────────────────────────────────────────────── */}
-        <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
-          <form onSubmit={(e) => e.preventDefault()}>
-
-            {currentStep === 1 && (
-              <StepBasics register={register} errors={errors} />
-            )}
-
-            {currentStep === 2 && (
-              <StepBranding
-                watch={watch}
-                setValue={setValue}
-                bannerFile={bannerFile}
-                bannerPreview={bannerPreview}
-                onFileChange={(file, preview) => {
-                  setBannerFile(file);
-                  setBannerPreview(preview);
-                }}
-              />
-            )}
-
-            {currentStep === 3 && (
-              <StepSessions
-                register={register}
-                control={control}
-                watch={watch}
-                setValue={setValue}
-                errors={errors}
-                sessionsField={sessionsField}
-              />
-            )}
-
-            {currentStep === 4 && (
-              <StepSegments
-                register={register}
-                control={control}
-                errors={errors}
-                segmentsField={segmentsField}
-              />
-            )}
-
-            {currentStep === 5 && (
-              <StepHowItWorks register={register} stepsField={stepsField} />
-            )}
-
-            {currentStep === 6 && (
-              <StepPresentation register={register} faqsField={faqsField} />
-            )}
-
-          </form>
-        </div>
-
-      </div>
-
-      {/* ── Sticky footer ─────────────────────────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-background/95 backdrop-blur-sm">
-        <div className="max-w-2xl mx-auto px-4 lg:px-0 py-3 flex items-center justify-between gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={currentStep === 1 ? () => navigate("/tryouts") : goBack}
-            disabled={isSubmitting}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            {currentStep === 1 ? "Cancel" : "Back"}
-          </Button>
-
-          <div className="flex items-center gap-2">
-            {isLastStep ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isSubmitting}
-                  onClick={handleSubmit((d) => onSubmit(d, "draft"))}
-                >
-                  {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Save Draft
-                </Button>
-                <Button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleSubmit((d) => onSubmit(d, "open"))}
-                >
-                  {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Save Changes
-                </Button>
-              </>
-            ) : (
-              <Button type="button" onClick={goNext}>
-                Continue
-                <ChevronRight className="h-4 w-4 ml-1" />
+          {/* ── Footer nav ───────────────────────────────────────────────────── */}
+          {currentStep !== 8 && (
+            <div className="sticky bottom-0 z-10 bg-background border-t border-border py-4 flex items-center justify-between gap-3 -mx-4 px-4 sm:-mx-6 sm:px-6">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={currentStep === 1 ? () => navigate("/tryouts") : goBack}
+                disabled={isSubmitting}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                {currentStep === 1 ? "Cancel" : "Back"}
               </Button>
-            )}
-          </div>
+
+              {!isLastStep && (
+                <Button type="button" onClick={goNext} disabled={isSubmitting}>
+                  {currentStep === 7 && isSubmitting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : null}
+                  {currentStep === 7 ? "Save & Continue" : "Continue"}
+                  {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
+                </Button>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
     </PageShell>

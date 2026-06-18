@@ -24,6 +24,7 @@ const controller = new TryoutController(service);
  * GET  /:id/slots                — get slots for a tryout (admin, coach)
  * GET  /:id/registrations        — get all registrations for a tryout (admin, coach)
  * GET  /:id/leaderboard          — get scored leaderboard (admin, coach)
+ * GET  /:id/registrations/:regId — get single registration detail (admin, coach)
  * PUT  /:id/registrations/:regId/decision — update status to offered/rejected
  * PUT  /:id/registrations/:regId/promote  — promote from waitlist
  * PUT  /:id/registrations/:regId/verify   — update USA-S verification
@@ -38,12 +39,14 @@ const tryoutRouter = Router();
 tryoutRouter.get('/public', controller.listPublic);
 tryoutRouter.get('/public/:id/sessions', controller.getSessions);
 tryoutRouter.get('/public/:id/slots', controller.getSlots);
+tryoutRouter.get('/public/:id/registration-questions', controller.getPublicRegistrationQuestions);
 tryoutRouter.get('/public/:id', controller.getPublicById);
 tryoutRouter.get('/', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.list);
 tryoutRouter.get('/:id/sessions', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getSessions);
 tryoutRouter.get('/:id/slots', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getSlots);
 tryoutRouter.get('/:id/registrations', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getRegistrations);
 tryoutRouter.get('/:id/leaderboard', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getLeaderboard);
+tryoutRouter.get('/:id/registrations/:regId', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getRegistrationDetail);
 tryoutRouter.get('/:id', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getById);
 
 tryoutRouter.post(
@@ -60,6 +63,13 @@ tryoutRouter.put(
   authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
   upload.single('banner'),
   controller.update,
+);
+
+tryoutRouter.patch(
+  '/:id/publish',
+  authenticate,
+  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
+  controller.publish,
 );
 
 tryoutRouter.delete(
@@ -97,6 +107,13 @@ tryoutRouter.put(
   authenticate,
   authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
   controller.updateScore,
+);
+
+tryoutRouter.put(
+  '/:id/registration-questions',
+  authenticate,
+  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
+  controller.upsertRegistrationQuestions,
 );
 
 tryoutRouter.post(

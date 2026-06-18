@@ -1,14 +1,14 @@
-import { Router } from 'express';
-import { authenticate } from '../../middleware/auth.middleware';
-import { authorize } from '../../middleware/authorize.middleware';
-import { USER_ROLES } from '../../shared/constants/roles';
-import { RegistrationRepository } from './registration.repository';
-import { TryoutRepository } from '../tryout/tryout.repository';
-import { TryoutSessionRepository } from '../tryout/tryout-session.repository';
-import { TryoutSlotRepository } from '../tryout/tryout-slot.repository';
-import { SwimmerRepository } from '../swimmer/swimmer.repository';
-import { RegistrationService } from './registration.service';
-import { RegistrationController } from './registration.controller';
+import { Router } from "express";
+import { authenticate } from "../../middleware/auth.middleware";
+import { authorize } from "../../middleware/authorize.middleware";
+import { USER_ROLES } from "../../shared/constants/roles";
+import { RegistrationRepository } from "./registration.repository";
+import { TryoutRepository } from "../tryout/tryout.repository";
+import { TryoutSessionRepository } from "../tryout/tryout-session.repository";
+import { TryoutSlotRepository } from "../tryout/tryout-slot.repository";
+import { SwimmerRepository } from "../swimmer/swimmer.repository";
+import { RegistrationService } from "./registration.service";
+import { RegistrationController } from "./registration.controller";
 
 const repository = new RegistrationRepository();
 const tryoutRepository = new TryoutRepository();
@@ -38,10 +38,10 @@ registrationRouter.use(authenticate);
 // Only parents can access registration endpoints
 registrationRouter.use(authorize(USER_ROLES.PARENT));
 
-registrationRouter.post('/', controller.create);
-registrationRouter.get('/my-kids', controller.listByParent);
-registrationRouter.get('/my-tryouts', controller.listParentTryouts);
-registrationRouter.get('/:id', controller.getById);
-registrationRouter.put('/:id', controller.updateStatus);
+registrationRouter.post("/", controller.create);
+registrationRouter.get("/my-kids", controller.listByParent);
+registrationRouter.get("/my-tryouts", controller.listParentTryouts);
+registrationRouter.get("/:id", controller.getById);
+registrationRouter.put("/:id", controller.updateStatus);
 
 export { registrationRouter };

@@ -1,95 +1,129 @@
 import { Link } from "react-router-dom";
-import { Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Calendar, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { TryoutStatusBadge } from "./StatusBadge";
 import { availableSlotsCount, tryoutStatus } from "@/lib/api/tryouts";
 import { formatDate, relativeFromNow } from "@/lib/format";
 import type { Tryout } from "@/lib/types";
 
 const THEME_CLASSES: Record<string, string> = {
-  ocean:    "bg-gradient-to-br from-sky-500 to-blue-700",
-  sunset:   "bg-gradient-to-br from-orange-400 to-pink-600",
-  forest:   "bg-gradient-to-br from-emerald-500 to-teal-700",
-  midnight: "bg-gradient-to-br from-slate-700 to-slate-900",
-  coral:    "bg-gradient-to-br from-rose-400 to-orange-500",
+  ocean: "bg-linear-to-br from-sky-500 to-blue-700",
+  sunset: "bg-linear-to-br from-orange-400 to-pink-600",
+  forest: "bg-linear-to-br from-emerald-500 to-teal-700",
+  midnight: "bg-linear-to-br from-slate-700 to-slate-900",
+  coral: "bg-linear-to-br from-rose-400 to-orange-500",
 };
 
 function themeBg(theme: string) {
-  return THEME_CLASSES[theme] ?? "bg-gradient-to-br from-indigo-700 to-slate-900";
+  return THEME_CLASSES[theme] ?? "bg-linear-to-br from-indigo-700 to-slate-900";
 }
 
 export function TryoutCard({ tryout }: { tryout: Tryout }) {
-  console.info('tryout =>',tryout);
-  
+  console.info("tryout =>", tryout);
+
   const status = tryoutStatus(tryout);
   const slots = availableSlotsCount(tryout);
 
+  const totalCap = tryout.slots.reduce((s, x) => s + x.capacity, 0);
+  const totalTaken = tryout.slots.reduce((s, x) => s + x.taken, 0);
+  const pctFilled = totalCap > 0 ? Math.round((totalTaken / totalCap) * 100) : 0;
+  const gradClass = themeBg(tryout.purpose);
+
   return (
-    <Card className="group overflow-hidden border-border/60 p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-lift">
-      <div className="relative h-40 w-full overflow-hidden bg-muted">
-        {tryout.image ? (
+    <div className="group overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+      {/* Hero banner */}
+      <div className={`relative h-36 ${gradClass}`}>
+        {tryout.image && (
           <img
             src={tryout.image}
             alt={tryout.name}
             loading="lazy"
-            width={800}
-            height={400}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover"
           />
-        ) : (
-          <div className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${themeBg(tryout.purpose)}`} />
         )}
-        <div className="absolute right-3 top-3">
-          {/* <TryoutStatusBadge status={status} /> */}
-        </div>
-        <div className="absolute bottom-3 left-3 rounded-md bg-background/90 px-2 py-1 text-xs font-semibold text-foreground backdrop-blur">
-          Ages {tryout.ageGroup}
-        </div>
-      </div>
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
 
-      <div className="flex flex-col gap-3 p-5">
-        <div>
-          {/* <p className="text-xs font-semibold uppercase tracking-wide text-ocean">
-            {tryout.club}
-          </p> */}
-          <h3 className="mt-1 line-clamp-2 font-display text-lg font-bold text-foreground">
+        {/* Title overlay */}
+        <div className="absolute bottom-3 left-3 right-3">
+          <h3 className="line-clamp-2 font-display text-lg font-bold leading-tight text-white">
             {tryout.name}
           </h3>
         </div>
+      </div>
 
-        <ul className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-          <li className="flex items-center gap-1.5">
-            <MapPin className="h-4 w-4 text-primary/70" />
-            <span className="truncate">{tryout.city}, {tryout.state}</span>
-          </li>
-          <li className="flex items-center gap-1.5">
-            <Calendar className="h-4 w-4 text-primary/70" />
-            <span className="truncate">{formatDate(tryout.date)}</span>
-          </li>
-          <li className="flex items-center gap-1.5">
-            <Clock className="h-4 w-4 text-primary/70" />
-            <span>{tryout.time}</span>
-          </li>
-          <li className="flex items-center gap-1.5">
-            <Users className="h-4 w-4 text-primary/70" />
-            <span>{slots} slots left</span>
-          </li>
-        </ul>
+      {/* Card body */}
+      <div className="p-4">
+        <div className="mb-3 space-y-1.5">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4 shrink-0 text-primary/70" />
+            {tryout.sessionCount && tryout.sessionCount > 0 ? (
+              <span className="truncate">
+                {tryout.sessionCount} session{tryout.sessionCount !== 1 ? "s" : ""} starting{" "}
+                {formatDate(tryout.date)}
+              </span>
+            ) : (
+              <span className="truncate">
+                {formatDate(tryout.date)}
+                {tryout.time ? ` · ${tryout.time}` : ""}
+              </span>
+            )}
+          </div>
+          {tryout.location && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4 shrink-0 text-primary/70" />
+              <span className="truncate">{tryout.location}</span>
+            </div>
+          )}
+          {totalCap > 0 && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Users className="h-4 w-4 shrink-0 text-primary/70" />
+              <span>
+                {slots} of {totalCap} spots open
+              </span>
+            </div>
+          )}
+        </div>
 
-        <p className="text-xs text-muted-foreground">
-          Registration closes {relativeFromNow(tryout.deadline)}
+        {/* Age segments */}
+        {tryout.segments.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {tryout.segments.map((seg, i) => (
+              <span
+                key={i}
+                className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+              >
+                Ages {seg.minAge}–{seg.maxAge}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Slot fill progress */}
+        {totalCap > 0 && (
+          <div className="mb-4">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-1.5 rounded-full bg-primary transition-all"
+                style={{ width: `${pctFilled}%` }}
+              />
+            </div>
+            <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+              <span>{pctFilled}% filled</span>
+              <span>{slots} spots left</span>
+            </div>
+          </div>
+        )}
+
+        <p className="mb-3 text-xs text-muted-foreground">
+          Registration closes {relativeFromNow(tryout.startAt)}
         </p>
 
-        <div className="mt-1 flex gap-2">
+        {/* Action buttons */}
+        <div className="flex gap-2">
           <Button asChild variant="outline" className="flex-1">
             <Link to={`/tryouts/${tryout.id}`}>View Details</Link>
           </Button>
-          <Button asChild className="btn-cta flex-1" disabled={status === "closed"}>
-            <Link to={`/tryouts/${tryout.id}#register`}>Register Now</Link>
-          </Button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

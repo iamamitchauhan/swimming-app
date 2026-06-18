@@ -11,6 +11,8 @@ export interface Club {
   ownerId: string;
   status: "draft" | "pending_review" | "approved" | "rejected";
   rejectionReason: string | null;
+  clubSize: string | null;
+  region: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,6 +27,8 @@ export interface Step1Input {
   address: string;
   phone: string;
   logoUrl?: string;
+  clubSize?: string;
+  region?: string;
 }
 
 export interface Step2Input {

@@ -5,9 +5,9 @@ import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+// import {
+//   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+// } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -20,27 +20,30 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus, Search, MoreHorizontal, Eye, Pencil, Trash2,
+  Plus, Search, MoreHorizontal, Pencil, Trash2,
   ChevronLeft, ChevronRight, Loader2, AlertCircle, ArrowUp, ArrowDown, ArrowUpDown, X,
-  EyeIcon,
+  Eye, Rocket,
+  LayoutDashboard,
 } from "lucide-react";
-import { useTryouts, useDeleteTryout } from "@/hooks/use-tryouts";
+import { useTryouts, useDeleteTryout, usePublishTryout } from "@/hooks/use-tryouts";
 import type { Tryout, TryoutSortField, SortOrder } from "@/lib/api/tryouts.api";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const statusVariant: Record<string, string> = {
-  open:   "bg-success/10 text-success border-success/20",
-  draft:  "bg-muted text-muted-foreground border-border",
-  closed: "bg-destructive/10 text-destructive border-destructive/20",
+  open:      "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400",
+  draft:     "bg-muted text-muted-foreground border-border",
+  closed:    "bg-destructive/10 text-destructive border-destructive/20",
+  published: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400",
 };
 
 function statusLabel(s: string) {
+  if (s === "open") return "Published";
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function firstSessionDate(t: Tryout) {
-  const d = t.sessions?.[0]?.date;
+  const d = t.startDate ?? t.sessions?.[0]?.date;
   if (!d) return "—";
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", {
     month: "short", day: "numeric", year: "numeric",
@@ -52,6 +55,14 @@ const SORT_OPTIONS: { value: TryoutSortField; label: string }[] = [
   { value: "updatedAt", label: "Updated" },
   { value: "name",      label: "Name" },
   { value: "status",    label: "Status" },
+];
+
+const STATUS_TABS: { label: string; value: string; apiValue?: string }[] = [
+  { label: "All",       value: "all" },
+  { label: "Draft",     value: "draft" },
+  { label: "Published", value: "published", apiValue: "open" },
+  { label: "Closed",    value: "closed" },
+  { label: "Completed", value: "completed" },
 ];
 
 const PAGE_SIZE = 10;
@@ -99,7 +110,7 @@ export default function TryoutsList() {
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
-    status: statusFilter !== "all" ? statusFilter : undefined,
+    status: statusFilter !== "all" ? (STATUS_TABS.find(t => t.value === statusFilter)?.apiValue ?? statusFilter) : undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
     sortBy,
@@ -111,6 +122,23 @@ export default function TryoutsList() {
   const totalPages = data?.totalPages ?? 1;
 
   const deleteMutation = useDeleteTryout();
+  const publishMutation = usePublishTryout();
+
+  const [publishTarget, setPublishTarget] = useState<Tryout | null>(null);
+
+  function confirmPublish() {
+    if (!publishTarget) return;
+    publishMutation.mutate(publishTarget._id, {
+      onSuccess: () => {
+        toast.success(`"${publishTarget.name}" published.`);
+        setPublishTarget(null);
+      },
+      onError: (err: unknown) => {
+        toast.error(err instanceof Error ? err.message : "Publish failed.");
+        setPublishTarget(null);
+      },
+    });
+  }
 
   // ── Sort column toggle ───────────────────────────────────────────────────────
   function handleSortField(field: TryoutSortField) {
@@ -157,7 +185,25 @@ export default function TryoutsList() {
         {/* ── Toolbar ─────────────────────────────────────────────────────── */}
         <div className="p-4 flex flex-col gap-3 border-b border-border">
           {/* Row 1: search + status + sort */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
+            <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg p-1">
+              {STATUS_TABS.map((tab) => {
+                const active = statusFilter === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => { setStatusFilter(tab.value); setPage(1); }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-foreground text-background shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -168,17 +214,7 @@ export default function TryoutsList() {
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-              <SelectTrigger className="h-9 w-full sm:w-40">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
+            
 
             {/* <Select value={sortBy} onValueChange={(v) => setSortBy(v as TryoutSortField)}>
               <SelectTrigger className="h-9 w-full sm:w-40">
@@ -199,11 +235,11 @@ export default function TryoutsList() {
               {sortOrder === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
             </Button> */}
 
-            {hasActiveFilters && (
+            {/* {hasActiveFilters && (
               <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={clearFilters}>
                 <X className="h-4 w-4 mr-1" /> Clear
               </Button>
-            )}
+            )} */}
           </div>
 
           {/* Row 2: date range */}
@@ -259,11 +295,9 @@ export default function TryoutsList() {
                         className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
                         onClick={() => handleSortField("name")}
                       >
-                        Tryout <SortIcon field="name" />
+                        Title <SortIcon field="name" />
                       </button>
                     </TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>First Session</TableHead>
                     <TableHead>
                       <button
                         className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
@@ -272,22 +306,19 @@ export default function TryoutsList() {
                         Status <SortIcon field="status" />
                       </button>
                     </TableHead>
-                    <TableHead className="text-right">Slots / session</TableHead>
-                    <TableHead>
-                      <button
-                        className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
-                        onClick={() => handleSortField("updatedAt")}
-                      >
-                        Updated <SortIcon field="updatedAt" />
-                      </button>
-                    </TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead className="text-center">Sessions</TableHead>
+                    <TableHead>Age Segments</TableHead>
+                    <TableHead className="text-center">Slots</TableHead>
+                    <TableHead className="text-center">Registered</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {tryouts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-12 text-sm">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-12 text-sm">
                         {hasActiveFilters
                           ? "No tryouts match your filters."
                           : "No tryouts yet. Create your first one!"}
@@ -304,12 +335,6 @@ export default function TryoutsList() {
                             {t.name}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {t.location || "—"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {firstSessionDate(t)}
-                        </TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
@@ -318,13 +343,52 @@ export default function TryoutsList() {
                             {statusLabel(t.status)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {t.swimmersPerSlot} × {t.slotDuration} min
-                        </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {new Date(t.updatedAt).toLocaleDateString("en-US", {
-                            month: "short", day: "numeric", year: "numeric",
-                          })}
+                          {firstSessionDate(t)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-[140px] truncate" title={t.location}>
+                          {t.location ? (
+                            t.location.length > 18 ? t.location.slice(0, 18) + "…" : t.location
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell className="text-center font-medium">
+                          {t.sessionCount ?? t.sessions?.length ?? 0}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {(t.segments ?? []).length === 0 ? (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            ) : (
+                              (t.segments ?? []).slice(0, 3).map((seg, i) => {
+                                const badgeColors = [
+                                  "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-50",
+                                  "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50",
+                                  "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50",
+                                ];
+                                return (
+                                  <Badge
+                                    key={i}
+                                    variant="outline"
+                                    className={`text-[10px] font-medium whitespace-nowrap ${badgeColors[i % badgeColors.length]}`}
+                                  >
+                                    {seg.minAge}–{seg.maxAge} {seg.level}
+                                  </Badge>
+                                );
+                              })
+                            )}
+                            {(t.segments ?? []).length > 3 && (
+                              <span className="text-[10px] text-muted-foreground">+{t.segments.length - 3}</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center font-medium">
+                          {t.totalSlots ?? 0}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="font-medium">{t.registeredCount ?? 0}</span>
+                          {(t.totalSlots ?? 0) > 0 && (
+                            <span className="text-muted-foreground text-sm">/{t.totalSlots}</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -334,15 +398,26 @@ export default function TryoutsList() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => navigate(`/tryouts/view/${t._id}`)}>
-                                <EyeIcon className="h-4 w-4 mr-2" /> View
+                              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/tryouts/preview/${t._id}`)}>
+                                <Eye className="h-4 w-4 mr-2" /> Preview
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate(`/tryouts/edit/${t._id}`)}>
+                              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/tryouts/view/${t._id}`)}>
+                                <LayoutDashboard className="h-4 w-4 mr-2" /> Manage
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/tryouts/edit/${t._id}`)}>
                                 <Pencil className="h-4 w-4 mr-2" /> Edit
                               </DropdownMenuItem>
+                              {t.status === "draft" && (
+                                <DropdownMenuItem
+                                  className="text-emerald-600 focus:text-emerald-600"
+                                  onClick={() => setPublishTarget(t)}
+                                >
+                                  <Rocket className="h-4 w-4 mr-2" /> Publish
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
+                                className="text-destructive focus:text-destructive cursor-pointer"
                                 onClick={() => setDeleteTarget(t)}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" /> Delete
@@ -364,49 +439,75 @@ export default function TryoutsList() {
                 {hasActiveFilters && " (filtered)"}
                 {totalPages > 1 && ` · page ${page} of ${totalPages}`}
               </span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline" size="icon" className="h-8 w-8"
-                  disabled={page <= 1 || isFetching}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                  .reduce<(number | "…")[]>((acc, p, idx, arr) => {
-                    if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
-                    acc.push(p);
-                    return acc;
-                  }, [])
-                  .map((p, i) =>
-                    p === "…" ? (
-                      <span key={`ellipsis-${i}`} className="px-1">…</span>
-                    ) : (
-                      <Button
-                        key={p}
-                        variant={p === page ? "default" : "outline"}
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        disabled={isFetching}
-                        onClick={() => setPage(p as number)}
-                      >
-                        {p}
-                      </Button>
-                    )
-                  )}
-                <Button
-                  variant="outline" size="icon" className="h-8 w-8"
-                  disabled={page >= totalPages || isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline" size="icon" className="h-8 w-8"
+                    disabled={page <= 1 || isFetching}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                    .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                      if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((p, i) =>
+                      p === "…" ? (
+                        <span key={`ellipsis-${i}`} className="px-1">…</span>
+                      ) : (
+                        <Button
+                          key={p}
+                          variant={p === page ? "default" : "outline"}
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          disabled={isFetching}
+                          onClick={() => setPage(p as number)}
+                        >
+                          {p}
+                        </Button>
+                      )
+                    )}
+                  <Button
+                    variant="outline" size="icon" className="h-8 w-8"
+                    disabled={page >= totalPages || isFetching}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </>
         )}
       </div>
+
+      {/* ── Publish confirmation dialog ────────────────────────────────────── */}
+      <AlertDialog open={!!publishTarget} onOpenChange={(o) => !o && setPublishTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Publish tryout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-medium text-foreground">{publishTarget?.name}</span> will be
+              published and visible to the public for registration.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={confirmPublish}
+              disabled={publishMutation.isPending}
+            >
+              {publishMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Publish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── Delete confirmation dialog ─────────────────────────────────────── */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>

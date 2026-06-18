@@ -49,6 +49,9 @@ export interface Tryout {
   date: string;
   time: string;
   deadline: string;
+  startAt: string;
+  endAt: string;
+  status: "closed" | "open" | "completed";
   description: string;
   purpose: string;
   eligibility: string[];
@@ -63,6 +66,7 @@ export interface Tryout {
   image: string;
   slots: Slot[];
   sessions: TryoutSession[];
+  sessionCount?: number;
 }
 
 export interface Child {
@@ -77,11 +81,7 @@ export interface Child {
   emergencyContactPhone?: string;
 }
 
-export type RegistrationStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "cancelled";
+export type RegistrationStatus = "pending" | "approved" | "rejected" | "cancelled";
 
 export interface Registration {
   id: string;
@@ -105,6 +105,30 @@ export interface Parent {
   phone?: string;
   address?: string;
   emailVerified: boolean;
+}
+
+export interface MyTryoutChild {
+  registrationId: string;
+  swimmerId: string;
+  firstName: string;
+  lastName: string;
+  ageOnTryoutDay: number;
+  status: string;
+  registeredAt: string;
+}
+
+export interface MyTryoutItem {
+  tryout: {
+    _id: string;
+    name: string;
+    status: "closed" | "open" | "completed";
+    location: string;
+    description: string;
+    bannerUrl: string;
+    createdAt: string;
+    theme?: string;
+  };
+  children: MyTryoutChild[];
 }
 
 export interface Notification {

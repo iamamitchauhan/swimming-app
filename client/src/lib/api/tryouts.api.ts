@@ -1,4 +1,5 @@
 import { apiClient, api } from "./client";
+import type { SelectedQuestion } from "./question-library.api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,10 +63,19 @@ export interface Tryout {
   segments: Segment[];
   steps: Step[];
   faqs: Faq[];
+  registrationQuestions?: SelectedQuestion[];
   clubId: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  // Computed from sessions
+  startAt?: string | null;
+  endAt?: string | null;
+  // Computed from aggregation
+  sessionCount: number;
+  startDate?: string;
+  totalSlots: number;
+  registeredCount: number;
 }
 
 // ─── List params / result ─────────────────────────────────────────────────────
@@ -187,6 +197,31 @@ export const tryoutsApi = {
   delete: (id: string) => apiClient.delete(`/tryouts/${id}`),
 
   /**
+   * PATCH /tryouts/:id/publish
+   * Publishes a draft tryout (sets status to 'open')
+   */
+  publish: (id: string): Promise<Tryout> =>
+    api<{ tryout: Tryout }>(apiClient.patch(`/tryouts/${id}/publish`)).then((res) => res.tryout),
+
+  /**
+   * GET /tryouts/public/:id/registration-questions
+   * Fetches saved registration questions for a tryout (no auth required).
+   */
+  getRegistrationQuestions: (id: string): Promise<SelectedQuestion[]> =>
+    fetch(`${apiClient.defaults.baseURL}/tryouts/public/${id}/registration-questions`)
+      .then((r) => r.json())
+      .then((body) => body.data?.questions ?? []),
+
+  /**
+   * PUT /tryouts/:id/registration-questions
+   * Saves the custom registration questions for a tryout.
+   */
+  saveRegistrationQuestions: (id: string, questions: SelectedQuestion[]): Promise<SelectedQuestion[]> =>
+    api<{ questions: SelectedQuestion[] }>(
+      apiClient.put(`/tryouts/${id}/registration-questions`, { questions }),
+    ).then((res) => res.questions),
+
+  /**
    * GET /tryouts/:id/slots
    * Returns all slots for a tryout (admin view)
    */
@@ -199,6 +234,15 @@ export const tryoutsApi = {
    */
   getSessions: (id: string): Promise<TryoutSession[]> =>
     api<{ sessions: TryoutSession[] }>(apiClient.get(`/tryouts/${id}/sessions`)).then((res) => res.sessions),
+
+  /**
+   * GET /tryouts/:id/registrations/:regId
+   * Returns full registration detail (admin/coach view)
+   */
+  getRegistrationDetail: (tryoutId: string, regId: string): Promise<RegistrationDetail> =>
+    api<{ registration: RegistrationDetail }>(apiClient.get(`/tryouts/${tryoutId}/registrations/${regId}`)).then(
+      (res) => res.registration,
+    ),
 };
 
 // ─── Admin View Types ─────────────────────────────────────────────────────────
@@ -267,4 +311,42 @@ export interface LeaderboardEntry {
   age_segment?: string;
   total_score: number | string;
   status: string;
+}
+
+export interface RegistrationDetail {
+  _id: string;
+  tryoutId: string;
+  swimmerId: { firstName: string; lastName: string; birthDate?: string };
+  parentId: { firstName: string; lastName: string; email: string };
+  sessionId: string;
+  slotId: string;
+  segmentId?: string;
+  status: string;
+  swimmerDetails: {
+    firstName: string;
+    lastName: string;
+    dob?: string;
+    ageOnTryoutDay: number;
+    hasUsaMembership: boolean;
+    usaMembershipId?: string;
+    clubName?: string;
+    guardianName: string;
+    guardianEmail: string;
+  };
+  dynamicAnswers?: { label: string; value: string | string[] }[];
+  scores?: {
+    safetyEntryExit?: boolean;
+    safetyFloat?: boolean;
+    freestyle?: number;
+    backstroke?: number;
+    breaststroke?: number;
+    butterfly?: number;
+    totalScore?: number;
+  };
+  usaVerificationStatus?: string;
+  waitlistPosition?: number;
+  registeredAt?: string;
+  emailSent?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }

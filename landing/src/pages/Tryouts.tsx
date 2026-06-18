@@ -9,7 +9,7 @@ import { tryoutsQuery } from "@/lib/queries";
 import { uniqueValues, type TryoutFilters } from "@/lib/api/tryouts";
 
 export default function TryoutsPage() {
-  const [filters, setFilters] = useState<TryoutFilters>({ sort: "earliest" });
+  const [filters, setFilters] = useState<TryoutFilters>({ sort: "latest" });
   const { data: tryouts = [], isFetching } = useQuery(tryoutsQuery(filters));
   const ageGroups = uniqueValues("ageGroup");
   const states = uniqueValues("state");

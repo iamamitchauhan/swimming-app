@@ -10,6 +10,8 @@ export type PlainClub = {
   ownerId: string;
   status: string;
   rejectionReason: string | null;
+  clubSize: string | null;
+  region: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

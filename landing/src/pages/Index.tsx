@@ -8,7 +8,7 @@ import heroImg from "@/assets/hero-pool.jpg";
 
 export default function LandingPage() {
   const { data: stats } = useQuery(statsQuery());
-  const { data: tryouts = [] } = useQuery(tryoutsQuery({ sort: "earliest" }));
+  const { data: tryouts = [] } = useQuery(tryoutsQuery({ sort: "latest" }));
   const featured = tryouts.slice(0, 6);
 
   return (
@@ -20,9 +20,6 @@ export default function LandingPage() {
         </div>
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:py-28">
           <div className="flex flex-col justify-center text-white">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-              <Waves className="h-3.5 w-3.5" /> Parent Portal
-            </span>
             <h1 className="mt-4 font-display text-4xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">
               Discover Swimming Tryouts For Your Child
             </h1>
@@ -54,9 +51,9 @@ export default function LandingPage() {
             <p className="text-sm font-semibold uppercase tracking-wider text-ocean">Now open</p>
             <h2 className="mt-1 font-display text-3xl font-bold sm:text-4xl">Tryouts taking registrations</h2>
           </div>
-          {/* <Button asChild variant="ghost" className="hidden sm:inline-flex">
+          <Button asChild variant="ghost" className="hidden sm:inline-flex">
             <Link to="/tryouts">See all <ArrowRight className="h-4 w-4" /></Link>
-          </Button> */}
+          </Button>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((t) => <TryoutCard key={t.id} tryout={t} />)}

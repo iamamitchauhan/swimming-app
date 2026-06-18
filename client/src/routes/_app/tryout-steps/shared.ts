@@ -9,10 +9,29 @@ export const sessionSchema = z
     endTime: z.string().min(1, "End time is required"),
     label: z.string(),
   })
+  .refine(
+    (s) => {
+      if (!s.date) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selected = new Date(s.date + "T00:00:00");
+      return selected >= today;
+    },
+    { message: "Date cannot be in the past", path: ["date"] },
+  )
   .refine((s) => !s.startTime || !s.endTime || s.endTime > s.startTime, {
     message: "End time must be after start time",
     path: ["endTime"],
-  });
+  })
+  .refine(
+    (s) => {
+      if (!s.startTime || !s.endTime) return true;
+      const [sh, sm] = s.startTime.split(":").map(Number);
+      const [eh, em] = s.endTime.split(":").map(Number);
+      return eh * 60 + em - (sh * 60 + sm) >= 15;
+    },
+    { message: "End time must be at least 15 minutes after start time", path: ["endTime"] },
+  );
 
 export const segmentSchema = z
   .object({
@@ -38,14 +57,29 @@ export const faqSchema = z.object({
 
 export const tryoutSchema = z.object({
   name: z.string().min(1, "Tryout name is required"),
-  location: z.string().optional(),
+  location: z.string().min(5, "Minimum 5 characters required"),
   description: z.string().optional(),
   theme: z.enum(["ocean", "sunset", "forest", "midnight", "coral"]),
   bannerUrl: z.string().optional(),
-  sessions: z.array(sessionSchema).min(1, "At least one session is required"),
+  sessions: z
+    .array(sessionSchema)
+    .min(1, "At least one session is required")
+    .superRefine((sessions, ctx) => {
+      for (let i = 1; i < sessions.length; i++) {
+        const prev = sessions[i - 1].date;
+        const curr = sessions[i].date;
+        if (prev && curr && curr < prev) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Date must not be before session ${i}'s date`,
+            path: [i, "date"],
+          });
+        }
+      }
+    }),
   slotDuration: z.coerce.number(),
   swimmersPerSlot: z.coerce.number(),
-  segments: z.array(segmentSchema),
+  segments: z.array(segmentSchema).min(1, "At least one segment is required"),
   steps: z.array(stepSchema),
   additionalInstructions: z.string().optional(),
   ctaLabel: z.string(),
@@ -112,6 +146,8 @@ export const WIZARD_STEPS = [
   { id: 4, label: "Segments", description: "Age groups & levels" },
   { id: 5, label: "How It Works", description: "Steps & instructions" },
   { id: 6, label: "Presentation", description: "Public card & FAQ" },
+  { id: 7, label: "Registration", description: "Choose questions for the parent registration form" },
+  { id: 8, label: "Review & Publish", description: "Preview and publish your tryout" },
 ] as const;
 
 export type WizardStepId = (typeof WIZARD_STEPS)[number]["id"];
@@ -125,4 +161,6 @@ export const STEP_FIELDS: Record<WizardStepId, (keyof TryoutFormValues)[]> = {
   4: ["segments"],
   5: ["steps", "additionalInstructions"],
   6: ["ctaLabel", "highlights", "faqs"],
+  7: [],
+  8: [],
 };

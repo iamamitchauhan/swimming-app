@@ -101,9 +101,6 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
         swimmerDob: "",
         ageOnTryoutDay: 0,
         hasUsaMembership: false,
-        strokes: [],
-        starts: [],
-        turns: [],
         guardianName: "",
         guardianEmail: "",
       });
@@ -122,9 +119,6 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
     !submitMut.isPending &&
     !!form.fullName.trim() &&
     !!form.ageOnTryoutDay &&
-    form.strokes.length > 0 &&
-    form.starts.length > 0 &&
-    form.turns.length > 0 &&
     !!form.guardianName &&
     !!form.guardianEmail;
 

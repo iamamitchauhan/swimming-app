@@ -1,23 +1,23 @@
-import mongoose from 'mongoose';
-import { RegistrationModel } from '../../models/registration.model';
+import mongoose from "mongoose";
+import { RegistrationModel } from "../../models/registration.model";
 
 // ─── Plain domain types ───────────────────────────────────────────────────────
 
 export type SwimmerDetails = {
   firstName: string;
   lastName: string;
-  dob: string;
+  dob?: string;
   ageOnTryoutDay: number;
   hasUsaMembership: boolean;
   usaMembershipId?: string;
   clubName?: string;
-  swimTime50Free?: string;
-  swimTime100Free?: string;
-  strokes: string[];
-  starts: string[];
-  turns: string[];
   guardianName: string;
   guardianEmail: string;
+};
+
+export type DynamicAnswer = {
+  label: string;
+  value: string | string[];
 };
 
 export type PlainRegistration = {
@@ -29,7 +29,8 @@ export type PlainRegistration = {
   slotId: string;
   segmentId: string;
   swimmerDetails: SwimmerDetails;
-  status: 'registered' | 'waitlisted' | 'offered' | 'rejected' | 'cancelled';
+  dynamicAnswers?: DynamicAnswer[];
+  status: "registered" | "waitlisted" | "offered" | "rejected" | "cancelled";
   waitlistPosition?: number;
   registeredAt: Date;
   scores?: {
@@ -41,7 +42,7 @@ export type PlainRegistration = {
     butterfly?: number;
     totalScore?: number;
   };
-  usaVerificationStatus?: 'pending' | 'needs_review' | 'verified' | 'rejected';
+  usaVerificationStatus?: "pending" | "needs_review" | "verified" | "rejected";
   emailSent: boolean;
   lastCommunicationAt?: Date;
   createdAt: Date;
@@ -53,8 +54,8 @@ export type RegistrationListParams = {
   limit?: number;
   status?: string;
   tryoutId?: string;
-  sortBy?: 'registeredAt' | 'status' | 'waitlistPosition';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "registeredAt" | "status" | "waitlistPosition";
+  sortOrder?: "asc" | "desc";
 };
 
 export type RegistrationListResult = {
@@ -72,26 +73,18 @@ export type RegistrationListResult = {
  * Returns lean plain objects; no Mongoose document overhead exposed to services.
  */
 export class RegistrationRepository {
-
   // ─── CRUD operations ────────────────────────────────────────────────────────
 
   async findById(id: string): Promise<PlainRegistration | null> {
     return RegistrationModel.findById(id)
-      .populate('tryoutId', 'name status')
-      .populate('swimmerId', 'firstName lastName birthDate')
+      .populate("tryoutId", "name status")
+      .populate("swimmerId", "firstName lastName birthDate")
       .lean<PlainRegistration>()
       .exec();
   }
 
   async findByParent(parentId: string, params: RegistrationListParams = {}): Promise<RegistrationListResult> {
-    const {
-      page = 1,
-      limit = 10,
-      status,
-      tryoutId,
-      sortBy = 'registeredAt',
-      sortOrder = 'desc'
-    } = params;
+    const { page = 1, limit = 10, status, tryoutId, sortBy = "registeredAt", sortOrder = "desc" } = params;
 
     // Build filter
     const filter: any = { parentId };
@@ -100,20 +93,20 @@ export class RegistrationRepository {
 
     // Build sort
     const sort: any = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    sort[sortBy] = sortOrder === "asc" ? 1 : -1;
 
     // Execute query with pagination
     const skip = (page - 1) * limit;
     const [registrations, total] = await Promise.all([
       RegistrationModel.find(filter)
-        .populate('tryoutId', 'name status location')
-        .populate('swimmerId', 'firstName lastName birthDate')
+        .populate("tryoutId", "name status location")
+        .populate("swimmerId", "firstName lastName birthDate")
         .sort(sort)
         .skip(skip)
         .limit(limit)
         .lean<PlainRegistration[]>()
         .exec(),
-      RegistrationModel.countDocuments(filter).exec()
+      RegistrationModel.countDocuments(filter).exec(),
     ]);
 
     return {
@@ -121,37 +114,37 @@ export class RegistrationRepository {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     };
   }
 
   async findAllByParent(parentId: string): Promise<PlainRegistration[]> {
     return RegistrationModel.find({ parentId })
-      .populate('tryoutId', 'name status location description bannerUrl createdAt')
-      .populate('swimmerId', 'firstName lastName birthDate')
+      .populate("tryoutId", "name status location description theme bannerUrl createdAt startAt")
+      .populate("swimmerId", "firstName lastName birthDate")
       .sort({ registeredAt: -1 })
       .lean<PlainRegistration[]>()
       .exec();
   }
 
-  async create(data: Omit<PlainRegistration, '_id' | 'createdAt' | 'updatedAt'>): Promise<PlainRegistration> {
+  async create(data: Omit<PlainRegistration, "_id" | "createdAt" | "updatedAt">): Promise<PlainRegistration> {
     const doc = await new RegistrationModel(data).save();
     const plain = await RegistrationModel.findById(doc._id)
-      .populate('tryoutId', 'name status')
-      .populate('swimmerId', 'firstName lastName birthDate')
+      .populate("tryoutId", "name status")
+      .populate("swimmerId", "firstName lastName birthDate")
       .lean<PlainRegistration>()
       .exec();
-    if (!plain) throw new Error('Failed to retrieve created registration');
+    if (!plain) throw new Error("Failed to retrieve created registration");
     return plain;
   }
 
   async update(
     id: string,
-    data: Partial<Omit<PlainRegistration, '_id' | 'tryoutId' | 'swimmerId' | 'parentId' | 'sessionId' | 'segmentId' | 'createdAt' | 'updatedAt'>>,
+    data: Partial<Omit<PlainRegistration, "_id" | "tryoutId" | "swimmerId" | "parentId" | "sessionId" | "segmentId" | "createdAt" | "updatedAt">>,
   ): Promise<PlainRegistration | null> {
     return RegistrationModel.findByIdAndUpdate(id, { $set: data }, { new: true })
-      .populate('tryoutId', 'name status')
-      .populate('swimmerId', 'firstName lastName birthDate')
+      .populate("tryoutId", "name status")
+      .populate("swimmerId", "firstName lastName birthDate")
       .lean<PlainRegistration>()
       .exec();
   }
@@ -159,32 +152,32 @@ export class RegistrationRepository {
   // ─── Business logic queries ─────────────────────────────────────────────────
 
   async findByTryoutAndSwimmer(tryoutId: string, swimmerId: string): Promise<PlainRegistration | null> {
-    return RegistrationModel.findOne({ 
-      tryoutId, 
-      swimmerId, 
-      status: { $nin: ['cancelled'] }
+    return RegistrationModel.findOne({
+      tryoutId,
+      swimmerId,
+      status: { $nin: ["cancelled"] },
     })
-    .lean<PlainRegistration>()
-    .exec();
+      .lean<PlainRegistration>()
+      .exec();
   }
 
   async countBySessionAndStatus(tryoutId: string, sessionId: string, status: string): Promise<number> {
     return RegistrationModel.countDocuments({
       tryoutId,
       sessionId,
-      status
+      status,
     }).exec();
   }
 
   async getMaxWaitlistPosition(tryoutId: string): Promise<number> {
-    const result = await RegistrationModel.findOne({ 
-      tryoutId, 
-      status: 'waitlisted' 
+    const result = await RegistrationModel.findOne({
+      tryoutId,
+      status: "waitlisted",
     })
-    .sort({ waitlistPosition: -1 })
-    .lean<{ waitlistPosition: number }>()
-    .exec();
-    
+      .sort({ waitlistPosition: -1 })
+      .lean<{ waitlistPosition: number }>()
+      .exec();
+
     return result?.waitlistPosition || 0;
   }
 
@@ -194,25 +187,19 @@ export class RegistrationRepository {
     totalCount: number;
   }> {
     const [registeredCount, waitlistCount] = await Promise.all([
-      RegistrationModel.countDocuments({ tryoutId, status: 'registered' }),
-      RegistrationModel.countDocuments({ tryoutId, status: 'waitlisted' })
+      RegistrationModel.countDocuments({ tryoutId, status: "registered" }),
+      RegistrationModel.countDocuments({ tryoutId, status: "waitlisted" }),
     ]);
 
     return {
       registeredCount,
       waitlistCount,
-      totalCount: registeredCount + waitlistCount
+      totalCount: registeredCount + waitlistCount,
     };
   }
 
   async findByTryout(tryoutId: string, params: RegistrationListParams = {}): Promise<RegistrationListResult> {
-    const {
-      page = 1,
-      limit = 10,
-      status,
-      sortBy = 'registeredAt',
-      sortOrder = 'desc'
-    } = params;
+    const { page = 1, limit = 10, status, sortBy = "registeredAt", sortOrder = "desc" } = params;
 
     // Build filter
     const filter: any = { tryoutId };
@@ -220,20 +207,20 @@ export class RegistrationRepository {
 
     // Build sort
     const sort: any = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    sort[sortBy] = sortOrder === "asc" ? 1 : -1;
 
     // Execute query with pagination
     const skip = (page - 1) * limit;
     const [registrations, total] = await Promise.all([
       RegistrationModel.find(filter)
-        .populate('swimmerId', 'firstName lastName birthDate')
-        .populate('parentId', 'firstName lastName email')
+        .populate("swimmerId", "firstName lastName birthDate")
+        .populate("parentId", "firstName lastName email")
         .sort(sort)
         .skip(skip)
         .limit(limit)
         .lean<PlainRegistration[]>()
         .exec(),
-      RegistrationModel.countDocuments(filter).exec()
+      RegistrationModel.countDocuments(filter).exec(),
     ]);
 
     return {
@@ -241,7 +228,7 @@ export class RegistrationRepository {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     };
   }
 }
