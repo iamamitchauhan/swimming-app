@@ -786,3 +786,219 @@ export async function sendInvitation(opts: {
   `,
 });
 }
+
+
+export async function sendRegistrationOffer(opts: { to: string; swimmerName: string; parentName: string }) {
+ await sendMail({
+  to: opts.to,
+  subject: `🎉 Registration Accepted: ${opts.swimmerName} | Swimming App`,
+  html: `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
+      <body style="margin:0;padding:0;background-color:#f4f7fb;font-family:Arial,Helvetica,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f7fb;padding:40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+
+                <!-- Header -->
+                <tr>
+                  <td align="center" style="background:#16a34a;padding:30px;">
+                    <h1 style="margin:0;color:#ffffff;font-size:28px;">
+                      Swimming App
+                    </h1>
+                  </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                  <td style="padding:40px 30px;color:#374151;">
+                    <div style="text-align:center;margin-bottom:24px;">
+                      <div style="font-size:56px;">🎉</div>
+                    </div>
+
+                    <h2 style="margin-top:0;text-align:center;color:#111827;">
+                      Congratulations!
+                    </h2>
+
+                    <p style="font-size:16px;line-height:24px;text-align:center;">
+                      We are excited to share some great news.
+                    </p>
+
+                    <div style="
+                      margin:30px 0;
+                      padding:24px;
+                      background:#f0fdf4;
+                      border:1px solid #bbf7d0;
+                      border-radius:10px;
+                      text-align:center;
+                    ">
+                      <p style="margin:0;font-size:14px;color:#6b7280;">
+                        Accepted Swimmer
+                      </p>
+
+                      <p style="
+                        margin:10px 0 0;
+                        font-size:24px;
+                        font-weight:700;
+                        color:#15803d;
+                      ">
+                        ${opts.swimmerName}
+                      </p>
+                    </div>
+
+                    <p style="font-size:15px;line-height:24px;">
+                      Dear ${opts.parentName},
+                    </p>
+
+                    <p style="font-size:15px;line-height:24px;">
+                      We are pleased to inform you that
+                      <strong>${opts.swimmerName}</strong> has been selected and offered a spot on our swimming team.
+                    </p>
+
+                    <p style="font-size:15px;line-height:24px;">
+                      This achievement reflects the effort, dedication, and potential demonstrated throughout the registration and evaluation process.
+                    </p>
+
+                    <p style="font-size:15px;line-height:24px;">
+                      We look forward to welcoming your family to the club and supporting ${opts.swimmerName}'s continued growth and success in swimming.
+                    </p>
+
+                    <p style="font-size:15px;line-height:24px;margin-top:30px;">
+                      Best regards,<br />
+                      The Coaching Team
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
+                    <p style="margin:0;font-size:13px;color:#6b7280;">
+                      © ${new Date().getFullYear()} Swimming App. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `,
+});
+    
+}
+
+export async function sendRegistrationReject(opts: { to: string; swimmerName: string; parentName: string }) {
+    await sendMail({
+  to: opts.to,
+  subject: `Tryout Result for ${opts.swimmerName} | Swimming App`,
+  html: `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
+      <body style="margin:0;padding:0;background-color:#f4f7fb;font-family:Arial,Helvetica,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f7fb;padding:40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+
+                <!-- Header -->
+                <tr>
+                  <td align="center" style="background:#dc2626;padding:30px;">
+                    <h1 style="margin:0;color:#ffffff;font-size:28px;">
+                      Swimming App
+                    </h1>
+                  </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                  <td style="padding:40px 30px;color:#374151;">
+                    <div style="text-align:center;margin-bottom:24px;">
+                      <div style="font-size:56px;">📋</div>
+                    </div>
+
+                    <h2 style="margin-top:0;text-align:center;color:#111827;">
+                      Registration Update
+                    </h2>
+
+                    <p style="font-size:15px;line-height:24px;">
+                      Dear ${opts.parentName},
+                    </p>
+
+                    <div style="
+                      margin:30px 0;
+                      padding:24px;
+                      background:#fef2f2;
+                      border:1px solid #fecaca;
+                      border-radius:10px;
+                      text-align:center;
+                    ">
+                      <p style="margin:0;font-size:14px;color:#6b7280;">
+                        Swimmer
+                      </p>
+
+                      <p style="
+                        margin:10px 0 0;
+                        font-size:24px;
+                        font-weight:700;
+                        color:#b91c1c;
+                      ">
+                        ${opts.swimmerName}
+                      </p>
+                    </div>
+
+                    <p style="font-size:15px;line-height:24px;">
+                      Thank you for participating in our tryout and registration process.
+                    </p>
+
+                    <p style="font-size:15px;line-height:24px;">
+                      After careful evaluation, we are unable to offer
+                      <strong>${opts.swimmerName}</strong> a spot on the team at this time.
+                    </p>
+
+                    <p style="font-size:15px;line-height:24px;">
+                      We appreciate the effort and commitment shown throughout the process,
+                      and we encourage ${opts.swimmerName} to continue training and apply
+                      again in future seasons.
+                    </p>
+
+                    <p style="font-size:15px;line-height:24px;">
+                      We wish your family all the best in your swimming journey.
+                    </p>
+
+                    <p style="font-size:15px;line-height:24px;margin-top:30px;">
+                      Best regards,<br />
+                      The Coaching Team
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
+                    <p style="margin:0;font-size:13px;color:#6b7280;">
+                      © ${new Date().getFullYear()} Swimming App. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `,
+});
+}

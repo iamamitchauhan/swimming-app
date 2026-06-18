@@ -20,9 +20,6 @@ export default function LandingPage() {
         </div>
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:py-28">
           <div className="flex flex-col justify-center text-white">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-              <Waves className="h-3.5 w-3.5" /> Parent Portal
-            </span>
             <h1 className="mt-4 font-display text-4xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">
               Discover Swimming Tryouts For Your Child
             </h1>

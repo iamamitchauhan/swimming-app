@@ -9,7 +9,7 @@ import { tryoutsQuery } from "@/lib/queries";
 import { uniqueValues, type TryoutFilters } from "@/lib/api/tryouts";
 
 export default function TryoutsPage() {
-  const [filters, setFilters] = useState<TryoutFilters>({ sort: "earliest" });
+  const [filters, setFilters] = useState<TryoutFilters>({ sort: "latest" });
   const { data: tryouts = [], isFetching } = useQuery(tryoutsQuery(filters));
   const ageGroups = uniqueValues("ageGroup");
   const states = uniqueValues("state");
@@ -23,7 +23,7 @@ export default function TryoutsPage() {
         <h1 className="font-display text-3xl font-bold sm:text-4xl">Browse Tryouts</h1>
         <p className="mt-2 text-muted-foreground">{tryouts.length} tryout{tryouts.length === 1 ? "" : "s"} available</p>
       </header>
-      {/* <div className="mb-6 rounded-2xl border border-border/60 bg-card p-4 shadow-soft">
+      <div className="mb-6 rounded-2xl border border-border/60 bg-card p-4 shadow-soft">
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input placeholder="Search by tryout name, club, or city…" value={filters.search ?? ""} onChange={(e) => update("search", e.target.value)} className="pl-9" />
@@ -43,7 +43,7 @@ export default function TryoutsPage() {
           </Select>
         </div>
         <div className="mt-3 flex justify-end"><Button variant="ghost" size="sm" onClick={() => setFilters({ sort: "earliest" })}>Clear filters</Button></div>
-      </div> */}
+      </div>
       {isFetching && tryouts.length === 0 ? (
         <p className="text-muted-foreground">Loading…</p>
       ) : tryouts.length === 0 ? (

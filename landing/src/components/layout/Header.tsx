@@ -39,7 +39,7 @@ export function Header() {
           {/* <HeaderLink to="/tryouts">Tryouts</HeaderLink> */}
           {parent ? (
             <>
-              <HeaderLink to="/dashboard">Dashboard</HeaderLink>
+              {/* <HeaderLink to="/dashboard">Dashboard</HeaderLink> */}
               <HeaderLink to="/registrations">My Registrations</HeaderLink>
             </>
           ) : null}

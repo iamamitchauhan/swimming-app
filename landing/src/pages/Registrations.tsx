@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import type { LucideIcon } from "lucide-react";
-import { CheckCircle2, Clock, XCircle, MapPin, CalendarDays, PlusCircle } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, MapPin, CalendarDays, PlusCircle, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -21,6 +21,7 @@ function themeBg(theme?: string) {
 }
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; Icon: LucideIcon; label: string }> = {
+  offered: { bg: "bg-blue-100",  text: "text-blue-700",  Icon: CheckCircle2, label: "Offered" },
   registered: { bg: "bg-green-100",  text: "text-green-700",  Icon: CheckCircle2, label: "Registered" },
   waitlisted: { bg: "bg-yellow-100", text: "text-yellow-700", Icon: Clock,         label: "Waitlisted" },
   cancelled:  { bg: "bg-red-100",    text: "text-red-600",    Icon: XCircle,       label: "Cancelled"  },
@@ -91,12 +92,26 @@ export default function RegistrationsPage() {
                                 <span>Registered {formatDate(c.registeredAt)}</span>
                               </div>
                             </div>
+                            
+                            {/* <div className="mt-2 space-y-1">
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <CalendarDays className="size-3.5 shrink-0" />
+                                <span>Registration closes in X days</span>
+                              </div>
+                            </div> */}
+
                           </div>
 
                           {/* Status */}
-                          <div className="shrink-0">
+                          <div className="shrink-0 flex flex-col gap-4">
                             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 ${s.bg} ${s.text}`}>
                               <s.Icon className="size-3.5" />{s.label}
+                            </span>
+
+                            <span onClick={()=>{
+                              alert("Work in progress");
+                            }} className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 text-red-600 hover:text-red-700 cursor-pointer`}>
+                              <X className="size-3.5" />Cancel
                             </span>
                           </div>
                         </div>

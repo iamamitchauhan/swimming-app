@@ -296,7 +296,7 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
         </div>
 
         {/* ── Fixed: USA Swimming membership ─────────────────────────────────── */}
-        <div className="rounded-lg border border-border bg-background p-4 space-y-2">
+        {/* <div className="rounded-lg border border-border bg-background p-4 space-y-2">
           <label className="flex items-center gap-2.5 cursor-pointer">
             <Checkbox
               id="usa-membership"
@@ -315,7 +315,7 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
               </Field>
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* ── Fixed: Guardian ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
