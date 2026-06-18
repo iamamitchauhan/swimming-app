@@ -1225,3 +1225,224 @@ export async function sendRegistrationReject(opts: { to: string; swimmerName: st
   `,
   });
 }
+
+export async function sendRegistrationReceivedEmail(opts: {
+  to: string;
+  parentName: string;
+  swimmerName: string;
+  tryoutName: string;
+  location: string;
+  slotLabel: string;
+}): Promise<any> {
+  const currentYear = new Date().getFullYear();
+
+  const html = `
+    <table
+      width="600"
+      cellpadding="0"
+      cellspacing="0"
+      style="
+        max-width:600px;
+        background:#ffffff;
+        border-radius:12px;
+        overflow:hidden;
+        box-shadow:0 4px 12px rgba(0,0,0,0.08);
+      "
+    >
+
+      <tr>
+        <td align="center" style="background:#2563eb;padding:30px;">
+          <h1 style="margin:0;color:#ffffff;font-size:28px;">
+            Swimming App
+          </h1>
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding:40px 30px;color:#374151;">
+
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="font-size:56px;">✅</div>
+          </div>
+
+          <h2 style="margin-top:0;text-align:center;color:#111827;">
+            Registration Received
+          </h2>
+
+          <p style="font-size:16px;line-height:24px;text-align:center;">
+            Thank you for registering for our swim program.
+          </p>
+
+          <div
+            style="
+              margin:30px 0;
+              padding:24px;
+              background:#eff6ff;
+              border:1px solid #bfdbfe;
+              border-radius:10px;
+              text-align:center;
+            "
+          >
+            <p style="margin:0;font-size:14px;color:#6b7280;">
+              Registered Swimmer
+            </p>
+
+            <p
+              style="
+                margin:10px 0 0;
+                font-size:24px;
+                font-weight:700;
+                color:#2563eb;
+              "
+            >
+              ${opts.swimmerName}
+            </p>
+          </div>
+
+          <p style="font-size:15px;line-height:24px;">
+            Dear ${opts.parentName},
+          </p>
+
+          <p style="font-size:15px;line-height:24px;">
+            Thank you for registering
+            <strong>${opts.swimmerName}</strong>
+            for <strong>${opts.tryoutName}</strong>.
+          </p>
+
+          <p style="font-size:15px;line-height:24px;">
+            We have successfully received the registration and recorded the selected session below.
+          </p>
+
+          <p style="font-size:15px;line-height:24px;">
+            At this stage, no action is required from you.
+          </p>
+
+          <div
+            style="
+              margin:30px 0;
+              background:#f9fafb;
+              border:1px solid #e5e7eb;
+              border-radius:10px;
+              overflow:hidden;
+            "
+          >
+            <div
+              style="
+                background:#f3f4f6;
+                padding:14px 20px;
+                font-size:18px;
+                font-weight:700;
+                color:#111827;
+              "
+            >
+              📋 Registration Details
+            </div>
+
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;font-weight:600;width:35%;">
+                  Swimmer
+                </td>
+                <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
+                  ${opts.swimmerName}
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;font-weight:600;">
+                  Tryout
+                </td>
+                <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
+                  ${opts.tryoutName}
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;font-weight:600;">
+                  Location
+                </td>
+                <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
+                  ${opts.location}
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:14px 20px;font-weight:600;">
+                  Selected Slot
+                </td>
+                <td style="padding:14px 20px;color:#2563eb;font-weight:600;">
+                  ${opts.slotLabel}
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <div
+            style="
+              margin:24px 0;
+              padding:20px;
+              background:#eff6ff;
+              border:1px solid #bfdbfe;
+              border-radius:8px;
+            "
+          >
+            <p style="margin:0 0 12px;font-weight:700;color:#1d4ed8;">
+              What's Next?
+            </p>
+
+            <p style="margin:0;font-size:14px;line-height:22px;">
+              Our coaching team will carefully review the registration details
+              and evaluate whether the swimmer is a good fit for the program.
+            </p>
+
+            <p style="margin:12px 0 0;font-size:14px;line-height:22px;">
+              Once the review process is complete, we will notify you by email
+              regarding the outcome.
+            </p>
+
+            <p style="margin:12px 0 0;font-size:14px;line-height:22px;">
+              If your swimmer is selected, you will receive an offer email
+              with the next steps and program details.
+            </p>
+          </div>
+
+          <p style="font-size:15px;line-height:24px;">
+            Thank you for your interest in our program. We appreciate the
+            opportunity to learn more about your swimmer and look forward to
+            reviewing the application.
+          </p>
+
+          <p style="font-size:15px;line-height:24px;margin-top:30px;">
+            Best regards,<br />
+            The Coaching Team
+          </p>
+
+        </td>
+      </tr>
+
+      <tr>
+        <td
+          style="
+            padding:20px 30px;
+            background:#f9fafb;
+            border-top:1px solid #e5e7eb;
+            text-align:center;
+          "
+        >
+          <p style="margin:0;font-size:13px;color:#6b7280;">
+            © ${currentYear} Swimming App. All rights reserved.
+          </p>
+        </td>
+      </tr>
+
+    </table>
+
+  </td>
+</tr>`;
+
+  await sendMail({
+    to: opts.to,
+    subject: `✅ Registration Received: ${opts.tryoutName} | Swimming App`,
+    html,
+  });
+}

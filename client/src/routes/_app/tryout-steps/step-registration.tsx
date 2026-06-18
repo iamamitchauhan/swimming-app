@@ -19,7 +19,21 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuestionLibrary } from "@/hooks/use-question-library";
-import { QuestionCategory, SelectedQuestion, LibraryQuestion } from "@/lib/api/question-library.api";
+import {
+  QuestionCategory,
+  SelectedQuestion,
+  LibraryQuestion,
+} from "@/lib/api/question-library.api";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import DefaultFormUI from "./DefaultFormUI";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,21 +46,31 @@ interface Props {
 
 function questionTypeIcon(type: string) {
   switch (type) {
-    case "text":      return <Type className="h-3.5 w-3.5" />;
-    case "textarea":  return <AlignLeft className="h-3.5 w-3.5" />;
-    case "radio":     return <List className="h-3.5 w-3.5" />;
-    case "checkbox":  return <CheckSquare className="h-3.5 w-3.5" />;
-    default:          return <Type className="h-3.5 w-3.5" />;
+    case "text":
+      return <Type className="h-3.5 w-3.5" />;
+    case "textarea":
+      return <AlignLeft className="h-3.5 w-3.5" />;
+    case "radio":
+      return <List className="h-3.5 w-3.5" />;
+    case "checkbox":
+      return <CheckSquare className="h-3.5 w-3.5" />;
+    default:
+      return <Type className="h-3.5 w-3.5" />;
   }
 }
 
 function questionTypeBadgeColor(type: string): string {
   switch (type) {
-    case "text":      return "bg-blue-50 text-blue-700 border-blue-200";
-    case "textarea":  return "bg-purple-50 text-purple-700 border-purple-200";
-    case "radio":     return "bg-amber-50 text-amber-700 border-amber-200";
-    case "checkbox":  return "bg-green-50 text-green-700 border-green-200";
-    default:          return "bg-muted text-muted-foreground border-border";
+    case "text":
+      return "bg-blue-50 text-blue-700 border-blue-200";
+    case "textarea":
+      return "bg-purple-50 text-purple-700 border-purple-200";
+    case "radio":
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    case "checkbox":
+      return "bg-green-50 text-green-700 border-green-200";
+    default:
+      return "bg-muted text-muted-foreground border-border";
   }
 }
 
@@ -155,24 +179,21 @@ function LibraryQuestionRow({
           </p>
         )}
         {question.options && question.options.length > 0 && (
-          <p className="text-xs text-muted-foreground/70">
-            Options: {question.options.join(", ")}
-          </p>
+          <p className="text-xs text-muted-foreground/70">Options: {question.options.join(", ")}</p>
         )}
       </div>
       <Button
         type="button"
         size="icon"
         variant={isAdded ? "secondary" : "outline"}
-        className={cn("h-7 w-7 shrink-0 mt-0.5", isAdded && "text-destructive hover:text-destructive")}
+        className={cn(
+          "h-7 w-7 shrink-0 mt-0.5",
+          isAdded && "text-destructive hover:text-destructive",
+        )}
         onClick={isAdded ? onRemove : onAdd}
         title={isAdded ? "Remove from form" : "Add to form"}
       >
-        {isAdded ? (
-          <Trash2 className="h-3.5 w-3.5" />
-        ) : (
-          <Plus className="h-3.5 w-3.5" />
-        )}
+        {isAdded ? <Trash2 className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
       </Button>
     </div>
   );
@@ -279,9 +300,7 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
   }
 
   const addedKeys = useMemo<Set<string>>(() => {
-    return new Set(
-      selectedQuestions.map((q) => buildKey(q.categoryId, q.questionIndex)),
-    );
+    return new Set(selectedQuestions.map((q) => buildKey(q.categoryId, q.questionIndex)));
   }, [selectedQuestions]);
 
   function handleAdd(cat: QuestionCategory, qIndex: number) {
@@ -303,9 +322,7 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
 
   function handleRemove(catId: string, qIndex: number) {
     onChange(
-      selectedQuestions.filter(
-        (q) => !(q.categoryId === catId && q.questionIndex === qIndex),
-      ),
+      selectedQuestions.filter((q) => !(q.categoryId === catId && q.questionIndex === qIndex)),
     );
   }
 
@@ -317,13 +334,13 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
 
   return (
     <div className="flex gap-6 min-h-[500px]">
-
       {/* ── Left: Question Library ─────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 space-y-4">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Question Library</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Click <Plus className="h-3 w-3 inline-block" /> to add a question to the registration form.
+            Click <Plus className="h-3 w-3 inline-block" /> to add a question to the registration
+            form.
           </p>
         </div>
 
@@ -378,6 +395,14 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
           )}
         </div>
 
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Registration Form
+          </p>
+
+          <DefaultFormUI />
+        </div>
+
         {selectedQuestions.length === 0 ? (
           <div className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
             <Eye className="h-7 w-7 opacity-40" />
@@ -387,8 +412,8 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
           </div>
         ) : (
           <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-1 max-h-[calc(100vh-360px)] overflow-y-auto">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              Registration Form
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-1">
+              Additional information
             </p>
             <div className="space-y-2">
               {selectedQuestions.map((q, idx) => (
@@ -404,8 +429,8 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
                     draggingIdx === idx
                       ? "opacity-40 border-dashed border-primary/40"
                       : overIdx === idx
-                      ? "border-primary bg-primary/5 shadow-sm"
-                      : "border-border hover:border-border/80",
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border hover:border-border/80",
                   )}
                 >
                   <div
@@ -447,10 +472,7 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
             <p className="text-xs font-medium text-foreground">Selected questions</p>
             <div className="space-y-1.5">
               {selectedQuestions.map((q, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 text-xs text-muted-foreground"
-                >
+                <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span
                     className={cn(
                       "inline-flex items-center gap-0.5 shrink-0 px-1 py-0.5 rounded border text-[9px] font-semibold uppercase",
@@ -460,13 +482,11 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
                     {questionTypeIcon(q.type)}
                   </span>
                   <span className="truncate flex-1">{q.label}</span>
-                  {q.required && (
-                    <span className="text-destructive shrink-0 text-[10px]">*</span>
-                  )}
+                  {q.required && <span className="text-destructive shrink-0 text-[10px]">*</span>}
                   <button
                     type="button"
                     onClick={() => handleRemoveSelected(idx)}
-                    className="shrink-0 text-muted-foreground/50 hover:text-destructive transition-colors"
+                    className="shrink-0 text-muted-foreground/50 hover:text-destructive transition-colors cursor-pointer"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>

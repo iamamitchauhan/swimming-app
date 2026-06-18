@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import { TryoutModel } from '../../models/tryout.model';
+import mongoose from "mongoose";
+import { TryoutModel } from "../../models/tryout.model";
 
 export type PlainTryout = {
   _id: string;
@@ -42,8 +42,8 @@ export type PlainTryout = {
   registeredCount?: number;
 };
 
-export type TryoutSortField = 'name' | 'status' | 'createdAt' | 'updatedAt';
-export type SortOrder = 'asc' | 'desc';
+export type TryoutSortField = "name" | "status" | "createdAt" | "updatedAt";
+export type SortOrder = "asc" | "desc";
 
 export interface TryoutListParams {
   page?: number;
@@ -66,20 +66,32 @@ export interface TryoutListResult {
 
 export class TryoutRepository {
   async findById(id: string): Promise<PlainTryout | null> {
-    return TryoutModel.findById(id).lean<PlainTryout>().exec();
+    try {
+      const data = await TryoutModel.aggregate([
+        {
+          $addFields: {
+            status: {
+              $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"],
+            },
+          },
+        },
+        {
+          $match: {
+            _id: new mongoose.Types.ObjectId(id),
+            // status: { $ne: "closed" },
+          },
+        },
+      ]);
+
+      return data[0] || null;
+    } catch (error) {
+      console.error("Error finding tryout by ID:", error);
+      return null;
+    }
   }
 
   async findByClub(clubId: string, params: TryoutListParams = {}): Promise<TryoutListResult> {
-    const {
-      page = 1,
-      limit = 10,
-      search,
-      status="all",
-      dateFrom,
-      dateTo,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-    } = params;
+    const { page = 1, limit = 10, search, status = "all", dateFrom, dateTo, sortBy = "createdAt", sortOrder = "desc" } = params;
 
     const matchStage: any = {
       clubId: new mongoose.Types.ObjectId(clubId),
@@ -87,31 +99,27 @@ export class TryoutRepository {
 
     // Search filter
     if (search) {
-      const regex = new RegExp(search, 'i');
-      matchStage['$or'] = [
-        { name: { $regex: regex } },
-        { description: { $regex: regex } },
-        { location: { $regex: regex } }
-      ];
+      const regex = new RegExp(search, "i");
+      matchStage["$or"] = [{ name: { $regex: regex } }, { description: { $regex: regex } }, { location: { $regex: regex } }];
     }
 
     // Status filter
-    if (status && status !== 'all') {
-      matchStage['status'] = status;
+    if (status && status !== "all") {
+      matchStage["status"] = status;
     }
 
     // Date range filter
     if (dateFrom || dateTo) {
-      matchStage['createdAt'] = {};
-      if (dateFrom) matchStage['createdAt']['$gte'] = new Date(dateFrom);
+      matchStage["createdAt"] = {};
+      if (dateFrom) matchStage["createdAt"]["$gte"] = new Date(dateFrom);
       if (dateTo) {
         const end = new Date(dateTo);
         end.setHours(23, 59, 59, 999);
-        matchStage['createdAt']['$lte'] = end;
+        matchStage["createdAt"]["$lte"] = end;
       }
     }
 
-    const sortDir: 1 | -1 = sortOrder === 'asc' ? 1 : -1;
+    const sortDir: 1 | -1 = sortOrder === "asc" ? 1 : -1;
     const skip = (page - 1) * limit;
 
     const pipeline: any[] = [
@@ -124,26 +132,26 @@ export class TryoutRepository {
             { $limit: limit },
             {
               $lookup: {
-                from: 'tryout_sessions',
-                localField: '_id',
-                foreignField: 'tryoutId',
-                as: '_sessions',
+                from: "tryout_sessions",
+                localField: "_id",
+                foreignField: "tryoutId",
+                as: "_sessions",
               },
             },
             {
               $lookup: {
-                from: 'registrations',
-                let: { tid: '$_id' },
+                from: "registrations",
+                let: { tid: "$_id" },
                 pipeline: [
                   {
                     $match: {
-                      $expr: { $eq: ['$tryoutId', '$$tid'] },
-                      status: { $nin: ['cancelled'] },
+                      $expr: { $eq: ["$tryoutId", "$$tid"] },
+                      status: { $nin: ["cancelled"] },
                     },
                   },
-                  { $count: 'count' },
+                  { $count: "count" },
                 ],
-                as: '_regCount',
+                as: "_regCount",
               },
             },
             {
@@ -169,30 +177,30 @@ export class TryoutRepository {
                 updatedAt: 1,
                 startAt: 1,
                 endAt: 1,
-                sessionCount: { $size: '$_sessions' },
-                startDate: { $min: '$_sessions.date' },
+                sessionCount: { $size: "$_sessions" },
+                startDate: { $min: "$_sessions.date" },
                 totalSlots: {
                   $sum: {
                     $map: {
-                      input: '$_sessions',
-                      as: 's',
-                      in: '$$s.totalSlots',
+                      input: "$_sessions",
+                      as: "s",
+                      in: "$$s.totalSlots",
                     },
                   },
                 },
                 registeredCount: {
-                  $ifNull: [{ $arrayElemAt: ['$_regCount.count', 0] }, 0],
+                  $ifNull: [{ $arrayElemAt: ["$_regCount.count", 0] }, 0],
                 },
               },
             },
           ],
-          totalCount: [{ $count: 'count' }],
+          totalCount: [{ $count: "count" }],
         },
       },
     ];
 
     const [result] = await TryoutModel.aggregate(pipeline).exec();
-    
+
     const tryouts = result.tryouts || [];
     const total = result.totalCount.length > 0 ? result.totalCount[0].count : 0;
 
@@ -205,18 +213,13 @@ export class TryoutRepository {
     };
   }
 
-  async create(data: Omit<PlainTryout, '_id' | 'createdAt' | 'updatedAt'>): Promise<PlainTryout> {
+  async create(data: Omit<PlainTryout, "_id" | "createdAt" | "updatedAt">): Promise<PlainTryout> {
     const created = await TryoutModel.create(data);
     return created.toObject<PlainTryout>();
   }
 
-  async update(
-    id: string,
-    data: Partial<Omit<PlainTryout, '_id' | 'createdAt' | 'updatedAt'>>,
-  ): Promise<PlainTryout | null> {
-    return TryoutModel.findByIdAndUpdate(id, { $set: data }, { new: true })
-      .lean<PlainTryout>()
-      .exec();
+  async update(id: string, data: Partial<Omit<PlainTryout, "_id" | "createdAt" | "updatedAt">>): Promise<PlainTryout | null> {
+    return TryoutModel.findByIdAndUpdate(id, { $set: data }, { new: true }).lean<PlainTryout>().exec();
   }
 
   async delete(id: string): Promise<PlainTryout | null> {
@@ -224,49 +227,43 @@ export class TryoutRepository {
   }
 
   async list(params: TryoutListParams = {}): Promise<TryoutListResult> {
-    const {
-      page = 1,
-      limit = 10,
-      search,
-      status,
-      dateFrom,
-      dateTo,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-    } = params;
+    const { page = 1, limit = 10, search, status, dateFrom, dateTo, sortBy = "createdAt", sortOrder = "desc" } = params;
 
     const matchStage: any = {};
 
     // Search filter
     if (search) {
-      const regex = new RegExp(search, 'i');
-      matchStage['$or'] = [
-        { name: { $regex: regex } },
-        { description: { $regex: regex } },
-        { location: { $regex: regex } }
-      ];
+      const regex = new RegExp(search, "i");
+      matchStage["$or"] = [{ name: { $regex: regex } }, { description: { $regex: regex } }, { location: { $regex: regex } }];
     }
 
     // Status filter
-    if (status && status !== 'all') {
-      matchStage['status'] = status;
+    if (status && status !== "all") {
+      matchStage["status"] = status;
     }
 
     // Date range filter
     if (dateFrom || dateTo) {
-      matchStage['createdAt'] = {};
-      if (dateFrom) matchStage['createdAt']['$gte'] = new Date(dateFrom);
+      matchStage["createdAt"] = {};
+      if (dateFrom) matchStage["createdAt"]["$gte"] = new Date(dateFrom);
       if (dateTo) {
         const end = new Date(dateTo);
         end.setHours(23, 59, 59, 999);
-        matchStage['createdAt']['$lte'] = end;
+        matchStage["createdAt"]["$lte"] = end;
       }
     }
 
-    const sortDir: 1 | -1 = sortOrder === 'asc' ? 1 : -1;
+    const sortDir: 1 | -1 = sortOrder === "asc" ? 1 : -1;
     const skip = (page - 1) * limit;
 
     const pipeline: any[] = [
+      {
+        $addFields: {
+          status: {
+            $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"],
+          },
+        },
+      },
       { $match: matchStage },
       { $sort: { [sortBy]: sortDir } },
       {
@@ -276,28 +273,29 @@ export class TryoutRepository {
             { $limit: limit },
             {
               $lookup: {
-                from: 'tryout_sessions',
-                localField: '_id',
-                foreignField: 'tryoutId',
-                as: '_sessions',
+                from: "tryout_sessions",
+                localField: "_id",
+                foreignField: "tryoutId",
+                as: "_sessions",
               },
             },
             {
               $lookup: {
-                from: 'registrations',
-                let: { tid: '$_id' },
+                from: "registrations",
+                let: { tid: "$_id" },
                 pipeline: [
                   {
                     $match: {
-                      $expr: { $eq: ['$tryoutId', '$$tid'] },
-                      status: { $nin: ['cancelled'] },
+                      $expr: { $eq: ["$tryoutId", "$$tid"] },
+                      status: { $nin: ["cancelled"] },
                     },
                   },
-                  { $count: 'count' },
+                  { $count: "count" },
                 ],
-                as: '_regCount',
+                as: "_regCount",
               },
             },
+
             {
               $project: {
                 _id: 1,
@@ -321,30 +319,31 @@ export class TryoutRepository {
                 updatedAt: 1,
                 startAt: 1,
                 endAt: 1,
-                sessionCount: { $size: '$_sessions' },
-                startDate: { $min: '$_sessions.date' },
+                computedStatus: 1,
+                sessionCount: { $size: "$_sessions" },
+                startDate: { $min: "$_sessions.date" },
                 totalSlots: {
                   $sum: {
                     $map: {
-                      input: '$_sessions',
-                      as: 's',
-                      in: '$$s.totalSlots',
+                      input: "$_sessions",
+                      as: "s",
+                      in: "$$s.totalSlots",
                     },
                   },
                 },
                 registeredCount: {
-                  $ifNull: [{ $arrayElemAt: ['$_regCount.count', 0] }, 0],
+                  $ifNull: [{ $arrayElemAt: ["$_regCount.count", 0] }, 0],
                 },
               },
             },
           ],
-          totalCount: [{ $count: 'count' }]
-        }
-      }
+          totalCount: [{ $count: "count" }],
+        },
+      },
     ];
 
     const [result] = await TryoutModel.aggregate(pipeline).exec();
-    
+
     const tryouts = result.tryouts || [];
     const total = result.totalCount.length > 0 ? result.totalCount[0].count : 0;
 

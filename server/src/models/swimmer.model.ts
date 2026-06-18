@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 
@@ -6,15 +6,15 @@ export interface ISwimmer extends Document {
   parentId: mongoose.Types.ObjectId;
   firstName: string;
   lastName: string;
-  birthDate: Date;
-  
+  birthDate?: Date;
+
   // USA Swimming (Optional)
   usaMembershipId?: string;
   clubName?: string;
-  
+
   // Status
   isActive: boolean;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,7 +25,7 @@ const swimmerSchema = new Schema<ISwimmer>(
   {
     parentId: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       index: true,
     },
@@ -41,7 +41,7 @@ const swimmerSchema = new Schema<ISwimmer>(
     },
     birthDate: {
       type: Date,
-      required: true,
+      required: false,
     },
     usaMembershipId: {
       type: String,
@@ -57,7 +57,7 @@ const swimmerSchema = new Schema<ISwimmer>(
     },
   },
   {
-    collection: 'swimmers',
+    collection: "swimmers",
     timestamps: true,
   },
 );
@@ -75,4 +75,4 @@ swimmerSchema.index({ parentId: 1, firstName: 1, lastName: 1, birthDate: 1 }, { 
 
 // ─── Export ─────────────────────────────────────────────────────────────────────
 
-export const SwimmerModel: Model<ISwimmer> = mongoose.model<ISwimmer>('Swimmer', swimmerSchema);
+export const SwimmerModel: Model<ISwimmer> = mongoose.model<ISwimmer>("Swimmer", swimmerSchema);

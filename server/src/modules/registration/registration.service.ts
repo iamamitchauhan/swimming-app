@@ -1,11 +1,13 @@
-import { RegistrationRepository, PlainRegistration, RegistrationListParams, RegistrationListResult } from './registration.repository';
-import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '../../shared/errors/domain.errors';
-import { TryoutRepository } from '../tryout/tryout.repository';
-import { TryoutSessionRepository } from '../tryout/tryout-session.repository';
-import { TryoutSlotRepository } from '../tryout/tryout-slot.repository';
-import { SwimmerRepository } from '../swimmer/swimmer.repository';
-import { CreateRegistrationInput } from './registration.validation';
-import logger from '../../shared/utils/logger';
+import { RegistrationRepository, PlainRegistration, RegistrationListParams, RegistrationListResult } from "./registration.repository";
+import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from "../../shared/errors/domain.errors";
+import { TryoutRepository } from "../tryout/tryout.repository";
+import { TryoutSessionRepository } from "../tryout/tryout-session.repository";
+import { TryoutSlotRepository } from "../tryout/tryout-slot.repository";
+import { SwimmerRepository } from "../swimmer/swimmer.repository";
+import { CreateRegistrationInput } from "./registration.validation";
+import logger from "../../shared/utils/logger";
+import { sendRegistrationReceivedEmail } from "../../shared/utils/mailer";
+import { UserModel } from "../auth/auth.schema";
 
 export class RegistrationService {
   constructor(
@@ -13,7 +15,7 @@ export class RegistrationService {
     private readonly tryoutRepo: TryoutRepository,
     private readonly sessionRepo: TryoutSessionRepository,
     private readonly slotRepo: TryoutSlotRepository,
-    private readonly swimmerRepo: SwimmerRepository
+    private readonly swimmerRepo: SwimmerRepository,
   ) {}
 
   /**
@@ -27,49 +29,57 @@ export class RegistrationService {
    * Returns all tryouts where the parent registered their children,
    * grouped by tryout with each child's status and scores.
    */
-  async listParentTryouts(parentId: string): Promise<Array<{
-    tryout: {
-      _id: string;
-      name: string;
-      status: string;
-      location: string;
-      description: string;
-      theme: string;
-      bannerUrl: string;
-      createdAt: Date;
-    };
-    children: Array<{
-      registrationId: string;
-      swimmerId: string;
-      firstName: string;
-      lastName: string;
-      ageOnTryoutDay: number;
-      status: string;
-      scores: PlainRegistration['scores'];
-      registeredAt: Date;
-    }>;
-  }>> {
+  async listParentTryouts(parentId: string): Promise<
+    Array<{
+      tryout: {
+        _id: string;
+        name: string;
+        status: string;
+        location: string;
+        description: string;
+        theme: string;
+        bannerUrl: string;
+        createdAt: Date;
+      };
+      children: Array<{
+        registrationId: string;
+        swimmerId: string;
+        firstName: string;
+        lastName: string;
+        ageOnTryoutDay: number;
+        status: string;
+        scores: PlainRegistration["scores"];
+        registeredAt: Date;
+      }>;
+    }>
+  > {
     const registrations = await this.repo.findAllByParent(parentId);
 
-    const tryoutMap = new Map<string, {
-      tryout: any;
-      children: any[];
-    }>();
+    const tryoutMap = new Map<
+      string,
+      {
+        tryout: any;
+        children: any[];
+      }
+    >();
 
     for (const reg of registrations) {
       const tryout = reg.tryoutId as any;
+
+      console.info("tryout => ", tryout);
+
       const tryoutId = tryout._id?.toString?.() ?? tryout.toString?.() ?? tryout;
 
       if (!tryoutMap.has(tryoutId)) {
         tryoutMap.set(tryoutId, {
           tryout: {
             _id: tryoutId,
-            name: tryout.name ?? '',
-            status: tryout.status ?? '',
-            location: tryout.location ?? '',
-            description: tryout.description ?? '',
-            theme: tryout.theme ?? '',
-            bannerUrl: tryout.bannerUrl ?? '',
+            name: tryout.name ?? "",
+            status: tryout.startAt && tryout.startAt > new Date() ? "open" : "closed",
+            location: tryout.location ?? "",
+            description: tryout.description ?? "",
+            theme: tryout.theme ?? "",
+            bannerUrl: tryout.bannerUrl ?? "",
             createdAt: tryout.createdAt,
           },
           children: [],
@@ -98,13 +108,13 @@ export class RegistrationService {
    */
   async getById(id: string, parentId: string): Promise<PlainRegistration> {
     const registration = await this.repo.findById(id);
-    if (!registration) throw new NotFoundError('Registration not found');
-    
+    if (!registration) throw new NotFoundError("Registration not found");
+
     // Ownership validation
     if (registration.parentId !== parentId) {
-      throw new ForbiddenError('Access denied');
+      throw new ForbiddenError("Access denied");
     }
-    
+
     return registration;
   }
 
@@ -113,34 +123,41 @@ export class RegistrationService {
    */
   async create(input: CreateRegistrationInput, parentId: string): Promise<PlainRegistration> {
     const {
-      tryoutId, sessionId, slotId, segmentId,
-      swimmerFirstName, swimmerLastName, swimmerDob, ageOnTryoutDay,
-      hasUsaMembership, usaMembershipId, clubName,
-      guardianName, guardianEmail,
+      tryoutId,
+      sessionId,
+      slotId,
+      segmentId,
+      swimmerFirstName,
+      swimmerLastName,
+      swimmerDob,
+      ageOnTryoutDay,
+      hasUsaMembership,
+      usaMembershipId,
+      clubName,
+      guardianName,
+      guardianEmail,
       dynamicAnswers,
     } = input;
 
     // 1. Validate tryout exists and is open
     const tryout = await this.tryoutRepo.findById(tryoutId);
-    if (!tryout) throw new NotFoundError('Tryout not found');
-    if (tryout.status !== 'open') throw new BadRequestError('Tryout is not open for registration');
+    if (!tryout) throw new NotFoundError("Tryout not found");
+    if (tryout.status !== "open") throw new BadRequestError("Tryout is not open for registration");
 
     // 2. Validate session belongs to this tryout
     const session = await this.sessionRepo.findById(sessionId);
-    if (!session || session.tryoutId.toString() !== tryoutId) throw new NotFoundError('Session not found');
+    if (!session || session.tryoutId.toString() !== tryoutId) throw new NotFoundError("Session not found");
 
     // 3. Validate slot belongs to this session and has capacity
     const slot = await this.slotRepo.findById(slotId);
-    if (!slot || slot.sessionId.toString() !== sessionId) throw new NotFoundError('Slot not found');
+    if (!slot || slot.sessionId.toString() !== sessionId) throw new NotFoundError("Slot not found");
     if (slot.registeredCount >= slot.capacity) {
-      throw new BadRequestError('This slot is full. Please choose another slot.');
+      throw new BadRequestError("This slot is full. Please choose another slot.");
     }
 
     // 4. Create or find swimmer record
-    const birthDate = new Date(swimmerDob);
-    let swimmer = await this.swimmerRepo.findByParentAndName(
-      parentId, swimmerFirstName, swimmerLastName
-    );
+    const birthDate = swimmerDob ? new Date(swimmerDob) : undefined;
+    let swimmer = await this.swimmerRepo.findByParentAndName(parentId, swimmerFirstName, swimmerLastName);
     if (!swimmer) {
       swimmer = await this.swimmerRepo.create({
         parentId,
@@ -155,14 +172,14 @@ export class RegistrationService {
 
     // 5. Check for duplicate registration
     const existing = await this.repo.findByTryoutAndSwimmer(tryoutId, swimmer._id);
-    if (existing && existing.status !== 'cancelled') {
-      throw new ConflictError('This swimmer is already registered for this tryout.');
+    if (existing && existing.status !== "cancelled") {
+      throw new ConflictError("This swimmer is already registered for this tryout.");
     }
 
     // 6. Calculate waitlist position if needed
     const capacityInfo = await this.calculateSessionCapacity(tryoutId, sessionId, session);
-    const status = capacityInfo.hasCapacity ? 'registered' : 'waitlisted';
-    const waitlistPosition = status === 'waitlisted' ? capacityInfo.nextWaitlistPosition : undefined;
+    const status = capacityInfo.hasCapacity ? "registered" : "waitlisted";
+    const waitlistPosition = status === "waitlisted" ? capacityInfo.nextWaitlistPosition : undefined;
 
     // 7. Create registration with all form data embedded
     const created = await this.repo.create({
@@ -176,16 +193,16 @@ export class RegistrationService {
       swimmerDetails: {
         firstName: swimmerFirstName,
         lastName: swimmerLastName,
-        dob: swimmerDob,
+        dob: swimmerDob || "",
         ageOnTryoutDay,
         hasUsaMembership,
-        usaMembershipId: hasUsaMembership ? usaMembershipId : '',
-        clubName: clubName || '',
+        usaMembershipId: hasUsaMembership ? usaMembershipId : "",
+        clubName: clubName || "",
         guardianName,
         guardianEmail,
       },
       dynamicAnswers: dynamicAnswers ?? [],
-      status: status as PlainRegistration['status'],
+      status: status as PlainRegistration["status"],
       waitlistPosition,
       registeredAt: new Date(),
     });
@@ -196,14 +213,34 @@ export class RegistrationService {
     // 9. Update tryout registration counts
     await this.tryoutRepo.updateRegistrationCounts(tryoutId);
 
-    logger.info({
-      registrationId: created._id,
-      tryoutId,
-      slotId,
-      swimmerId: swimmer._id,
-      parentId,
-      status,
-    }, 'registration.created');
+    // 9 Send successfully registered email
+
+    // fetch tryout detail
+    const parentDetail = await UserModel.findById({ _id: parentId }).lean();
+    console.info("parentDetail => ", parentDetail);
+
+    if (parentDetail) {
+      sendRegistrationReceivedEmail({
+        to: parentDetail?.email || "",
+        parentName: `${parentDetail.firstName} ${parentDetail.lastName}`.trim(),
+        swimmerName: `${swimmerFirstName} ${swimmerLastName}`.trim(),
+        tryoutName: tryout?.name || "",
+        location: tryout.location || "",
+        slotLabel: slot.label || "",
+      });
+    }
+
+    logger.info(
+      {
+        registrationId: created._id,
+        tryoutId,
+        slotId,
+        swimmerId: swimmer._id,
+        parentId,
+        status,
+      },
+      "registration.created",
+    );
 
     return created;
   }
@@ -211,24 +248,20 @@ export class RegistrationService {
   /**
    * Updates registration status (for cancellations, etc.)
    */
-  async updateStatus(
-    id: string,
-    parentId: string,
-    status: PlainRegistration['status']
-  ): Promise<PlainRegistration> {
+  async updateStatus(id: string, parentId: string, status: PlainRegistration["status"]): Promise<PlainRegistration> {
     // Validate ownership
     const existing = await this.repo.findById(id);
-    if (!existing) throw new NotFoundError('Registration not found');
-    if (existing.parentId !== parentId) throw new ForbiddenError('Access denied');
+    if (!existing) throw new NotFoundError("Registration not found");
+    if (existing.parentId !== parentId) throw new ForbiddenError("Access denied");
 
     // Update registration
     const updated = await this.repo.update(id, { status });
-    if (!updated) throw new NotFoundError('Registration not found');
+    if (!updated) throw new NotFoundError("Registration not found");
 
     // Update tryout counts
     await this.tryoutRepo.updateRegistrationCounts(existing.tryoutId);
 
-    logger.info({ registrationId: id, status }, 'registration.status.updated');
+    logger.info({ registrationId: id, status }, "registration.status.updated");
 
     return updated;
   }
@@ -239,9 +272,9 @@ export class RegistrationService {
   private async calculateSessionCapacity(
     tryoutId: string,
     sessionId: string,
-    session: { totalSlots: number; swimmersPerSlot: number }
+    session: { totalSlots: number; swimmersPerSlot: number },
   ): Promise<{ hasCapacity: boolean; nextWaitlistPosition: number }> {
-    const registeredCount = await this.repo.countBySessionAndStatus(tryoutId, sessionId, 'registered');
+    const registeredCount = await this.repo.countBySessionAndStatus(tryoutId, sessionId, "registered");
 
     const sessionCapacity = session.totalSlots * session.swimmersPerSlot;
     const hasCapacity = registeredCount < sessionCapacity;
@@ -263,11 +296,32 @@ export class RegistrationService {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    
+
     return age;
+  }
+
+  /**
+   * Updates registration status (for cancellations, etc.)
+   */
+  async registrationCancelByParent(id: string, parentId: string, status: PlainRegistration["status"]): Promise<PlainRegistration> {
+    // Validate ownership
+    const existing = await this.repo.findById(id);
+    if (!existing) throw new NotFoundError("Registration not found");
+    if (existing.parentId !== parentId) throw new ForbiddenError("Access denied");
+
+    // Update registration
+    const updated = await this.repo.update(id, { status });
+    if (!updated) throw new NotFoundError("Registration not found");
+
+    // Update tryout counts
+    // await this.tryoutRepo.updateRegistrationCounts(existing.tryoutId);
+
+    logger.info({ registrationId: id, status }, "registration.status.updated");
+
+    return updated;
   }
 }

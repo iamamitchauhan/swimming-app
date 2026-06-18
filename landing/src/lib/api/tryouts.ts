@@ -2,7 +2,7 @@ import { MOCK_TRYOUTS, PLATFORM_STATS } from "../mock-data";
 import type { Tryout, TryoutStatus } from "../types";
 import { wait } from "../mock-db";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api/v1";
 
 export interface TryoutFilters {
   search?: string;
@@ -28,9 +28,12 @@ export function availableSlotsCount(t: Tryout) {
 
 function mapSortToApi(sort: TryoutFilters["sort"]): { sortBy: string; sortOrder: string } {
   switch (sort) {
-    case "earliest": return { sortBy: "createdAt", sortOrder: "asc" };
-    case "most_slots": return { sortBy: "createdAt", sortOrder: "desc" };
-    default: return { sortBy: "createdAt", sortOrder: "desc" };
+    case "earliest":
+      return { sortBy: "createdAt", sortOrder: "asc" };
+    case "most_slots":
+      return { sortBy: "createdAt", sortOrder: "desc" };
+    default:
+      return { sortBy: "createdAt", sortOrder: "desc" };
   }
 }
 
@@ -57,7 +60,8 @@ function mapTryout(raw: any): Tryout {
       label: sl.label ?? s.label ?? "",
       capacity: sl.capacity ?? raw.swimmersPerSlot ?? 4,
       registeredCount: sl.registeredCount ?? 0,
-      availableSlots: sl.availableSlots ?? Math.max(0, (sl.capacity ?? 0) - (sl.registeredCount ?? 0)),
+      availableSlots:
+        sl.availableSlots ?? Math.max(0, (sl.capacity ?? 0) - (sl.registeredCount ?? 0)),
     })),
   }));
 
@@ -72,21 +76,23 @@ function mapTryout(raw: any): Tryout {
       capacity: sl.capacity,
       taken: sl.registeredCount,
       availableSlots: sl.availableSlots,
-    }))
+    })),
   );
 
   // When the list endpoint returns aggregated totals instead of embedded slots,
   // synthesise a single summary slot so capacity/taken calculations work on the card.
   if (slots.length === 0 && (raw.totalSlots ?? 0) > 0) {
-    slots = [{
-      id: `${raw._id ?? raw.id}-summary`,
-      sessionId: "",
-      label: "Summary",
-      time: "",
-      capacity: raw.totalSlots as number,
-      taken: raw.registeredCount ?? 0,
-      availableSlots: Math.max(0, (raw.totalSlots as number) - (raw.registeredCount ?? 0)),
-    }];
+    slots = [
+      {
+        id: `${raw._id ?? raw.id}-summary`,
+        sessionId: "",
+        label: "Summary",
+        time: "",
+        capacity: raw.totalSlots as number,
+        taken: raw.registeredCount ?? 0,
+        availableSlots: Math.max(0, (raw.totalSlots as number) - (raw.registeredCount ?? 0)),
+      },
+    ];
   }
 
   // Derive date/time: prefer aggregated startDate from list, then first embedded session
@@ -101,6 +107,7 @@ function mapTryout(raw: any): Tryout {
     ageGroup: firstSegment ? `${firstSegment.minAge}–${firstSegment.maxAge}` : "",
     skillLevel: firstSegment?.level ?? "",
     state: "",
+    status: raw.status ?? "open",
     city: raw.location ?? "",
     location: raw.location ?? "",
     poolName: raw.location ?? "",
@@ -115,7 +122,9 @@ function mapTryout(raw: any): Tryout {
     purpose: raw.theme ?? "",
     eligibility: raw.segments?.map((s: any) => s.name) ?? [],
     segments: raw.segments ?? [],
-    steps: raw.steps?.map((s: any) => ({ title: s.title ?? "", description: s.description ?? "" })) ?? [],
+    steps:
+      raw.steps?.map((s: any) => ({ title: s.title ?? "", description: s.description ?? "" })) ??
+      [],
     faqs: raw.faqs?.map((f: any) => ({ question: f.question ?? "", answer: f.answer ?? "" })) ?? [],
     image: raw.bannerUrl ?? "",
     slots,

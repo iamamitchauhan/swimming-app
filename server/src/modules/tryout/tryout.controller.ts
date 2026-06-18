@@ -534,7 +534,7 @@ export class TryoutController {
             // fetch slot detail by slot Id
             const slot = await TryoutSlotModel.findById({ _id: updated.slotId }).lean();
 
-            await sendRegistrationOffer({
+            sendRegistrationOffer({
               to: parentEmail,
               swimmerName,
               parentName,
@@ -548,7 +548,7 @@ export class TryoutController {
           }
 
           case "rejected":
-            await sendRegistrationReject({
+            sendRegistrationReject({
               to: parentEmail,
               swimmerName,
               parentName,

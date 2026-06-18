@@ -111,7 +111,13 @@ function validateDynamicAnswers(
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo, segments = [] }: Props) {
+export function RegistrationForm({
+  tryoutId,
+  slotId,
+  sessionId,
+  selectedSlotInfo,
+  segments = [],
+}: Props) {
   const qc = useQueryClient();
 
   // Fetch dynamic questions from API
@@ -119,11 +125,14 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
     registrationQuestionsQuery(tryoutId),
   );
 
-
   // parent Name
 
-  const guardianName = localStorage.getItem("auth_user") ? `${JSON.parse(localStorage.getItem("auth_user")!).firstName} ${JSON.parse(localStorage.getItem("auth_user")!).lastName}` : "" ;
-  const guardianEmail = localStorage.getItem("auth_user") ? `${JSON.parse(localStorage.getItem("auth_user")!).email}` : "" ;
+  const guardianName = localStorage.getItem("auth_user")
+    ? `${JSON.parse(localStorage.getItem("auth_user")!).firstName} ${JSON.parse(localStorage.getItem("auth_user")!).lastName}`
+    : "";
+  const guardianEmail = localStorage.getItem("auth_user")
+    ? `${JSON.parse(localStorage.getItem("auth_user")!).email}`
+    : "";
   // Fixed fields form
   const {
     register,
@@ -158,9 +167,7 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
   }, [ageValue, segments]);
 
   // Dynamic question state
-  const [dynamicState, setDynamicState] = useState<DynamicState>(() =>
-    initialDynamic(questions),
-  );
+  const [dynamicState, setDynamicState] = useState<DynamicState>(() => initialDynamic(questions));
   const [dynamicErrors, setDynamicErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
 
@@ -186,7 +193,6 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
       const dynamicAnswers = Object.entries(dynamicState)
         .filter(([, v]) => (Array.isArray(v) ? v.length > 0 : String(v).trim() !== ""))
         .map(([label, value]) => ({ label, value }));
-
 
       return createRegistration({
         tryoutId,
@@ -226,7 +232,6 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
 
   return (
     <div className="rounded-xl border border-border bg-card p-6 space-y-5">
-
       {/* ── Slot status ──────────────────────────────────────────────────────── */}
       {slotId && selectedSlotInfo ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
@@ -241,12 +246,12 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
       ) : (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
           <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
-          No slot selected — pick a slot from the Registration Windows above, or we'll auto-assign the earliest open one.
+          No slot selected — pick a slot from the Registration Windows above, or we'll auto-assign
+          the earliest open one.
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-
         {/* ── Fixed: Swimmer name ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
           <Field label="Swimmer first name" required error={errors.swimmerFirstName?.message}>
@@ -256,11 +261,6 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
             <Input placeholder="Last name" {...register("swimmerLastName")} />
           </Field>
         </div>
-
-        {/* ── Fixed: DOB ─────────────────────────────────────────────────────── */}
-        {/* <Field label="Swimmer date of birth" required error={errors.swimmerDob?.message}>
-          <Input type="date" {...register("swimmerDob")} />
-        </Field> */}
 
         {/* ── Fixed: Age + Segment ───────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
@@ -280,9 +280,7 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
               disabled={validSegments.length === 0}
             >
               <SelectTrigger className={validSegments.length === 0 ? "text-muted-foreground" : ""}>
-                <SelectValue
-                  placeholder={ageValue ? "Select Segment" : "Enter age first"}
-                />
+                <SelectValue placeholder={ageValue ? "Select Segment" : "Enter age first"} />
               </SelectTrigger>
               <SelectContent>
                 {validSegments.map((s) => (
@@ -294,28 +292,6 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
             </Select>
           </Field>
         </div>
-
-        {/* ── Fixed: USA Swimming membership ─────────────────────────────────── */}
-        {/* <div className="rounded-lg border border-border bg-background p-4 space-y-2">
-          <label className="flex items-center gap-2.5 cursor-pointer">
-            <Checkbox
-              id="usa-membership"
-              checked={hasUsaMembership}
-              onCheckedChange={(v) => setValue("hasUsaMembership", !!v)}
-            />
-            <span className="text-sm font-medium">Has USA Swimming membership</span>
-          </label>
-          {hasUsaMembership && (
-            <div className="mt-3 grid grid-cols-2 gap-3 pl-6">
-              <Field label="Membership ID" required error={errors.usaMembershipId?.message}>
-                <Input placeholder="e.g. 123456789" {...register("usaMembershipId")} />
-              </Field>
-              <Field label="Club name" error={errors.clubName?.message}>
-                <Input placeholder="Swim club name" {...register("clubName")} />
-              </Field>
-            </div>
-          )}
-        </div> */}
 
         {/* ── Fixed: Guardian ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
@@ -344,9 +320,7 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
                 question={q}
                 value={dynamicState[q.label] ?? (q.type === "checkbox" ? [] : "")}
                 error={submitted ? dynamicErrors[q.label] : undefined}
-                onChange={(val) =>
-                  setDynamicState((prev) => ({ ...prev, [q.label]: val }))
-                }
+                onChange={(val) => setDynamicState((prev) => ({ ...prev, [q.label]: val }))}
               />
             ))}
           </div>
@@ -354,11 +328,7 @@ export function RegistrationForm({ tryoutId, slotId, sessionId, selectedSlotInfo
 
         {/* ── Submit ──────────────────────────────────────────────────────────── */}
         <div className="space-y-2 pt-1">
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={submitMut.isPending}
-          >
+          <Button type="submit" className="w-full" disabled={submitMut.isPending}>
             {submitMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {submitMut.isPending ? "Submitting…" : "Submit Registration"}
           </Button>
@@ -407,10 +377,7 @@ function DynamicField({
       )}
       {question.type === "radio" && (
         <div className="rounded-lg border border-border bg-background p-3 space-y-2">
-          <RadioGroup
-            value={value as string}
-            onValueChange={(v) => onChange(v)}
-          >
+          <RadioGroup value={value as string} onValueChange={(v) => onChange(v)}>
             {(question.options ?? []).map((opt) => (
               <div key={opt} className="flex items-center gap-2.5">
                 <RadioGroupItem value={opt} id={`${fieldId}-${opt}`} />
@@ -427,7 +394,11 @@ function DynamicField({
           {(question.options ?? []).map((opt) => {
             const checked = Array.isArray(value) && value.includes(opt);
             return (
-              <label key={opt} htmlFor={`${fieldId}-${opt}`} className="flex items-center gap-2.5 cursor-pointer">
+              <label
+                key={opt}
+                htmlFor={`${fieldId}-${opt}`}
+                className="flex items-center gap-2.5 cursor-pointer"
+              >
                 <Checkbox
                   id={`${fieldId}-${opt}`}
                   checked={checked}

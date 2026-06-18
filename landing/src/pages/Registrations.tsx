@@ -2,11 +2,12 @@ import { useEffect } from "react";
 import type { LucideIcon } from "lucide-react";
 import { CheckCircle2, Clock, XCircle, MapPin, CalendarDays, PlusCircle, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { parentQuery, myTryoutsQuery } from "@/lib/queries";
+import { parentQuery, myTryoutsQuery, cancelRegistration } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
+import { cancelRegistrationById } from "@/lib/api/registrations";
 
 const THEME_CLASSES: Record<string, string> = {
   ocean: "bg-linear-to-br from-sky-500 to-blue-700",
@@ -40,6 +41,10 @@ export default function RegistrationsPage() {
   const navigate = useNavigate();
   const { data: parent, isLoading } = useQuery(parentQuery());
   const { data: tryouts = [], isLoading: loadingTryouts } = useQuery(myTryoutsQuery());
+
+  const cancelReg = useMutation({
+    mutationFn: (id: string) => cancelRegistrationById(id),
+  });
 
   useEffect(() => {
     if (!isLoading && !parent) navigate("/login");
@@ -81,7 +86,7 @@ export default function RegistrationsPage() {
                   )}
                   <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent" />
                   <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
-                    <h2 className="font-bold text-white text-lg drop-shadow">{t.name}</h2>
+                    <h2 className="font-bold text-white text-lg">{t.name}</h2>
                     {t.location && (
                       <span className="text-white/80 text-xs flex items-center gap-1">
                         <MapPin className="size-3" />
@@ -132,17 +137,18 @@ export default function RegistrationsPage() {
                               {s.label}
                             </span>
 
-                            {["Registered", "Waitlisted"].includes(s.label) && (
+                            {t.status === "open" &&
+                            (["Registered", "Waitlisted"] as string[]).includes(s.label) ? (
                               <span
                                 onClick={() => {
-                                  alert("Work in progress");
+                                  cancelReg.mutate(t._id);
                                 }}
                                 className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 text-red-600 hover:text-red-700 cursor-pointer`}
                               >
                                 <X className="size-3.5" />
                                 Cancel
                               </span>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -151,7 +157,7 @@ export default function RegistrationsPage() {
                 </div>
 
                 {/* Add another swimmer CTA */}
-                {
+                {t.status !== "closed" && (
                   <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
                     <Link
                       to={`/tryouts/${t._id}`}
@@ -160,7 +166,7 @@ export default function RegistrationsPage() {
                       <PlusCircle className="size-4" /> Add another swimmer for this tryout
                     </Link>
                   </div>
-                }
+                )}
               </div>
             );
           })}

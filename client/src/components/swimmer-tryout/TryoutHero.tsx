@@ -24,10 +24,10 @@ export function TryoutHero({ tryout, onRegister }: Props) {
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(
-      ([entry]) => setCompact(!entry.isIntersecting),
-      { rootMargin: "0px 0px -100% 0px", threshold: 0 },
-    );
+    const io = new IntersectionObserver(([entry]) => setCompact(!entry.isIntersecting), {
+      rootMargin: "0px 0px -100% 0px",
+      threshold: 0,
+    });
     io.observe(el);
     return () => io.disconnect();
   }, []);
@@ -70,12 +70,12 @@ export function TryoutHero({ tryout, onRegister }: Props) {
             )}
           </div>
 
-          <h1 className="mt-4 text-3xl font-black tracking-tight text-white drop-shadow-lg sm:text-4xl md:text-5xl">
+          <h1 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl md:text-5xl">
             {tryout.name}
           </h1>
 
           {tryout.location && (
-            <div className="mt-3 flex items-center gap-2 text-white/90 drop-shadow">
+            <div className="mt-3 flex items-center gap-2 text-white/90">
               <MapPin className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{tryout.location}</span>
             </div>

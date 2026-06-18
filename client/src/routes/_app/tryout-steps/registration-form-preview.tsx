@@ -1,9 +1,25 @@
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SelectedQuestion } from "@/lib/api/question-library.api";
 import { cn } from "@/lib/utils";
 
 // ─── Shared sub-components matching the real RegistrationForm style ────────────
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
       <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -15,7 +31,15 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-function CheckCard({ label, required, children }: { label?: string; required?: boolean; children: React.ReactNode }) {
+function CheckCard({
+  label,
+  required,
+  children,
+}: {
+  label?: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-lg border border-border bg-background p-4 space-y-2">
       {label && (
@@ -55,11 +79,52 @@ export function RegistrationFormPreview({ selectedQuestions }: Props) {
       <h2 className="mb-5 text-xl font-bold">Complete Registration</h2>
 
       <div className="rounded-xl border border-border bg-card p-6 space-y-5">
-
         {/* Slot selection banner (static amber — no slot selected in preview) */}
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
           <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
-          No slot selected — pick a slot from the Registration Windows above, or we'll auto-assign the earliest open one.
+          No slot selected — pick a slot from the Registration Windows above, or we'll auto-assign
+          the earliest open one.
+        </div>
+
+        {/* ── Fixed: Swimmer name ─────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Swimmer first name" required>
+            <Input placeholder="First name" />
+          </Field>
+          <Field label="Swimmer last name" required>
+            <Input placeholder="Last name" />
+          </Field>
+        </div>
+
+        {/* ── Fixed: Age + Segment ───────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Age on tryout day" required>
+            <Input type="number" min={1} max={30} placeholder="e.g. 10" />
+          </Field>
+          <Field label="Registration segment" required>
+            <Select disabled={true}>
+              <SelectTrigger className={"text-muted-foreground"}>
+                <SelectValue placeholder={"Enter age first"} />
+              </SelectTrigger>
+              <SelectContent>
+                {[{ name: "Segment A" }, { name: "Segment B" }].map((s) => (
+                  <SelectItem key={s.name} value={s.name}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+
+        {/* ── Fixed: Guardian ─────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Guardian name" required>
+            <Input placeholder="Full name" />
+          </Field>
+          <Field label="Guardian email" required>
+            <Input type="email" placeholder="name@domain.com" />
+          </Field>
         </div>
 
         {/* Dynamic questions from the question library */}
@@ -99,7 +164,9 @@ export function RegistrationFormPreview({ selectedQuestions }: Props) {
                         <FakeCheckRow key={i} label={opt} type="radio" />
                       ))
                     ) : (
-                      <span className="text-xs text-muted-foreground/50 italic">No options defined</span>
+                      <span className="text-xs text-muted-foreground/50 italic">
+                        No options defined
+                      </span>
                     )}
                   </CheckCard>
                 );
@@ -113,7 +180,9 @@ export function RegistrationFormPreview({ selectedQuestions }: Props) {
                         <FakeCheckRow key={i} label={opt} type="checkbox" />
                       ))
                     ) : (
-                      <span className="text-xs text-muted-foreground/50 italic">No options defined</span>
+                      <span className="text-xs text-muted-foreground/50 italic">
+                        No options defined
+                      </span>
                     )}
                   </CheckCard>
                 );
@@ -142,7 +211,6 @@ export function RegistrationFormPreview({ selectedQuestions }: Props) {
             15-minute evaluation · Instant confirmation · Email reminder before tryout
           </p>
         </div>
-
       </div>
     </section>
   );

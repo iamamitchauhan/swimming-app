@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 
@@ -6,7 +6,7 @@ export interface IRegistration extends Document {
   tryoutId: mongoose.Types.ObjectId;
   swimmerId: mongoose.Types.ObjectId;
   parentId: mongoose.Types.ObjectId;
-  
+
   // References to separate collections
   sessionId: mongoose.Types.ObjectId;
   slotId: mongoose.Types.ObjectId;
@@ -16,7 +16,7 @@ export interface IRegistration extends Document {
   swimmerDetails: {
     firstName: string;
     lastName: string;
-    dob: string;
+    dob?: string;
     ageOnTryoutDay: number;
     hasUsaMembership: boolean;
     usaMembershipId?: string;
@@ -24,14 +24,14 @@ export interface IRegistration extends Document {
     guardianName: string;
     guardianEmail: string;
   };
-  
+
   // Registration Management
-  status: 'registered' | 'waitlisted' | 'offered' | 'rejected' | 'cancelled';
+  status: "registered" | "waitlisted" | "offered" | "rejected" | "cancelled";
   waitlistPosition?: number;
   registeredAt: Date;
-  
+
   // USA-S Verification
-  usaVerificationStatus?: 'pending' | 'needs_review' | 'verified' | 'rejected';
+  usaVerificationStatus?: "pending" | "needs_review" | "verified" | "rejected";
 
   // Scores
   scores?: {
@@ -64,31 +64,31 @@ const registrationSchema = new Schema<IRegistration>(
   {
     tryoutId: {
       type: Schema.Types.ObjectId,
-      ref: 'Tryout',
+      ref: "Tryout",
       required: true,
       index: true,
     },
     swimmerId: {
       type: Schema.Types.ObjectId,
-      ref: 'Swimmer',
+      ref: "Swimmer",
       required: true,
       index: true,
     },
     parentId: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       index: true,
     },
     sessionId: {
       type: Schema.Types.ObjectId,
-      ref: 'TryoutSession',
+      ref: "TryoutSession",
       required: true,
       index: true,
     },
     slotId: {
       type: Schema.Types.ObjectId,
-      ref: 'TryoutSlot',
+      ref: "TryoutSlot",
       required: true,
       index: true,
     },
@@ -99,8 +99,8 @@ const registrationSchema = new Schema<IRegistration>(
     },
     status: {
       type: String,
-      enum: ['registered', 'waitlisted', 'offered', 'rejected', 'cancelled'],
-      default: 'registered',
+      enum: ["registered", "waitlisted", "offered", "rejected", "cancelled"],
+      default: "registered",
       index: true,
     },
     waitlistPosition: {
@@ -119,22 +119,22 @@ const registrationSchema = new Schema<IRegistration>(
     },
     usaVerificationStatus: {
       type: String,
-      enum: ['pending', 'needs_review', 'verified', 'rejected'],
-      default: 'pending',
+      enum: ["pending", "needs_review", "verified", "rejected"],
+      default: "pending",
     },
     scores: {
       safetyEntryExit: { type: Boolean },
-      safetyFloat:     { type: Boolean },
-      freestyle:       { type: Number },
-      backstroke:      { type: Number },
-      breaststroke:    { type: Number },
-      butterfly:       { type: Number },
-      totalScore:      { type: Number },
+      safetyFloat: { type: Boolean },
+      freestyle: { type: Number },
+      backstroke: { type: Number },
+      breaststroke: { type: Number },
+      butterfly: { type: Number },
+      totalScore: { type: Number },
     },
     swimmerDetails: {
       firstName: { type: String, required: true },
       lastName: { type: String, required: true },
-      dob: { type: String, required: true },
+      dob: { type: String },
       ageOnTryoutDay: { type: Number, required: true },
       hasUsaMembership: { type: Boolean, default: false },
       usaMembershipId: { type: String },
@@ -150,7 +150,7 @@ const registrationSchema = new Schema<IRegistration>(
     ],
   },
   {
-    collection: 'registrations',
+    collection: "registrations",
     timestamps: true,
   },
 );
@@ -160,12 +160,12 @@ const registrationSchema = new Schema<IRegistration>(
 // Unique constraint: one active registration per swimmer per tryout
 registrationSchema.index(
   { tryoutId: 1, swimmerId: 1 },
-  { 
+  {
     unique: true,
-    partialFilterExpression: { 
-      status: { $nin: ['cancelled'] }
-    }
-  }
+    partialFilterExpression: {
+      status: { $nin: ["cancelled"] },
+    },
+  },
 );
 
 // Parent can find their swimmer's registrations
@@ -179,4 +179,4 @@ registrationSchema.index({ sessionId: 1, segmentId: 1 });
 
 // ─── Export ─────────────────────────────────────────────────────────────────────
 
-export const RegistrationModel: Model<IRegistration> = mongoose.model<IRegistration>('Registration', registrationSchema);
+export const RegistrationModel: Model<IRegistration> = mongoose.model<IRegistration>("Registration", registrationSchema);

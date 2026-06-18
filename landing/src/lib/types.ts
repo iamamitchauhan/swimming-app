@@ -51,6 +51,7 @@ export interface Tryout {
   deadline: string;
   startAt: string;
   endAt: string;
+  status: "closed" | "open" | "completed";
   description: string;
   purpose: string;
   eligibility: string[];
@@ -80,11 +81,7 @@ export interface Child {
   emergencyContactPhone?: string;
 }
 
-export type RegistrationStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "cancelled";
+export type RegistrationStatus = "pending" | "approved" | "rejected" | "cancelled";
 
 export interface Registration {
   id: string;
@@ -124,7 +121,7 @@ export interface MyTryoutItem {
   tryout: {
     _id: string;
     name: string;
-    status: string;
+    status: "closed" | "open" | "completed";
     location: string;
     description: string;
     bannerUrl: string;
