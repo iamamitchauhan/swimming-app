@@ -1,15 +1,11 @@
 /**
  * Axios instance with:
- *  - Base URL from VITE_API_URL (falls back to localhost:3001)
+ *  - Base URL from VITE_API_BASE_URL (falls back to localhost:3001)
  *  - Automatic Bearer token injection from localStorage
  *  - 401 auto-redirect to /login (clears token first)
  *  - Normalised error shape thrown as ApiError
  */
-import axios, {
-  AxiosError,
-  AxiosResponse,
-  InternalAxiosRequestConfig,
-} from "axios";
+import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,7 +44,7 @@ export const tokenStorage = {
 export const apiClient = axios.create({
   baseURL:
     (typeof import.meta !== "undefined" &&
-      (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL) ||
+      (import.meta as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL) ||
     "http://localhost:3001/api/v1",
   headers: { "Content-Type": "application/json" },
   timeout: 15_000,
@@ -74,10 +70,7 @@ apiClient.interceptors.response.use(
   (error: AxiosError<ApiResponse>) => {
     const status = error.response?.status ?? 0;
     const body = error.response?.data;
-    const message =
-      body?.message ||
-      error.message ||
-      "Something went wrong. Please try again.";
+    const message = body?.message || error.message || "Something went wrong. Please try again.";
     const code = body?.error ?? null;
 
     // Auto-logout on 401
@@ -94,9 +87,7 @@ apiClient.interceptors.response.use(
 
 // ─── Convenience wrapper that unwraps ApiResponse<T> ─────────────────────────
 
-export async function api<T>(
-  promise: Promise<AxiosResponse<ApiResponse<T>>>,
-): Promise<T> {
+export async function api<T>(promise: Promise<AxiosResponse<ApiResponse<T>>>): Promise<T> {
   const res = await promise;
   return res.data.data;
 }
