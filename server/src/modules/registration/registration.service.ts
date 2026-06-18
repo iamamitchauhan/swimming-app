@@ -111,7 +111,7 @@ export class RegistrationService {
     if (!registration) throw new NotFoundError("Registration not found");
 
     // Ownership validation
-    if (registration.parentId !== parentId) {
+    if (String(registration.parentId) !== parentId) {
       throw new ForbiddenError("Access denied");
     }
 
@@ -252,7 +252,7 @@ export class RegistrationService {
     // Validate ownership
     const existing = await this.repo.findById(id);
     if (!existing) throw new NotFoundError("Registration not found");
-    if (existing.parentId !== parentId) throw new ForbiddenError("Access denied");
+    if (String(existing.parentId) !== parentId) throw new ForbiddenError("Access denied");
 
     // Update registration
     const updated = await this.repo.update(id, { status });
@@ -311,7 +311,7 @@ export class RegistrationService {
     // Validate ownership
     const existing = await this.repo.findById(id);
     if (!existing) throw new NotFoundError("Registration not found");
-    if (existing.parentId !== parentId) throw new ForbiddenError("Access denied");
+    if (String(existing.parentId) !== parentId) throw new ForbiddenError("Access denied");
 
     // Update registration
     const updated = await this.repo.update(id, { status });

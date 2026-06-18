@@ -15,7 +15,7 @@ export function PageShell({
     <>
       <AppHeader title={title} crumbs={crumbs} />
       <div className="px-4 lg:px-8 py-6 lg:py-8">
-        {actions && <div className="flex justify-end mb-4">{actions}</div>}
+        {actions && <div className={`flex justify-end ${actions ? "mb-4" : ""}`}>{actions}</div>}
         {children}
       </div>
     </>
@@ -23,9 +23,15 @@ export function PageShell({
 }
 
 export function StatCard({
-  label, value, hint, icon: Icon, accent = "primary",
+  label,
+  value,
+  hint,
+  icon: Icon,
+  accent = "primary",
 }: {
-  label: string; value: string | number; hint?: string;
+  label: string;
+  value: string | number;
+  hint?: string;
   icon: React.ComponentType<{ className?: string }>;
   accent?: "primary" | "aqua" | "success" | "warning";
 }) {

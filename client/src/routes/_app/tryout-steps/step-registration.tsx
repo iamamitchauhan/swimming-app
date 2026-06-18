@@ -179,7 +179,15 @@ function LibraryQuestionRow({
           </p>
         )}
         {question.options && question.options.length > 0 && (
-          <p className="text-xs text-muted-foreground/70">Options: {question.options.join(", ")}</p>
+          <div className="flex flex-wrap gap-1">
+            {question.options.map((opt) => (
+              <>
+                <Badge key={opt} variant="outline" className="bg-muted text-[10px] w-auto">
+                  {opt}
+                </Badge>
+              </>
+            ))}
+          </div>
         )}
       </div>
       <Button

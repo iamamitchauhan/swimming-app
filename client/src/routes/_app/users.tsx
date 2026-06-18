@@ -18,11 +18,39 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Loader2, MoreHorizontal, Plus, Search, Shield, Trash2, UserPlus, XCircle } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Shield,
+  Trash2,
+  UserPlus,
+  X,
+  XCircle,
+} from "lucide-react";
 import { useAllUsers, useChangeRole, useRemoveFromClub, useUsersByClub } from "@/hooks/use-users";
-import { useSendInvitation, useResendInvitation, useCancelInvitation } from "@/hooks/use-invitations";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  useSendInvitation,
+  useResendInvitation,
+  useCancelInvitation,
+} from "@/hooks/use-invitations";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/lib/auth.store";
 import { useApiError } from "@/hooks/use-api-error";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,7 +63,7 @@ export default function UsersPage() {
   const isSuperAdmin = user?.role === "super_admin";
   const isAdmin = user?.role === "admin";
   const isCoach = user?.role === "coach";
-  const canInvite = isAdmin || isCoach ;
+  const canInvite = isAdmin || isCoach;
   const clubId = user?.clubId ?? "";
 
   const [search, setSearch] = useState("");
@@ -52,9 +80,7 @@ export default function UsersPage() {
   }, [search]);
 
   const allUsers = useAllUsers(
-    isSuperAdmin
-      ? { page, limit: PAGE_SIZE, search: debouncedSearch || undefined }
-      : undefined,
+    isSuperAdmin ? { page, limit: PAGE_SIZE, search: debouncedSearch || undefined } : undefined,
   );
   const clubUsers = useUsersByClub(clubId);
   const changeRole = useChangeRole(clubId);
@@ -77,21 +103,19 @@ export default function UsersPage() {
   const filteredItems = clubItems.filter((item) => {
     const s = search.toLowerCase();
     const email = item.data.email.toLowerCase();
-    const name = 'firstName' in item.data
-      ? `${item.data.firstName} ${item.data.lastName}`.toLowerCase()
-      : '';
+    const name =
+      "firstName" in item.data ? `${item.data.firstName} ${item.data.lastName}`.toLowerCase() : "";
     return email.includes(s) || name.includes(s);
   });
 
   const displayItems = isSuperAdmin
-    ? users.map((u) => ({ type: 'user' as const, data: u }))
+    ? users.map((u) => ({ type: "user" as const, data: u }))
     : filteredItems;
-
-    
 
   const statusBadge = (status: string) => {
     if (status === "active") return "bg-success/10 text-success border-success/20";
-    if (status === "pending_verification") return "bg-warning/15 text-warning-foreground border-warning/30";
+    if (status === "pending_verification")
+      return "bg-warning/15 text-warning-foreground border-warning/30";
     return "bg-muted text-muted-foreground";
   };
 
@@ -110,18 +134,17 @@ export default function UsersPage() {
     });
   };
 
-
   return (
     <PageShell
       title="Users"
       actions={
-       <>
-        {canInvite && (
-          <Button onClick={() => setInviteOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-1.5" /> Invite user
-          </Button>
-        )}
-       </>
+        <>
+          {canInvite && (
+            <Button onClick={() => setInviteOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-1.5" /> Invite user
+            </Button>
+          )}
+        </>
       }
     >
       <div className="bg-card rounded-xl border border-border">
@@ -130,10 +153,19 @@ export default function UsersPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search users…"
-              className="pl-9 h-9"
+              className="pl-9 pr-8 h-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -152,7 +184,9 @@ export default function UsersPage() {
         )}
         {!isLoading && !isError && isSuperAdmin && (
           <div className="px-4 py-2 border-b border-border flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{total} user{total !== 1 ? "s" : ""}</span>
+            <span>
+              {total} user{total !== 1 ? "s" : ""}
+            </span>
           </div>
         )}
         {!isLoading && !isError && (
@@ -176,7 +210,7 @@ export default function UsersPage() {
                   </TableRow>
                 )}
                 {displayItems.map((item) => {
-                  if (item.type === 'invitation') {
+                  if (item.type === "invitation") {
                     const inv = item.data as Invitation;
                     const isExpired = new Date(inv.expiresAt) < new Date();
                     return (
@@ -190,14 +224,21 @@ export default function UsersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{inv.email}</TableCell>
-                        <TableCell>
+                        {/* <TableCell>
                           <span className="font-medium text-muted-foreground">{inv.club?.name || '—'}</span>
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell>
                           <Badge variant="secondary">{inv.role}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={isExpired ? "bg-destructive/10 text-destructive border-destructive/30" : "bg-warning/10 text-warning-foreground border-warning/30"}>
+                          <Badge
+                            variant="outline"
+                            className={
+                              isExpired
+                                ? "bg-destructive/10 text-destructive border-destructive/30"
+                                : "bg-warning/10 text-warning-foreground border-warning/30"
+                            }
+                          >
                             {isExpired ? "Expired" : "Pending Invitation"}
                           </Badge>
                         </TableCell>
@@ -212,7 +253,9 @@ export default function UsersPage() {
                                 className="h-8 text-xs text-destructive hover:text-destructive"
                               >
                                 {cancelInvite.isPending ? (
-                                  <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Canceling…</>
+                                  <>
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Canceling…
+                                  </>
                                 ) : (
                                   <>Cancel</>
                                 )}
@@ -227,7 +270,9 @@ export default function UsersPage() {
                                 className="h-8 text-xs"
                               >
                                 {resendInvite.isPending ? (
-                                  <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Resending…</>
+                                  <>
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Resending…
+                                  </>
                                 ) : (
                                   <>Resend</>
                                 )}
@@ -245,7 +290,8 @@ export default function UsersPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-full bg-linear-to-br from-primary to-aqua text-primary-foreground flex items-center justify-center text-xs font-semibold shrink-0">
-                            {`${u.firstName?.[0] ?? ""}${u.lastName?.[0] ?? ""}`.toUpperCase() || u.email[0].toUpperCase()}
+                            {`${u.firstName?.[0] ?? ""}${u.lastName?.[0] ?? ""}`.toUpperCase() ||
+                              u.email[0].toUpperCase()}
                           </div>
                           <span className="font-medium">
                             {u.firstName || u.lastName
@@ -263,7 +309,7 @@ export default function UsersPage() {
                           {(u.status ?? "").replace(/_/g, " ")}
                         </Badge>
                       </TableCell>
-                      {(isAdmin || isSuperAdmin) && !isCurrentUser  && (
+                      {(isAdmin || isSuperAdmin) && !isCurrentUser && (
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Button
@@ -274,14 +320,16 @@ export default function UsersPage() {
                             >
                               <Shield className="h-4 w-4" />
                             </Button>
-                            {u.status == "active" && <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => setRemoveTarget(u)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>}
+                            {u.status == "active" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setRemoveTarget(u)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       )}
@@ -322,7 +370,11 @@ export default function UsersPage() {
         )}
       </div>
 
-      <InviteDialog open={inviteOpen} onClose={() => setInviteOpen(false)} sendInvite={sendInvite} />
+      <InviteDialog
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        sendInvite={sendInvite}
+      />
 
       <ChangeRoleDialog
         user={roleTarget}
@@ -341,7 +393,15 @@ export default function UsersPage() {
   );
 }
 
-function InviteDialog({ open, onClose, sendInvite }: { open: boolean; onClose: () => void; sendInvite: ReturnType<typeof useSendInvitation> }) {
+function InviteDialog({
+  open,
+  onClose,
+  sendInvite,
+}: {
+  open: boolean;
+  onClose: () => void;
+  sendInvite: ReturnType<typeof useSendInvitation>;
+}) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<InvitationRole>("coach");
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -362,8 +422,8 @@ function InviteDialog({ open, onClose, sendInvite }: { open: boolean; onClose: (
           onClose();
         },
         onError: (err) => {
-          console.info('err =>',err);
-          
+          console.info("err =>", err);
+
           toastError(err);
           setEmailError((err as Error).message);
         },
@@ -410,8 +470,12 @@ function InviteDialog({ open, onClose, sendInvite }: { open: boolean; onClose: (
             </Button>
             <Button type="submit" disabled={sendInvite.isPending}>
               {sendInvite.isPending ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</>
-              ) : "Send invitation"}
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…
+                </>
+              ) : (
+                "Send invitation"
+              )}
             </Button>
           </DialogFooter>
         </form>
@@ -456,7 +520,9 @@ function ChangeRoleDialog({
             Change role for <span className="font-medium text-foreground">{user?.email}</span>:
           </p>
           <div className="flex items-center justify-center gap-3 py-4">
-            <Badge variant="secondary" className="capitalize text-sm px-3 py-1">{user?.role}</Badge>
+            <Badge variant="secondary" className="capitalize text-sm px-3 py-1">
+              {user?.role}
+            </Badge>
             <span className="text-muted-foreground">→</span>
             <Select value={selectedRole} onValueChange={setSelectedRole}>
               <SelectTrigger className="w-36">
@@ -477,7 +543,13 @@ function ChangeRoleDialog({
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isPending || !selectedRole}>
-            {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…</> : "Save"}
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…
+              </>
+            ) : (
+              "Save"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -518,7 +590,13 @@ function ConfirmRemoveDialog({
             Cancel
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
-            {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Removing…</> : "Yes, remove"}
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Removing…
+              </>
+            ) : (
+              "Yes, remove"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

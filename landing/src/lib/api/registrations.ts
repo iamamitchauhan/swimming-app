@@ -78,10 +78,15 @@ export async function createRegistration(input: CreateRegistrationInput): Promis
 export async function cancelRegistrationById(id: string): Promise<Registration | null> {
   console.info("cancelRegistrationById id => ", id);
   const token = localStorage.getItem("auth_token");
-  const res = await fetch(`${API_BASE}/auth/register/cancel/${id}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  const res = await fetch(`${API_BASE}/registrations/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ status: "cancelled" }),
   });
-  if (!res.ok) throw new Error("Failed to fetch registrations");
+  if (!res.ok) throw new Error("Failed to cancel registration");
   const body = await res.json();
   return body.data?.registration ?? null;
 }

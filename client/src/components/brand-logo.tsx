@@ -11,7 +11,7 @@ export function BrandLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
         <Waves className="h-1/2 w-1/2 text-primary-foreground" strokeWidth={2.5} />
       </div>
       <div className="flex flex-col leading-tight">
-        <span className={`font-bold tracking-tight ${text}`}>AquaTryouts</span>
+        <span className={`font-bold tracking-tight ${text}`}>Swim Tryouts</span>
         {size !== "sm" && (
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Club Platform

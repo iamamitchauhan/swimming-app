@@ -1,8 +1,14 @@
 import { useState } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, XCircle } from "lucide-react";
 import type { Registration, Tryout } from "@/lib/api/tryouts.api";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -81,6 +87,8 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
     const matchStatus = !statusFilter || r.status === statusFilter;
     return matchSearch && matchSeg && matchStatus;
   });
+  console.info("tryout.segments =>", tryout.segments);
+  console.info("segFilter =>", segFilter);
 
   return (
     <div>
@@ -92,33 +100,43 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
           placeholder="Search swimmer or parent email…"
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1 min-w-48"
         />
-        <select
-          value={segFilter}
-          onChange={(e) => setSegFilter(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All segments</option>
-          {tryout.segments?.map((seg, i) => (
-            <option key={i} value={(seg as any).id || String(i)}>
-              {seg.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All statuses</option>
-          {["registered", "offered", "rejected"].map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-gray-400 ml-auto">
-          {filteredRoster.length} of {registered.length}
-        </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
+              {tryout.segments?.find((seg) => (seg as any).id === segFilter)?.name ||
+                (segFilter === "" ? "All segments" : segFilter)}
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setSegFilter("")}>All segments</DropdownMenuItem>
+            {tryout.segments?.map((seg, i) => (
+              <DropdownMenuItem
+                key={i}
+                onClick={() => setSegFilter((seg as any).name || String(i))}
+              >
+                {seg.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer capitalize">
+              {statusFilter === "" ? "All statuses" : statusFilter}
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setStatusFilter("")}>All statuses</DropdownMenuItem>
+            {["registered", "offered", "rejected"].map((s) => (
+              <DropdownMenuItem className="capitalize" key={s} onClick={() => setStatusFilter(s)}>
+                {s}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Table */}

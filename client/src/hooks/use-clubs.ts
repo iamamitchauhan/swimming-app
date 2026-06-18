@@ -84,12 +84,44 @@ export function useApproveClub() {
 export function useRejectClub() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      clubsApi.reject(id, { reason }),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => clubsApi.reject(id, { reason }),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: clubKeys.pending });
       qc.invalidateQueries({ queryKey: clubKeys.all });
       qc.setQueryData(clubKeys.detail(data.club._id), data.club);
     },
+  });
+}
+
+export function useClubCoaches() {
+  return useQuery({
+    queryKey: ["clubs", "coaches"],
+    queryFn: async () => {
+      const data = await clubsApi.getCoaches();
+      return data.coaches;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useClubState() {
+  return useQuery({
+    queryKey: ["clubs", "state"],
+    queryFn: async () => {
+      const data = await clubsApi.clubState();
+      return data;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useAdminState() {
+  return useQuery({
+    queryKey: ["clubs", "admin-state"],
+    queryFn: async () => {
+      const data = await clubsApi.adminState();
+      return data;
+    },
+    staleTime: 2 * 60 * 1000,
   });
 }

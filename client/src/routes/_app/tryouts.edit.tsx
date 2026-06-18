@@ -6,12 +6,7 @@ import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  tryoutSchema,
-  TryoutFormValues,
-  WIZARD_STEPS,
-  STEP_FIELDS,
-} from "./tryout-steps/shared";
+import { tryoutSchema, TryoutFormValues, WIZARD_STEPS, STEP_FIELDS } from "./tryout-steps/shared";
 import { StepBasics } from "./tryout-steps/step-basics";
 import { StepBranding } from "./tryout-steps/step-branding";
 import { StepSessions } from "./tryout-steps/step-sessions";
@@ -53,7 +48,8 @@ export default function TryoutEditPage() {
   const updateMutation = useUpdateTryout(id);
   const publishMutation = usePublishTryout();
   const userRole = useAuthStore((s) => s.user?.role);
-  const canAccessReview = userRole === "admin" || userRole === "super_admin" || userRole === "coach";
+  const canAccessReview =
+    userRole === "admin" || userRole === "super_admin" || userRole === "coach";
 
   // ── Form ─────────────────────────────────────────────────────────────────────
   const {
@@ -128,9 +124,7 @@ export default function TryoutEditPage() {
     const stepKey = currentStep as keyof typeof STEP_FIELDS;
     const fields = STEP_FIELDS[stepKey];
     // Step 4 (segments) needs full-form trigger so nested array fields validate
-    const valid = await (fields.length === 0 || currentStep === 4
-      ? trigger()
-      : trigger(fields));
+    const valid = await (fields.length === 0 || currentStep === 4 ? trigger() : trigger(fields));
     if (!valid) return;
     if (currentStep === 7) {
       await onSaveAndAdvance(formValues);
@@ -147,7 +141,11 @@ export default function TryoutEditPage() {
   async function onSaveAndAdvance(data: TryoutFormValues) {
     setApiError("");
     try {
-      await updateMutation.mutateAsync({ ...data, status: "draft", banner: bannerFile ?? undefined });
+      await updateMutation.mutateAsync({
+        ...data,
+        status: "draft",
+        banner: bannerFile ?? undefined,
+      });
       await tryoutsApi.saveRegistrationQuestions(id, registrationQuestions);
       setCurrentStep(8);
     } catch (err: unknown) {
@@ -177,6 +175,23 @@ export default function TryoutEditPage() {
       navigate("/tryouts");
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : "Failed to publish. Please try again.");
+    }
+  }
+
+  async function onSaveAsDraft() {
+    setApiError("");
+    try {
+      await updateMutation.mutateAsync({
+        ...formValues,
+        status: "draft",
+        banner: bannerFile ?? undefined,
+      });
+      toast.success("Tryout saved as draft successfully!");
+      navigate("/tryouts");
+    } catch (err: unknown) {
+      setApiError(
+        err instanceof Error ? err.message : "Failed to save as draft. Please try again.",
+      );
     }
   }
 
@@ -222,16 +237,8 @@ export default function TryoutEditPage() {
     <PageShell
       title={`Edit: ${tryout?.name ?? "Tryout"}`}
       crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: "Edit" }]}
-      actions={
-        <div className="flex justify-start w-full">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/tryouts")}>
-            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-          </Button>
-        </div>
-      }
     >
       <div className="flex gap-0 min-h-[calc(100vh-200px)]">
-
         {/* ── Vertical tab sidebar ────────────────────────────────────────────── */}
         <nav className="w-44 shrink-0 sticky top-[60px] self-start pt-2">
           {WIZARD_STEPS.map((step) => {
@@ -247,8 +254,8 @@ export default function TryoutEditPage() {
                   isCurrent
                     ? "border-l-primary text-primary"
                     : isDone
-                    ? "border-l-transparent text-muted-foreground hover:text-foreground hover:border-l-border cursor-pointer"
-                    : "border-l-transparent text-muted-foreground/50 cursor-default",
+                      ? "border-l-transparent text-muted-foreground hover:text-foreground hover:border-l-border cursor-pointer"
+                      : "border-l-transparent text-muted-foreground/50 cursor-default",
                 )}
               >
                 {step.label}
@@ -259,7 +266,6 @@ export default function TryoutEditPage() {
 
         {/* ── Right panel ─────────────────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 border-l border-border pl-8">
-
           {/* Step heading */}
           <div className="pt-2 pb-6">
             <h2 className="text-xl font-bold text-foreground">
@@ -282,9 +288,8 @@ export default function TryoutEditPage() {
           <div className="flex-1 pb-5">
             <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
               <form onSubmit={(e) => e.preventDefault()}>
-
                 {currentStep === 1 && (
-                  <StepBasics register={register} errors={errors} />
+                  <StepBasics register={register} watch={watch} errors={errors} />
                 )}
 
                 {currentStep === 2 && (
@@ -325,22 +330,23 @@ export default function TryoutEditPage() {
                 )}
 
                 {currentStep === 6 && (
-                  <StepPresentation register={register} faqsField={faqsField} />
-                )}
-
-                {currentStep === 7 && (
                   <StepRegistration
                     selectedQuestions={registrationQuestions}
                     onChange={setRegistrationQuestions}
                   />
                 )}
 
-                {currentStep === 8 && (
-                  canAccessReview ? (
+                {currentStep === 7 && (
+                  <StepPresentation register={register} faqsField={faqsField} />
+                )}
+
+                {currentStep === 8 &&
+                  (canAccessReview ? (
                     <StepReviewPublish
                       values={formValues}
                       bannerPreview={bannerPreview}
                       onPublish={onPublish}
+                      onSaveAsDraft={onSaveAsDraft}
                       onBack={() => setCurrentStep(7)}
                       isPending={isSubmitting}
                       canPublish={canAccessReview}
@@ -350,9 +356,7 @@ export default function TryoutEditPage() {
                     <div className="py-12 text-center text-sm text-muted-foreground">
                       You do not have permission to publish tryouts.
                     </div>
-                  )
-                )}
-
+                  ))}
               </form>
             </div>
           </div>
@@ -381,7 +385,6 @@ export default function TryoutEditPage() {
               )}
             </div>
           )}
-
         </div>
       </div>
     </PageShell>

@@ -25,20 +25,47 @@ export function StepSegments({ register, control, errors, segmentsField }: Props
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-base font-semibold text-foreground">Evaluation Segments</h3>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Define age groups and skill levels being evaluated.
-        </p>
-      </div>
-
       {segmentsField.fields.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center py-10 gap-3 text-muted-foreground">
           <Users2 className="h-8 w-8 opacity-40" />
           <p className="text-sm">No segments yet. Add one to get started.</p>
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                segmentsField.append({
+                  name: "",
+                  minAge: "5" as unknown as number,
+                  maxAge: "10" as unknown as number,
+                  level: LEVELS[0],
+                })
+              }
+            >
+              <Plus className="h-4 w-4 mr-1.5" /> Add segment
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                segmentsField.append({
+                  name: "",
+                  minAge: "5" as unknown as number,
+                  maxAge: "10" as unknown as number,
+                  level: LEVELS[0],
+                })
+              }
+            >
+              <Plus className="h-4 w-4 mr-1.5" /> Add segment
+            </Button>
+          </div>
           {segmentsField.fields.map((field, idx) => {
             const segErr = errors.segments?.[idx];
             return (
@@ -121,22 +148,6 @@ export function StepSegments({ register, control, errors, segmentsField }: Props
       {Array.isArray(errors.segments) && errors.segments.length === 0 && (
         <p className="text-xs text-destructive mb-2">At least one segment is required</p>
       )}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={() =>
-          segmentsField.append({
-            name: "",
-            minAge: "5" as unknown as number,
-            maxAge: "10" as unknown as number,
-            level: LEVELS[0],
-          })
-        }
-      >
-        <Plus className="h-4 w-4 mr-1.5" /> Add segment
-      </Button>
     </div>
   );
 }

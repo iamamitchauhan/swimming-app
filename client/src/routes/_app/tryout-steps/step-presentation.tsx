@@ -1,7 +1,4 @@
-import {
-  UseFormRegister,
-  UseFieldArrayReturn,
-} from "react-hook-form";
+import { UseFormRegister, UseFieldArrayReturn } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -17,44 +14,8 @@ interface Props {
 export function StepPresentation({ register, faqsField }: Props) {
   return (
     <div className="space-y-2">
-
-      {/* Public website card */}
-      <div className="">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">Public Website Card</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Customize how this tryout appears in public listings.
-          </p>
-        </div>
-
-        {/* <FieldGroup label="CTA Button Label">
-          <Input
-            placeholder="Sign up today"
-            {...register("ctaLabel")}
-          />
-        </FieldGroup> */}
-
-        {/* <FieldGroup
-          label="Highlights"
-          hint="One highlight per line — displayed as bullet points on the public card."
-        >
-          <Textarea
-            placeholder={"No experience needed\nAll skill levels welcome\nCoach feedback included"}
-            rows={5}
-            {...register("highlights")}
-          />
-        </FieldGroup> */}
-      </div>
-
       {/* FAQ */}
-      <div className="space-y-4 pt-4">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">FAQ</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Frequently asked questions shown on the event page. Only entries with a question are saved.
-          </p>
-        </div>
-
+      <div className="space-y-4">
         {faqsField.fields.length === 0 ? (
           <div className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
             <HelpCircle className="h-7 w-7 opacity-40" />
@@ -63,14 +24,9 @@ export function StepPresentation({ register, faqsField }: Props) {
         ) : (
           <div className="space-y-3">
             {faqsField.fields.map((field, idx) => (
-              <div
-                key={field.id}
-                className="rounded-xl border border-border p-4 space-y-3"
-              >
+              <div key={field.id} className="rounded-xl border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">
-                    Question {idx + 1}
-                  </span>
+                  <span className="text-sm font-medium text-foreground">Question {idx + 1}</span>
                   <Button
                     type="button"
                     variant="ghost"
@@ -82,10 +38,7 @@ export function StepPresentation({ register, faqsField }: Props) {
                   </Button>
                 </div>
                 <FieldGroup label="Question">
-                  <Input
-                    placeholder="What should I bring?"
-                    {...register(`faqs.${idx}.question`)}
-                  />
+                  <Input placeholder="What should I bring?" {...register(`faqs.${idx}.question`)} />
                 </FieldGroup>
                 <FieldGroup label="Answer">
                   <Textarea
@@ -103,10 +56,10 @@ export function StepPresentation({ register, faqsField }: Props) {
           type="button"
           variant="outline"
           size="sm"
-          className={`w-full ${faqsField.fields.length >= 10 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`w-full ${faqsField.fields.length >= 10 ? "opacity-50 cursor-not-allowed" : ""}`}
           onClick={() => {
-            if(faqsField.fields.length < 10) {
-              faqsField.append({ question: "", answer: "" })
+            if (faqsField.fields.length < 10) {
+              faqsField.append({ question: "", answer: "" });
             }
           }}
         >

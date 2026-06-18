@@ -86,14 +86,16 @@ export default function LoginPage() {
           <BrandLogo size="lg" />
         </div>
         <div className="relative space-y-3">
-          <h2 className="text-3xl font-bold tracking-tight">Manage your swim club with confidence</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Manage your swim club with confidence
+          </h2>
           <p className="text-primary-foreground/80 text-lg leading-relaxed">
             From tryouts to evaluations — everything your club needs in one place.
           </p>
         </div>
         <div className="relative flex items-center gap-3">
           <Waves className="h-5 w-5 opacity-60" />
-          <p className="text-sm text-primary-foreground/60">AquaTryouts · Trusted by 180+ clubs</p>
+          <p className="text-sm text-primary-foreground/60">Swim Tryouts · Trusted by 180+ clubs</p>
         </div>
       </div>
 
@@ -153,18 +155,30 @@ export default function LoginPage() {
                   )}
                 </div>
                 <Button type="submit" className="w-full h-11" disabled={loading}>
-                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending code…</> : "Continue with email"}
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending code…
+                    </>
+                  ) : (
+                    "Continue with email"
+                  )}
                 </Button>
               </form>
               <p className="text-center text-sm text-muted-foreground mt-6">
                 Don't have an account?{" "}
-                <Link to="/register" className="text-primary font-medium hover:underline">Register</Link>
+                <Link to="/register" className="text-primary font-medium hover:underline">
+                  Register
+                </Link>
               </p>
             </>
           ) : (
             <>
               <button
-                onClick={() => { setStep("email"); setOtp(""); setError(null); }}
+                onClick={() => {
+                  setStep("email");
+                  setOtp("");
+                  setError(null);
+                }}
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
               >
                 <ArrowLeft className="h-4 w-4" /> Back
@@ -172,7 +186,8 @@ export default function LoginPage() {
               <div className="mb-8">
                 <h1 className="text-2xl font-bold tracking-tight">Check your inbox</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  We sent a 6-digit code to <span className="font-medium text-foreground">{email}</span>
+                  We sent a 6-digit code to{" "}
+                  <span className="font-medium text-foreground">{email}</span>
                 </p>
               </div>
               <form onSubmit={verify} className="space-y-5">
@@ -186,8 +201,18 @@ export default function LoginPage() {
                   </InputOTP>
                 </div>
                 {error && <p className="text-xs text-destructive text-center">{error}</p>}
-                <Button type="submit" className="w-full h-11" disabled={loading || otp.length !== 6}>
-                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Verifying…</> : "Verify code"}
+                <Button
+                  type="submit"
+                  className="w-full h-11"
+                  disabled={loading || otp.length !== 6}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Verifying…
+                    </>
+                  ) : (
+                    "Verify code"
+                  )}
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
                   Didn't get it?{" "}

@@ -72,7 +72,7 @@ export class TryoutRepository {
         {
           $addFields: {
             status: {
-              $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"],
+              $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }],
             },
           },
         },
@@ -124,6 +124,13 @@ export class TryoutRepository {
     const skip = (page - 1) * limit;
 
     const pipeline: any[] = [
+      {
+        $addFields: {
+          status: {
+            $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }],
+          },
+        },
+      },
       { $match: matchStage },
       { $sort: { [sortBy]: sortDir } },
       {
@@ -261,7 +268,7 @@ export class TryoutRepository {
       {
         $addFields: {
           status: {
-            $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"],
+            $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }],
           },
         },
       },

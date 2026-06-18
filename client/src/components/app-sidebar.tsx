@@ -29,7 +29,6 @@ import { useAuthStore } from "@/lib/auth.store";
 import { Badge } from "@/components/ui/badge";
 import { ROLE_LABEL } from "@/lib/utils";
 
-
 type Item = { title: string; url: string; icon: React.ComponentType<{ className?: string }> };
 
 const MENUS: Record<string, Item[]> = {
@@ -66,11 +65,13 @@ export function AppSidebar() {
   const role = user?.role ?? "parent";
   const { pathname } = useLocation();
   const items = MENUS[role] ?? MENUS["parent"];
-  const initials = [user?.firstName, user?.lastName]
-    .filter(Boolean)
-    .map((n) => n![0].toUpperCase())
-    .join("") || "?";
-  const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "—";
+  const initials =
+    [user?.firstName, user?.lastName]
+      .filter(Boolean)
+      .map((n) => n![0].toUpperCase())
+      .join("") || "?";
+  const displayName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "—";
 
   return (
     <Sidebar collapsible="icon">
@@ -136,7 +137,7 @@ export function AppSidebar() {
           </SidebarGroup>
         )} */}
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border p-3">
+      {/* <SidebarFooter className="border-t border-sidebar-border p-3">
         {!collapsed ? (
           <div className="flex items-center gap-3 px-1">
             <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary to-aqua flex items-center justify-center text-primary-foreground font-semibold text-sm">
@@ -154,7 +155,7 @@ export function AppSidebar() {
             {initials}
           </div>
         )}
-      </SidebarFooter>
+      </SidebarFooter> */}
     </Sidebar>
   );
 }

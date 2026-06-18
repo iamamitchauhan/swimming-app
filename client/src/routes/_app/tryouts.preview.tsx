@@ -10,12 +10,18 @@ import {
 } from "lucide-react";
 import { RegistrationFormPreview } from "./tryout-steps/registration-form-preview";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { useTryout } from "@/hooks/use-tryouts";
 import type { Tryout, TryoutSession, TryoutSlot } from "@/lib/api/tryouts.api";
 import { useQuery } from "@tanstack/react-query";
 import { tryoutsApi } from "@/lib/api/tryouts.api";
 import { tryoutKeys } from "@/hooks/use-tryouts";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 // ─── Theme helpers ─────────────────────────────────────────────────────────────
 
@@ -32,19 +38,6 @@ function getThemeBg(theme: string): string {
   return match
     ? `bg-gradient-to-br ${match.from} ${match.to}`
     : "bg-gradient-to-br from-indigo-700 to-slate-900";
-}
-
-function formatDate(dateString: string) {
-  // expected dateString is "2026-06-17T14:50:00.000Z"
-  if (!dateString) return "";
-
-  return new Date(dateString).toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }
 
 console.log(formatDate("2026-06-17T14:50:00.000Z"));
@@ -112,6 +105,9 @@ export default function TryoutPreviewPage() {
     return acc;
   }, {});
 
+  const totalCap = slots.reduce((s, x) => s + x.capacity, 0);
+  const totalOpen = slots.reduce((s, x) => s + Math.max(0, x.capacity - x.registeredCount), 0);
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
       {/* ── Preview banner ─────────────────────────────────────────── */}
@@ -152,7 +148,7 @@ export default function TryoutPreviewPage() {
           </div>
 
           {tryout.description && (
-            <p className="mt-2 max-w-2xl text-sm text-white/70">{tryout.description}</p>
+            <p className="mt-2 text-sm text-white/70 wrap-break-word">{tryout.description}</p>
           )}
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -163,14 +159,16 @@ export default function TryoutPreviewPage() {
             >
               {"Reserve your slot →"}
             </Button>
-            <div>
-              <span className="text-2xl font-extrabold text-white">
-                {tryout.totalSlots ?? 0} slots
-              </span>
-              <div className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                {tryout.status === "open" ? "Registration Open" : "Registration Closed"}
+            {tryout.status !== "closed" && (
+              <div>
+                <span className="text-2xl font-extrabold text-white">
+                  {totalOpen} of {totalCap}
+                </span>
+                <div className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                  Registration Open
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>
@@ -340,27 +338,30 @@ export default function TryoutPreviewPage() {
           </section>
         )}
 
+        <RegistrationFormPreview selectedQuestions={registrationQuestions} />
+
         {/* FAQs */}
         {faqs.length > 0 && (
           <section className="mt-10">
-            <h2 className="mb-5 text-center text-xl font-bold">Common questions</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {faqs.map((f, i) => (
-                <div key={i} className="rounded-xl border border-border bg-card p-5">
-                  <div className="mb-2 flex items-start gap-2">
-                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                      <Clock className="h-3 w-3" />
-                    </span>
-                    <h3 className="text-sm font-semibold">{f.question}</h3>
-                  </div>
-                  <p className="pl-7 text-sm text-muted-foreground">{f.answer}</p>
-                </div>
+            <h2 className="mb-5 text-center font-display text-xl font-bold">Common questions</h2>
+            <Accordion
+              type="single"
+              collapsible
+              className="rounded-xl border border-border bg-card px-5"
+            >
+              {faqs.map((f) => (
+                <AccordionItem key={f.question} value={f.question}>
+                  <AccordionTrigger className="text-sm font-semibold">
+                    {f.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground">
+                    {f.answer}
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </section>
         )}
-
-        <RegistrationFormPreview selectedQuestions={registrationQuestions} />
       </div>
     </div>
   );

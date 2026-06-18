@@ -54,6 +54,7 @@ import {
 } from "lucide-react";
 import { useTryouts, useDeleteTryout, usePublishTryout } from "@/hooks/use-tryouts";
 import type { Tryout, TryoutSortField, SortOrder } from "@/lib/api/tryouts.api";
+import { statusLabel } from "@/lib/utils";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -64,11 +65,6 @@ const statusVariant: Record<string, string> = {
   published:
     "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400",
 };
-
-function statusLabel(s: string) {
-  if (s === "open") return "Published";
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 function firstSessionDate(t: Tryout) {
   const d = t.startDate ?? t.sessions?.[0]?.date;
@@ -248,14 +244,25 @@ export default function TryoutsList() {
                 );
               })}
             </div>
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search name, description, location…"
-                className="pl-9 h-9"
-                value={searchInput}
-                onChange={(e) => handleSearchChange(e.target.value)}
-              />
+            <div className="p-4 border-b border-border flex gap-3">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search tryouts..."
+                  className="pl-9 pr-8 h-9"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* <Select value={sortBy} onValueChange={(v) => setSortBy(v as TryoutSortField)}>
@@ -336,7 +343,7 @@ export default function TryoutsList() {
                   <TableRow>
                     <TableHead>
                       <button
-                        className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
+                        className="flex items-center hover:text-foreground"
                         onClick={() => handleSortField("name")}
                       >
                         Title <SortIcon field="name" />
@@ -344,7 +351,7 @@ export default function TryoutsList() {
                     </TableHead>
                     <TableHead>
                       <button
-                        className="flex items-center text-xs font-medium uppercase tracking-wide hover:text-foreground"
+                        className="flex items-center hover:text-foreground"
                         onClick={() => handleSortField("status")}
                       >
                         Status <SortIcon field="status" />
@@ -438,7 +445,9 @@ export default function TryoutsList() {
                         <TableCell className="text-center">
                           <span className="font-medium">{t.registeredCount ?? 0}</span>
                           {(t.totalSlots ?? 0) > 0 && (
-                            <span className="text-muted-foreground text-sm">/{t.totalSlots}</span>
+                            <span className="text-muted-foreground text-sm">
+                              /{t.totalSlots * t.swimmersPerSlot}
+                            </span>
                           )}
                         </TableCell>
                         <TableCell>

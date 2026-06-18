@@ -48,13 +48,6 @@ export function StepBranding({ watch, setValue, bannerFile, bannerPreview, onFil
 
   return (
     <div className="space-y-8">
-      <div>
-        <h3 className="text-base font-semibold text-foreground">Branding</h3>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Customize the look of your public event page.
-        </p>
-      </div>
-
       {/* Theme */}
       <FieldGroup label="Color Theme">
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-1">
@@ -154,9 +147,7 @@ export function StepBranding({ watch, setValue, bannerFile, bannerPreview, onFil
                 selectedTheme.to,
               )}
             >
-              <span className="text-white/80 text-sm font-medium">
-                {selectedTheme.label} theme
-              </span>
+              <span className="text-white/80 text-sm font-medium">{selectedTheme.label} theme</span>
             </div>
           )}
         </div>

@@ -58,24 +58,16 @@ export const invitationsApi = {
     api<AcceptInvitationResponse>(apiClient.post("/invitations/accept", input)),
 
   /** GET /invitations/my — sent by me */
-  listMy: () =>
-    api<{ invitations: Invitation[] }>(apiClient.get("/invitations/my")),
+  listMy: () => api<{ invitations: Invitation[] }>(apiClient.get("/invitations/my")),
 
   /** GET /invitations/club/:clubId */
   listByClub: (clubId: string) =>
-    api<{ invitations: Invitation[] }>(
-      apiClient.get(`/invitations/club/${clubId}`),
-    ),
+    api<{ invitations: Invitation[] }>(apiClient.get(`/invitations/club/${clubId}`)),
 
   /** POST /invitations/:invitationId/resend */
   resend: (invitationId: string) =>
-    api<{ invitation: Invitation }>(
-      apiClient.post(`/invitations/${invitationId}/resend`),
-    ),
+    api<{ invitation: Invitation }>(apiClient.post(`/invitations/${invitationId}/resend`)),
 
   /** DELETE /invitations/:invitationId */
-  cancel: (invitationId: string) =>
-    api<null>(
-      apiClient.delete(`/invitations/${invitationId}`),
-    ),
+  cancel: (invitationId: string) => api<null>(apiClient.delete(`/invitations/${invitationId}`)),
 };

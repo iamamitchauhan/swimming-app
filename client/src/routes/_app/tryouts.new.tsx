@@ -86,9 +86,7 @@ export default function TryoutNewPage() {
     const stepKey = currentStep as keyof typeof STEP_FIELDS;
     const fields = STEP_FIELDS[stepKey];
     // Step 4 (segments) needs full-form trigger so nested array fields validate
-    const valid = await (fields.length === 0 || currentStep === 4
-      ? trigger()
-      : trigger(fields));
+    const valid = await (fields.length === 0 || currentStep === 4 ? trigger() : trigger(fields));
     if (!valid) return;
     if (currentStep === 7) {
       await handleSubmit(onSaveAsDraft)();
@@ -129,7 +127,6 @@ export default function TryoutNewPage() {
       crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: "New" }]}
     >
       <div className="flex gap-0 min-h-[calc(100vh-200px)]">
-
         {/* ── Vertical tab sidebar ────────────────────────────────────────────── */}
         <nav className="w-44 shrink-0 sticky top-[60px] self-start pt-2">
           {WIZARD_STEPS.map((step) => {
@@ -145,8 +142,8 @@ export default function TryoutNewPage() {
                   isCurrent
                     ? "border-l-primary text-primary"
                     : isDone
-                    ? "border-l-transparent text-muted-foreground hover:text-foreground hover:border-l-border cursor-pointer"
-                    : "border-l-transparent text-muted-foreground/50 cursor-default",
+                      ? "border-l-transparent text-muted-foreground hover:text-foreground hover:border-l-border cursor-pointer"
+                      : "border-l-transparent text-muted-foreground/50 cursor-default",
                 )}
               >
                 {step.label}
@@ -157,7 +154,6 @@ export default function TryoutNewPage() {
 
         {/* ── Right panel ─────────────────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 border-l border-border pl-8">
-
           {/* Step heading */}
           <div className="pt-2 pb-6">
             <h2 className="text-xl font-bold text-foreground">
@@ -180,9 +176,8 @@ export default function TryoutNewPage() {
           <div className="flex-1  pb-5">
             <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
               <form onSubmit={(e) => e.preventDefault()}>
-
                 {currentStep === 1 && (
-                  <StepBasics register={register} errors={errors} />
+                  <StepBasics register={register} watch={watch} errors={errors} />
                 )}
 
                 {currentStep === 2 && (
@@ -219,26 +214,19 @@ export default function TryoutNewPage() {
                 )}
 
                 {currentStep === 5 && (
-                  <StepHowItWorks
-                    register={register}
-                    stepsField={stepsField}
-                  />
+                  <StepHowItWorks register={register} stepsField={stepsField} />
                 )}
 
                 {currentStep === 6 && (
-                  <StepPresentation
-                    register={register}
-                    faqsField={faqsField}
-                  />
-                )}
-
-                {currentStep === 7 && (
                   <StepRegistration
                     selectedQuestions={registrationQuestions}
                     onChange={setRegistrationQuestions}
                   />
                 )}
 
+                {currentStep === 7 && (
+                  <StepPresentation register={register} faqsField={faqsField} />
+                )}
               </form>
             </div>
           </div>
@@ -259,11 +247,10 @@ export default function TryoutNewPage() {
               {currentStep === 7 && isSubmitting ? (
                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />
               ) : null}
-              {currentStep === 7 ? "Save & Continue" : "Continue"}
+              {currentStep === 7 ? "Review and Publish" : "Continue"}
               {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
             </Button>
           </div>
-
         </div>
       </div>
     </PageShell>

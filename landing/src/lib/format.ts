@@ -1,15 +1,15 @@
-export function formatDate(iso: string) {
+export const formatDate = (dateString: string) => {
+  // expected dateString is "2026-06-17T14:50:00.000Z"
+  if (!dateString) return "";
 
-  console.info('iso => ',iso);
-  
-  
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(dateString).toLocaleDateString("en-GB", {
     weekday: "short",
+    day: "2-digit",
     month: "short",
-    day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
-}
+};
 
 export function formatDateShort(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -20,26 +20,16 @@ export function formatDateShort(iso: string) {
 
 export function relativeFromNow(iso: string): string {
   const target = new Date(iso);
-  console.info('target => ',target);
-  
+  console.info("target => ", target);
+
   const now = new Date();
 
   // Normalize both dates to local midnight
-  const targetDate = new Date(
-    target.getFullYear(),
-    target.getMonth(),
-    target.getDate()
-  );
+  const targetDate = new Date(target.getFullYear(), target.getMonth(), target.getDate());
 
-  const todayDate = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  );
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const diffDays = Math.round(
-    (targetDate.getTime() - todayDate.getTime()) / 86400000
-  );
+  const diffDays = Math.round((targetDate.getTime() - todayDate.getTime()) / 86400000);
 
   if (diffDays < -1) return `${Math.abs(diffDays)} days ago`;
   if (diffDays === -1) return "yesterday";

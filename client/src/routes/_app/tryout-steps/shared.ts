@@ -140,13 +140,21 @@ export function buildLabel(date: string, startTime: string, endTime: string) {
 // ─── Wizard step definitions ──────────────────────────────────────────────────
 
 export const WIZARD_STEPS = [
-  { id: 1, label: "Basics", description: "Name, location & description" },
-  { id: 2, label: "Branding", description: "Theme & banner" },
-  { id: 3, label: "Sessions", description: "Time windows & slots" },
-  { id: 4, label: "Segments", description: "Age groups & levels" },
+  { id: 1, label: "Basics", description: "Core details shown on the public event page." },
+  { id: 2, label: "Branding", description: "Customize the look of your public event page." },
+  {
+    id: 3,
+    label: "Sessions",
+    description: "Define one or more sessions. Slots are calculated automatically.",
+  },
+  { id: 4, label: "Segments", description: "Define age groups and skill levels being evaluated." },
   { id: 5, label: "How It Works", description: "Steps & instructions" },
-  { id: 6, label: "Presentation", description: "Public card & FAQ" },
-  { id: 7, label: "Registration", description: "Choose questions for the parent registration form" },
+  {
+    id: 6,
+    label: "Registration",
+    description: "Choose questions for the parent registration form",
+  },
+  { id: 7, label: "FAQ", description: "Frequently asked questions" },
   { id: 8, label: "Review & Publish", description: "Preview and publish your tryout" },
 ] as const;
 

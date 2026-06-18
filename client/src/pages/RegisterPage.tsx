@@ -66,14 +66,16 @@ export default function RegisterPage() {
           <BrandLogo size="lg" />
         </div>
         <div className="relative space-y-3">
-          <h2 className="text-3xl font-bold tracking-tight">Manage your swim club with confidence</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Manage your swim club with confidence
+          </h2>
           <p className="text-primary-foreground/80 text-lg leading-relaxed">
             From tryouts to evaluations — everything your club needs in one place.
           </p>
         </div>
         <div className="relative flex items-center gap-3">
           <Waves className="h-5 w-5 opacity-60" />
-          <p className="text-sm text-primary-foreground/60">AquaTryouts · Trusted by 180+ clubs</p>
+          <p className="text-sm text-primary-foreground/60">Swim Tryouts · Trusted by 180+ clubs</p>
         </div>
       </div>
 
@@ -111,7 +113,7 @@ export default function RegisterPage() {
               <div className="mb-8">
                 <h1 className="text-2xl font-bold tracking-tight">Create your account</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Join AquaTryouts to manage your swimming club.
+                  Join Swim Tryouts to manage your swimming club.
                 </p>
               </div>
               <form onSubmit={submit} className="space-y-4">
@@ -157,13 +159,19 @@ export default function RegisterPage() {
                 </div>
                 <Button type="submit" className="w-full h-11" disabled={registerMutation.isPending}>
                   {registerMutation.isPending ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending verification…</>
-                  ) : "Create account"}
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending verification…
+                    </>
+                  ) : (
+                    "Create account"
+                  )}
                 </Button>
               </form>
               <p className="text-center text-sm text-muted-foreground mt-6">
                 Already have an account?{" "}
-                <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link>
+                <Link to="/login" className="text-primary font-medium hover:underline">
+                  Sign in
+                </Link>
               </p>
             </>
           )}

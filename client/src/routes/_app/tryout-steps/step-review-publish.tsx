@@ -1,14 +1,31 @@
-import { ArrowLeft, Calendar, CheckCircle2, Clock, Loader2, MapPin, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  DraftingCompassIcon,
+  Loader2,
+  MapPin,
+  SaveIcon,
+  Send,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { TryoutFormValues, THEMES, calcSlots } from "./shared";
 import { SelectedQuestion } from "@/lib/api/question-library.api";
 import { RegistrationFormPreview } from "./registration-form-preview";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface Props {
   values: TryoutFormValues;
   bannerPreview: string;
   onPublish: () => void;
+  onSaveAsDraft: () => void;
   onBack: () => void;
   isPending: boolean;
   canPublish: boolean;
@@ -32,6 +49,7 @@ export function StepReviewPublish({
   values,
   bannerPreview,
   onPublish,
+  onSaveAsDraft,
   onBack,
   isPending,
   canPublish,
@@ -47,12 +65,25 @@ export function StepReviewPublish({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
       {/* ── Preview mode header ───────────────────────────────────────────── */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-amber-500/30 bg-white px-6 py-2.5">
+        <Button size="sm" variant="ghost" onClick={onBack} disabled={isPending}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back
+        </Button>
         <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
           Preview Mode — this is how your tryout looks to registrants
         </span>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={onBack} disabled={isPending}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          <Button
+            size="sm"
+            variant={"outline"}
+            onClick={onSaveAsDraft}
+            disabled={isPending || !canPublish}
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <SaveIcon className="h-4 w-4 mr-2" />
+            )}
+            Save as Draft
           </Button>
           <Button size="sm" onClick={onPublish} disabled={isPending || !canPublish}>
             {isPending ? (
@@ -83,7 +114,7 @@ export function StepReviewPublish({
             {sessions[0]?.date && (
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" />
-                {formatSessionDate(sessions[0].date)}
+                {formatDate(sessions[0].date)}
               </span>
             )}
             {values.location && (
@@ -95,7 +126,7 @@ export function StepReviewPublish({
           </div>
 
           {values.description && (
-            <p className="mt-2 max-w-2xl text-sm text-white/70">{values.description}</p>
+            <p className="mt-2 text-sm text-white/70 wrap-break-word">{values.description}</p>
           )}
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -261,27 +292,30 @@ export function StepReviewPublish({
           </section>
         )}
 
+        <RegistrationFormPreview selectedQuestions={selectedQuestions} />
+
         {/* FAQs */}
         {faqs.length > 0 && (
-          <section>
-            <h2 className="mb-5 text-center text-xl font-bold">Common questions</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {faqs.map((f, i) => (
-                <div key={i} className="rounded-xl border border-border bg-card p-5">
-                  <div className="mb-2 flex items-start gap-2">
-                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                      <Clock className="h-3 w-3" />
-                    </span>
-                    <h3 className="text-sm font-semibold">{f.question}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground pl-7">{f.answer}</p>
-                </div>
+          <section className="mt-10">
+            <h2 className="mb-5 text-center font-display text-xl font-bold">Common questions</h2>
+            <Accordion
+              type="single"
+              collapsible
+              className="rounded-xl border border-border bg-card px-5"
+            >
+              {faqs.map((f) => (
+                <AccordionItem key={f.question} value={f.question}>
+                  <AccordionTrigger className="text-sm font-semibold">
+                    {f.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground">
+                    {f.answer}
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </section>
         )}
-
-        <RegistrationFormPreview selectedQuestions={selectedQuestions} />
       </div>
     </div>
   );

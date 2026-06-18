@@ -100,14 +100,7 @@ interface Props {
   sessionsField: UseFieldArrayReturn<TryoutFormValues, "sessions">;
 }
 
-export function StepSessions({
-  register,
-  control,
-  watch,
-  setValue,
-  errors,
-  sessionsField,
-}: Props) {
+export function StepSessions({ register, control, watch, setValue, errors, sessionsField }: Props) {
   const watchedSessions = watch("sessions");
   const slotDuration = watch("slotDuration");
   const swimmersPerSlot = watch("swimmersPerSlot");
@@ -119,23 +112,28 @@ export function StepSessions({
 
   return (
     <div className="space-y-8">
-      <div>
-        <h3 className="text-base font-semibold text-foreground">Time Windows</h3>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Define one or more sessions. Slots are calculated automatically.
-        </p>
-      </div>
-
       {/* Sessions list */}
       <div className="space-y-4">
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              sessionsField.append({ date: "", startTime: "", endTime: "", label: "" })
+            }
+          >
+            <Plus className="h-4 w-4 mr-1.5" /> Add session
+          </Button>
+        </div>
         {sessionsField.fields.map((field, idx) => {
           const sv = watchedSessions?.[idx];
           const sessionErrors = errors.sessions?.[idx];
-          const { slots } = sv
-            ? calcSlots(sv.startTime, sv.endTime, slotDuration)
-            : { slots: 0 };
+          const { slots } = sv ? calcSlots(sv.startTime, sv.endTime, slotDuration) : { slots: 0 };
           const capacity = slots * swimmersPerSlot;
-          const displayLabel = sv ? buildLabel(sv.date ?? "", sv.startTime ?? "", sv.endTime ?? "") : "";
+          const displayLabel = sv
+            ? buildLabel(sv.date ?? "", sv.startTime ?? "", sv.endTime ?? "")
+            : "";
 
           return (
             <div key={field.id} className="rounded-xl border border-border p-4 space-y-4">
@@ -144,9 +142,7 @@ export function StepSessions({
                   <span className="h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
                     {idx + 1}
                   </span>
-                  <span className="text-sm font-medium text-foreground">
-                    Session {idx + 1}
-                  </span>
+                  <span className="text-sm font-medium text-foreground">Session {idx + 1}</span>
                   {displayLabel && (
                     <span className="text-xs text-muted-foreground hidden sm:inline">
                       · {displayLabel}
@@ -260,18 +256,6 @@ export function StepSessions({
             </div>
           );
         })}
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() =>
-            sessionsField.append({ date: "", startTime: "", endTime: "", label: "" })
-          }
-        >
-          <Plus className="h-4 w-4 mr-1.5" /> Add session
-        </Button>
       </div>
 
       {/* Slot settings */}

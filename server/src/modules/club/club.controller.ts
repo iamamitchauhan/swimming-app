@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import { ClubService } from './club.service';
-import { HTTP_STATUS } from '../../shared/constants/httpStatus';
-import { MESSAGES } from '../../shared/constants/messages';
-import { sendSuccess } from '../../shared/utils/response';
-import { rejectClubSchema } from './club.validation';
-import { UnauthorizedError } from '../../shared/errors/domain.errors';
+import { Request, Response, NextFunction } from "express";
+import { ClubService } from "./club.service";
+import { HTTP_STATUS } from "../../shared/constants/httpStatus";
+import { MESSAGES } from "../../shared/constants/messages";
+import { sendSuccess } from "../../shared/utils/response";
+import { rejectClubSchema } from "./club.validation";
+import { UnauthorizedError } from "../../shared/errors/domain.errors";
 
 export class ClubController {
   constructor(private readonly service: ClubService) {}
@@ -88,6 +88,49 @@ export class ClubController {
       const { reason } = rejectClubSchema.parse(req.body);
       const club = await this.service.rejectClub(clubId!, reason);
       sendSuccess(res, { club }, MESSAGES.CLUB_REJECTED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /clubs/coaches
+   * Returns all coaches for the authenticated user's club.
+   */
+  getCoaches = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const clubId = req.user?.clubId;
+      if (!clubId) return next(new UnauthorizedError());
+      const coaches = await this.service.getCoaches(clubId as string);
+      sendSuccess(res, { coaches }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /clubs/admin-state
+   * Returns super-admin dashboard overview stats.
+   */
+  getSuperAdminState = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const state = await this.service.getSuperAdminState();
+      sendSuccess(res, state, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /clubs/state
+   * Returns club overview stats for the authenticated user's club.
+   */
+  getClubState = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const clubId = req.user?.clubId;
+      if (!clubId) return next(new UnauthorizedError());
+      const state = await this.service.getClubState(clubId as string);
+      sendSuccess(res, state, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

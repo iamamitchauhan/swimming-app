@@ -1,5 +1,6 @@
 {
   "watch": ["src"],
+  "ignore": ["node_modules", "dist", "uploads", "logs", ".git"],
   "ext": "ts",
   "exec": "ts-node --project tsconfig.json src/server.ts"
 }

@@ -140,7 +140,9 @@ export default function TryoutDetailPage() {
             )}
           </div>
 
-          {tryout.description && <p className="mt-2 text-sm text-white/70">{tryout.description}</p>}
+          {tryout.description && (
+            <p className="mt-2 text-sm text-white/70 wrap-break-word">{tryout.description}</p>
+          )}
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
             {tryout.status === "open" ? (

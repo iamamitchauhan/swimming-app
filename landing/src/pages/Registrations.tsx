@@ -141,7 +141,7 @@ export default function RegistrationsPage() {
                             (["Registered", "Waitlisted"] as string[]).includes(s.label) ? (
                               <span
                                 onClick={() => {
-                                  cancelReg.mutate(t._id);
+                                  cancelReg.mutate(c.registrationId);
                                 }}
                                 className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 text-red-600 hover:text-red-700 cursor-pointer`}
                               >
