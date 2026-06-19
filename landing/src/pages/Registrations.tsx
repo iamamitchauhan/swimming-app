@@ -130,7 +130,7 @@ export default function RegistrationsPage() {
                             <div className="mt-2 space-y-1">
                               <div className="flex items-center gap-2 text-sm text-gray-500">
                                 <CalendarDays className="size-3.5 shrink-0" />
-                                <span>Registered {formatDate(c.registeredAt)}</span>
+                                <span>{formatDate(c.registeredAt)}</span>
                               </div>
                               {c.slot && (
                                 <div className="flex items-center gap-2 text-sm text-gray-500">

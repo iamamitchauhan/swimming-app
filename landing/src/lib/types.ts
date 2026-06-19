@@ -115,6 +115,15 @@ export interface MyTryoutChild {
   ageOnTryoutDay: number;
   status: string;
   registeredAt: string;
+  slot: {
+    id: string;
+    sessionDate: string;
+    startTime: string;
+    endTime: string;
+    label: string;
+    slotIndex: number;
+    capacity: number;
+  } | null;
 }
 
 export interface MyTryoutItem {
