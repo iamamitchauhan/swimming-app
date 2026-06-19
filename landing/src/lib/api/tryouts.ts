@@ -80,16 +80,18 @@ function mapTryout(raw: any): Tryout {
 
   // When the list endpoint returns aggregated totals instead of embedded slots,
   // synthesise a single summary slot so capacity/taken calculations work on the card.
+  const swimmersPerSlot = raw.swimmersPerSlot ?? 4;
   if (slots.length === 0 && (raw.totalSlots ?? 0) > 0) {
+    const totalCap = (raw.totalSlots as number) * swimmersPerSlot;
     slots = [
       {
         id: `${raw._id ?? raw.id}-summary`,
         sessionId: "",
         label: "Summary",
         time: "",
-        capacity: raw.totalSlots as number,
+        capacity: totalCap,
         taken: raw.registeredCount ?? 0,
-        availableSlots: Math.max(0, (raw.totalSlots as number) - (raw.registeredCount ?? 0)),
+        availableSlots: Math.max(0, totalCap - (raw.registeredCount ?? 0)),
       },
     ];
   }
