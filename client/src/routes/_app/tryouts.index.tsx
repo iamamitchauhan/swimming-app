@@ -5,6 +5,7 @@ import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 // import {
 //   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -216,27 +217,14 @@ export default function TryoutsList() {
         {/* Row 1: search + status + sort */}
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div className="flex items-start">
-            <div className="flex items-center gap-1.5 bg-[#f0f2f3] rounded-lg p-1">
-              {STATUS_TABS.map((tab) => {
-                const active = statusFilter === tab.value;
-                return (
-                  <button
-                    key={tab.value}
-                    onClick={() => {
-                      setStatusFilter(tab.value);
-                      setPage(1);
-                    }}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      active
-                        ? "bg-foreground text-background shadow-sm"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
+            <SegmentedTabs
+              tabs={STATUS_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
+              active={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setPage(1);
+              }}
+            />
           </div>
           <div className="flex items-center gap-3">
             <div className="flex">
@@ -458,7 +446,8 @@ export default function TryoutsList() {
                               )}
                               <DropdownMenuSeparator />
                               {(() => {
-                                const isDeleteDisabled = t.status !== "published";
+                                const isDeleteDisabled =
+                                  t.status !== "published" && t.status !== "draft";
                                 const deleteItem = (
                                   <DropdownMenuItem
                                     disabled={isDeleteDisabled}

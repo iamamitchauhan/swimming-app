@@ -5,6 +5,7 @@ import { Loader2, CalendarDays, MapPin, Users2, Waves, Pencil, ChevronLeft } fro
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useTryout } from "@/hooks/use-tryouts";
 import { apiClient, api } from "@/lib/api/client";
 import type { Registration, TryoutSlot, LeaderboardEntry } from "@/lib/api/tryouts.api";
@@ -24,46 +25,6 @@ const STATUS_VARIANT: Record<string, string> = {
   draft: "bg-muted text-muted-foreground border-border",
   closed: "bg-destructive/10 text-destructive border-destructive/20",
 };
-
-const THEME_STYLES: Record<
-  string,
-  { activeBg: string; activeText: string; badgeBg: string; badgeText: string }
-> = {
-  ocean: {
-    activeBg: "bg-blue-600",
-    activeText: "text-white",
-    badgeBg: "bg-amber-400",
-    badgeText: "text-amber-900",
-  },
-  sunset: {
-    activeBg: "bg-orange-500",
-    activeText: "text-white",
-    badgeBg: "bg-red-400",
-    badgeText: "text-red-900",
-  },
-  forest: {
-    activeBg: "bg-green-600",
-    activeText: "text-white",
-    badgeBg: "bg-yellow-400",
-    badgeText: "text-yellow-900",
-  },
-  midnight: {
-    activeBg: "bg-indigo-700",
-    activeText: "text-white",
-    badgeBg: "bg-sky-400",
-    badgeText: "text-sky-900",
-  },
-  coral: {
-    activeBg: "bg-rose-500",
-    activeText: "text-white",
-    badgeBg: "bg-teal-400",
-    badgeText: "text-teal-900",
-  },
-};
-
-function themeStyle(theme?: string) {
-  return THEME_STYLES[theme ?? "ocean"] ?? THEME_STYLES["ocean"];
-}
 
 function firstSessionDate(sessions?: { date: string }[]) {
   const d = sessions?.[0]?.date;
@@ -286,34 +247,20 @@ export default function TryoutViewPage() {
         />
       </div>
 
+      <div className="flex items-center gap-1.5 mb-4">
+        <SegmentedTabs
+          tabs={TABS.map((t) => ({
+            value: t.key,
+            label: t.label,
+            badge: t.badge != null ? String(t.badge) : undefined,
+          }))}
+          active={tab}
+          onChange={(value) => (value === "leaderboard" ? loadLeaderboard() : setTab(value))}
+        />
+      </div>
       {/* ── Tab container ──────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         {/* Tab bar */}
-        <div className="flex overflow-x-auto border-b border-gray-100">
-          {(() => {
-            const theme = themeStyle(tryout.theme);
-            return TABS.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => (t.key === "leaderboard" ? loadLeaderboard() : setTab(t.key))}
-                className={`shrink-0 flex items-center gap-1.5 px-4 py-3.5 text-sm font-medium transition whitespace-nowrap ${
-                  tab === t.key
-                    ? `${theme.activeBg} ${theme.activeText}`
-                    : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-                }`}
-              >
-                {t.label}
-                {t.badge && (
-                  <span
-                    className={`${theme.badgeBg} ${theme.badgeText} text-xs font-bold px-1.5 py-0.5 rounded-full`}
-                  >
-                    {t.badge}
-                  </span>
-                )}
-              </button>
-            ));
-          })()}
-        </div>
 
         {/* Tab content */}
         {tab === "roster" && (

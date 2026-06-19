@@ -248,14 +248,14 @@ export default function TryoutEditPage() {
               <button
                 key={step.id}
                 type="button"
-                onClick={() => (isDone || isCurrent) && setCurrentStep(step.id)}
+                onClick={() => setCurrentStep(step.id)}
                 className={cn(
-                  "w-full text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors border-l-2",
+                  "w-full text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors border-l-2 cursor-pointer",
                   isCurrent
                     ? "border-l-primary text-primary"
                     : isDone
-                      ? "border-l-transparent text-muted-foreground hover:text-foreground hover:border-l-border cursor-pointer"
-                      : "border-l-transparent text-muted-foreground/50 cursor-default",
+                      ? "border-l-transparent text-muted-foreground hover:text-foreground hover:border-l-border"
+                      : "border-l-transparent text-muted-foreground/50 hover:text-foreground hover:border-l-border",
                 )}
               >
                 {step.label}

@@ -58,7 +58,7 @@ export interface Tryout {
   ctaLabel: string;
   highlights?: string;
   additionalInstructions?: string;
-  status: string;
+  status: "draft" | "open" | "published";
   sessions: Session[];
   segments: Segment[];
   steps: Step[];
@@ -80,8 +80,8 @@ export interface Tryout {
 
 // ─── List params / result ─────────────────────────────────────────────────────
 
-export type TryoutSortField = 'name' | 'status' | 'createdAt' | 'updatedAt';
-export type SortOrder = 'asc' | 'desc';
+export type TryoutSortField = "name" | "status" | "createdAt" | "updatedAt";
+export type SortOrder = "asc" | "desc";
 
 export interface TryoutListParams {
   page?: number;
@@ -141,13 +141,13 @@ export const tryoutsApi = {
    */
   list: (params: TryoutListParams = {}): Promise<TryoutListResult> => {
     const query = new URLSearchParams();
-    if (params.page)      query.set("page",      String(params.page));
-    if (params.limit)     query.set("limit",     String(params.limit));
-    if (params.search)    query.set("search",    params.search);
+    if (params.page) query.set("page", String(params.page));
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.search) query.set("search", params.search);
     if (params.status && params.status !== "all") query.set("status", params.status);
-    if (params.dateFrom)  query.set("dateFrom",  params.dateFrom);
-    if (params.dateTo)    query.set("dateTo",    params.dateTo);
-    if (params.sortBy)    query.set("sortBy",    params.sortBy);
+    if (params.dateFrom) query.set("dateFrom", params.dateFrom);
+    if (params.dateTo) query.set("dateTo", params.dateTo);
+    if (params.sortBy) query.set("sortBy", params.sortBy);
     if (params.sortOrder) query.set("sortOrder", params.sortOrder);
     const qs = query.toString();
     return api<TryoutListResult>(apiClient.get(`/tryouts${qs ? `?${qs}` : ""}`));
@@ -172,15 +172,19 @@ export const tryoutsApi = {
     if (input.theme !== undefined) fd.append("theme", input.theme);
     if (input.bannerUrl !== undefined) fd.append("bannerUrl", input.bannerUrl ?? "");
     if (input.slotDuration !== undefined) fd.append("slotDuration", String(input.slotDuration));
-    if (input.swimmersPerSlot !== undefined) fd.append("swimmersPerSlot", String(input.swimmersPerSlot));
+    if (input.swimmersPerSlot !== undefined)
+      fd.append("swimmersPerSlot", String(input.swimmersPerSlot));
     if (input.ctaLabel !== undefined) fd.append("ctaLabel", input.ctaLabel);
     if (input.highlights !== undefined) fd.append("highlights", input.highlights ?? "");
-    if (input.additionalInstructions !== undefined) fd.append("additionalInstructions", input.additionalInstructions ?? "");
+    if (input.additionalInstructions !== undefined)
+      fd.append("additionalInstructions", input.additionalInstructions ?? "");
     if (input.status !== undefined) fd.append("status", input.status);
     if (input.sessions !== undefined) fd.append("sessions", JSON.stringify(input.sessions));
     if (input.segments !== undefined) fd.append("segments", JSON.stringify(input.segments));
-    if (input.steps !== undefined) fd.append("steps", JSON.stringify(input.steps.filter((s) => s.title.trim())));
-    if (input.faqs !== undefined) fd.append("faqs", JSON.stringify(input.faqs.filter((f) => f.question.trim())));
+    if (input.steps !== undefined)
+      fd.append("steps", JSON.stringify(input.steps.filter((s) => s.title.trim())));
+    if (input.faqs !== undefined)
+      fd.append("faqs", JSON.stringify(input.faqs.filter((f) => f.question.trim())));
     if (input.banner !== undefined) fd.append("banner", input.banner);
 
     return api<{ tryout: Tryout }>(
@@ -216,7 +220,10 @@ export const tryoutsApi = {
    * PUT /tryouts/:id/registration-questions
    * Saves the custom registration questions for a tryout.
    */
-  saveRegistrationQuestions: (id: string, questions: SelectedQuestion[]): Promise<SelectedQuestion[]> =>
+  saveRegistrationQuestions: (
+    id: string,
+    questions: SelectedQuestion[],
+  ): Promise<SelectedQuestion[]> =>
     api<{ questions: SelectedQuestion[] }>(
       apiClient.put(`/tryouts/${id}/registration-questions`, { questions }),
     ).then((res) => res.questions),
@@ -233,33 +240,35 @@ export const tryoutsApi = {
    * Returns all sessions for a tryout (admin view)
    */
   getSessions: (id: string): Promise<TryoutSession[]> =>
-    api<{ sessions: TryoutSession[] }>(apiClient.get(`/tryouts/${id}/sessions`)).then((res) => res.sessions),
+    api<{ sessions: TryoutSession[] }>(apiClient.get(`/tryouts/${id}/sessions`)).then(
+      (res) => res.sessions,
+    ),
 
   /**
    * GET /tryouts/:id/registrations/:regId
    * Returns full registration detail (admin/coach view)
    */
   getRegistrationDetail: (tryoutId: string, regId: string): Promise<RegistrationDetail> =>
-    api<{ registration: RegistrationDetail }>(apiClient.get(`/tryouts/${tryoutId}/registrations/${regId}`)).then(
-      (res) => res.registration,
-    ),
+    api<{ registration: RegistrationDetail }>(
+      apiClient.get(`/tryouts/${tryoutId}/registrations/${regId}`),
+    ).then((res) => res.registration),
 };
 
 // ─── Admin View Types ─────────────────────────────────────────────────────────
 
 export interface TryoutSlot {
-    _id: string,
-    tryoutId: string,
-    sessionId: string,
-    sessionDate: string,
-    startTime: string,
-    endTime: string,
-    label: string,
-    slotIndex: number,
-    capacity: number,
-    registeredCount: number,
-    createdAt: string,
-    updatedAt: string
+  _id: string;
+  tryoutId: string;
+  sessionId: string;
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+  label: string;
+  slotIndex: number;
+  capacity: number;
+  registeredCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TryoutSession {
@@ -290,7 +299,7 @@ export interface Registration {
   guardian_email?: string;
   parent_name?: string;
   parent_email?: string;
-  status: 'registered' | 'waitlisted' | 'offered' | 'rejected' | 'cancelled';
+  status: "registered" | "waitlisted" | "offered" | "rejected" | "cancelled";
   waitlist_position?: number;
   safety_entry_exit?: boolean | null;
   safety_float?: boolean | null;
