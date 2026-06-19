@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, Clock, Users, CalendarIcon } from "lucide-react";
+import { TimePicker } from "@/components/time-picker/TimePicker";
 import { TryoutFormValues, SLOT_DURATIONS, calcSlots, buildLabel } from "./shared";
 import { FieldGroup } from "./field-group";
 
@@ -253,22 +254,21 @@ export function StepSessions({ register, control, watch, setValue, errors, sessi
                     control={control}
                     name={`sessions.${idx}.startTime`}
                     render={({ field }) => (
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={field.value ?? ""}
-                        onChange={(e) => {
-                          field.onChange(e.target.value);
+                        placeholder="Select time"
+                        onChange={(v) => {
+                          field.onChange(v.formatted);
                           setValue(
                             `sessions.${idx}.label`,
-                            buildLabel(sv?.date ?? "", e.target.value, sv?.endTime ?? ""),
+                            buildLabel(sv?.date ?? "", v.formatted, sv?.endTime ?? ""),
                           );
                         }}
-                        className={[
-                          "appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none",
-                          sessionErrors?.startTime ? "border-destructive" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
+                        className={
+                          sessionErrors?.startTime
+                            ? "[&_button]:border-destructive [&_button]:focus:ring-destructive"
+                            : ""
+                        }
                       />
                     )}
                   />
@@ -280,22 +280,21 @@ export function StepSessions({ register, control, watch, setValue, errors, sessi
                     control={control}
                     name={`sessions.${idx}.endTime`}
                     render={({ field }) => (
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={field.value ?? ""}
-                        onChange={(e) => {
-                          field.onChange(e.target.value);
+                        placeholder="Select time"
+                        onChange={(v) => {
+                          field.onChange(v.formatted);
                           setValue(
                             `sessions.${idx}.label`,
-                            buildLabel(sv?.date ?? "", sv?.startTime ?? "", e.target.value),
+                            buildLabel(sv?.date ?? "", sv?.startTime ?? "", v.formatted),
                           );
                         }}
-                        className={[
-                          "appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none",
-                          sessionErrors?.endTime ? "border-destructive" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
+                        className={
+                          sessionErrors?.endTime
+                            ? "[&_button]:border-destructive [&_button]:focus:ring-destructive"
+                            : ""
+                        }
                       />
                     )}
                   />

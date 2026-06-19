@@ -5,13 +5,19 @@ import type { Registration } from "@/lib/api/tryouts.api";
 function fmtDate(d?: string) {
   if (!d) return "—";
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
 function fmtTime(t?: string) {
   if (!t) return "";
+  // Already 12h format — return as-is
+  if (/^\d{1,2}:\d{2}\s*[AaPp][Mm]$/.test(t)) return t;
+  // 24h format — convert to 12h
   const [h, m] = t.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return t;
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
@@ -32,22 +38,16 @@ export function WaitlistTab({ waitlisted, onPromote }: Props) {
 
   return (
     <div className="p-4">
-      {sorted.length === 0 && (
-        <p className="text-gray-400 text-center py-8">No one on waitlist</p>
-      )}
+      {sorted.length === 0 && <p className="text-gray-400 text-center py-8">No one on waitlist</p>}
       <div className="space-y-2">
         {sorted.map((r) => (
-          <div
-            key={r.id}
-            className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3"
-          >
+          <div key={r.id} className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3">
             <div className="w-8 h-8 bg-yellow-100 text-yellow-700 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
               {r.waitlist_position}
             </div>
             <div className="flex-1">
               <div className="font-medium text-gray-900">
-                {r.swimmer_name}{" "}
-                <span className="text-gray-400 text-sm">age {r.swimmer_age}</span>
+                {r.swimmer_name} <span className="text-gray-400 text-sm">age {r.swimmer_age}</span>
               </div>
               <div className="text-xs text-gray-500">
                 {r.guardian_name || r.parent_name} · {r.guardian_email || r.parent_email}

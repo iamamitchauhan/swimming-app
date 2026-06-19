@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseTimeString } from "@/components/time-picker/utils";
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
@@ -19,16 +20,23 @@ export const sessionSchema = z
     },
     { message: "Date cannot be in the past", path: ["date"] },
   )
-  .refine((s) => !s.startTime || !s.endTime || s.endTime > s.startTime, {
-    message: "End time must be after start time",
-    path: ["endTime"],
-  })
   .refine(
     (s) => {
       if (!s.startTime || !s.endTime) return true;
-      const [sh, sm] = s.startTime.split(":").map(Number);
-      const [eh, em] = s.endTime.split(":").map(Number);
-      return eh * 60 + em - (sh * 60 + sm) >= 15;
+      const start = parseTimeString(s.startTime);
+      const end = parseTimeString(s.endTime);
+      if (!start || !end) return true;
+      return end.hours24 * 60 + end.minute > start.hours24 * 60 + start.minute;
+    },
+    { message: "End time must be after start time", path: ["endTime"] },
+  )
+  .refine(
+    (s) => {
+      if (!s.startTime || !s.endTime) return true;
+      const start = parseTimeString(s.startTime);
+      const end = parseTimeString(s.endTime);
+      if (!start || !end) return true;
+      return end.hours24 * 60 + end.minute - (start.hours24 * 60 + start.minute) >= 15;
     },
     { message: "End time must be at least 15 minutes after start time", path: ["endTime"] },
   );
@@ -120,9 +128,10 @@ export const DEFAULT_STEPS = [
 
 export function calcSlots(startTime: string, endTime: string, slotDuration: number) {
   if (!startTime || !endTime || !slotDuration) return { slots: 0 };
-  const [sh, sm] = startTime.split(":").map(Number);
-  const [eh, em] = endTime.split(":").map(Number);
-  const durationMin = eh * 60 + em - (sh * 60 + sm);
+  const start = parseTimeString(startTime);
+  const end = parseTimeString(endTime);
+  if (!start || !end) return { slots: 0 };
+  const durationMin = end.hours24 * 60 + end.minute - (start.hours24 * 60 + start.minute);
   if (durationMin <= 0) return { slots: 0 };
   return { slots: Math.floor(durationMin / slotDuration) };
 }

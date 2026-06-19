@@ -24,6 +24,17 @@ const THEMES = [
   { id: "coral", from: "from-rose-400", to: "to-orange-500" },
 ] as const;
 
+function fmtTime(t?: string) {
+  if (!t) return "—";
+  // Already 12h format — return as-is
+  if (/^\d{1,2}:\d{2}\s*[AaPp][Mm]$/.test(t)) return t;
+  // 24h format — convert to 12h
+  const [h, m] = t.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return t;
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 function getThemeBg(theme: string): string {
   const match = THEMES.find((t) => t.id === theme);
   return match
@@ -42,6 +53,7 @@ export default function TryoutDetailPage() {
     date: string;
     time: string;
     label: string;
+    duration: string;
   } | null>(null);
 
   if (!isLoading && !tryout) {
@@ -91,6 +103,9 @@ export default function TryoutDetailPage() {
           date: formatDate(sess.date),
           time: `${sess.startTime} – ${sess.endTime}`,
           label: `Slot ${sl.slotIndex + 1}`,
+          duration: slot.time,
+          // startTime: sess.startTime,
+          // endTime: sess.endTime,
         });
         break;
       }
@@ -257,7 +272,7 @@ export default function TryoutDetailPage() {
                             id: sl.id,
                             sessionId: sl.sessionId,
                             label: `${session.date} · Slot ${sl.slotIndex + 1}`,
-                            time: `${session.startTime} – ${session.endTime}`,
+                            time: `${fmtTime(sl.startTime)} – ${fmtTime(sl.endTime)}`,
                             capacity: sl.capacity,
                             taken: sl.registeredCount,
                             availableSlots: sl.availableSlots,
@@ -273,6 +288,9 @@ export default function TryoutDetailPage() {
                                 className={`w-8 shrink-0 text-xs font-bold tabular-nums ${selected ? "text-sky-700 dark:text-sky-300" : "text-muted-foreground"}`}
                               >
                                 #{sl.slotIndex + 1}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {fmtTime(sl.startTime)} – {fmtTime(sl.endTime)}
                               </span>
                               {full ? (
                                 <span className="text-xs font-bold uppercase tracking-wide text-destructive">

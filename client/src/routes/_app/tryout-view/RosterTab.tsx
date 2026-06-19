@@ -47,7 +47,11 @@ function fmtDate(d?: string) {
 
 function fmtTime(t?: string) {
   if (!t) return "";
+  // Already 12h format — return as-is
+  if (/^\d{1,2}:\d{2}\s*[AaPp][Mm]$/.test(t)) return t;
+  // 24h format — convert to 12h
   const [h, m] = t.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return t;
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 }

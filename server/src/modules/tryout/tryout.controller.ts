@@ -16,13 +16,51 @@ import { sendRegistrationOffer, sendRegistrationReject } from "../../shared/util
 import { UserService } from "../user/user.service";
 import { TryoutSlotModel } from "../../models/tryout-slot.model";
 
+// ─── Time helpers ─────────────────────────────────────────────────────────────
+
+/** Parse a 12h or 24h time string into { hours24, minute } */
+function parseTimeString(input: string): { hours24: number; minute: number } | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const twelve = trimmed.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
+  if (twelve) {
+    let h = parseInt(twelve[1], 10);
+    const m = parseInt(twelve[2], 10);
+    const period = twelve[3].toUpperCase() as "AM" | "PM";
+    if (h < 1 || h > 12 || m < 0 || m > 59) return null;
+    if (period === "AM") h = h === 12 ? 0 : h;
+    else h = h === 12 ? 12 : h + 12;
+    return { hours24: h, minute: m };
+  }
+
+  const twentyFour = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (twentyFour) {
+    const h = parseInt(twentyFour[1], 10);
+    const m = parseInt(twentyFour[2], 10);
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return { hours24: h, minute: m };
+  }
+
+  return null;
+}
+
+function timeToIsoString(time: string): string | null {
+  const parsed = parseTimeString(time);
+  if (!parsed) return null;
+  const { hours24, minute } = parsed;
+  return `${String(hours24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
 // ─── Slot helpers ─────────────────────────────────────────────────────────────
 
 function calcSlots(startTime: string, endTime: string, slotDuration: number): number {
   if (!startTime || !endTime || !slotDuration) return 0;
-  const [sh, sm] = startTime.split(":").map(Number);
-  const [eh, em] = endTime.split(":").map(Number);
-  const durationMin = eh * 60 + em - (sh * 60 + sm);
+  const start = parseTimeString(startTime);
+  const end = parseTimeString(endTime);
+  if (!start || !end) return 0;
+  const durationMin = end.hours24 * 60 + end.minute - (start.hours24 * 60 + start.minute);
   if (durationMin <= 0) return 0;
   return Math.floor(durationMin / slotDuration);
 }
@@ -44,8 +82,10 @@ function computeTryoutBounds(rawSessions: Array<{ date: string; startTime: strin
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
 
-  const startAt = new Date(`${first.date}T${first.startTime}`);
-  const endAt = new Date(`${last.date}T${last.endTime}`);
+  const startIso = timeToIsoString(first.startTime);
+  const endIso = timeToIsoString(last.endTime);
+  const startAt = startIso ? new Date(`${first.date}T${startIso}`) : null;
+  const endAt = endIso ? new Date(`${last.date}T${endIso}`) : null;
 
   return { startAt, endAt };
 }
@@ -73,19 +113,32 @@ async function syncSessionsAndSlots(
   if (sessionDocs.length === 0) return;
   const createdSessions = await sessionRepo.createMany(sessionDocs);
 
-  const slots = createdSessions.flatMap((session) =>
-    Array.from({ length: session.totalSlots }, (_, i) => ({
-      tryoutId,
-      sessionId: session._id,
-      sessionDate: session.date,
-      startTime: session.startTime,
-      endTime: session.endTime,
-      label: session.label,
-      slotIndex: i,
-      capacity: swimmersPerSlot,
-      registeredCount: 0,
-    })),
-  );
+  const slots = createdSessions.flatMap((session) => {
+    const parsed = parseTimeString(session.startTime);
+    if (!parsed) return [];
+    const sessionStartMin = parsed.hours24 * 60 + parsed.minute;
+
+    return Array.from({ length: session.totalSlots }, (_, i) => {
+      const slotStartMin = sessionStartMin + i * slotDuration;
+      const slotEndMin = slotStartMin + slotDuration;
+      const sh = Math.floor(slotStartMin / 60) % 24;
+      const sm = slotStartMin % 60;
+      const eh = Math.floor(slotEndMin / 60) % 24;
+      const em = slotEndMin % 60;
+
+      return {
+        tryoutId,
+        sessionId: session._id,
+        sessionDate: session.date,
+        startTime: `${String(sh).padStart(2, "0")}:${String(sm).padStart(2, "0")}`,
+        endTime: `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`,
+        label: `${session.label} · Slot ${i + 1}`,
+        slotIndex: i,
+        capacity: swimmersPerSlot,
+        registeredCount: 0,
+      };
+    });
+  });
 
   if (slots.length > 0) await slotRepo.createMany(slots);
 }

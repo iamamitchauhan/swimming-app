@@ -35,6 +35,7 @@ interface SlotInfo {
   date: string;
   time: string;
   label: string;
+  duration: string;
 }
 
 interface Props {
@@ -131,6 +132,8 @@ export function RegistrationForm({
   const navigate = useNavigate();
   const qc = useQueryClient();
 
+  console.info("selectedSlotInfo =>", selectedSlotInfo);
+
   // Fetch dynamic questions from API
   const { data: questions = [], isLoading: questionsLoading } = useQuery(
     registrationQuestionsQuery(tryoutId),
@@ -187,6 +190,7 @@ export function RegistrationForm({
     guardianEmail: string;
     slotInfo: SlotInfo | null;
   } | null>(null);
+  console.info("lastSubmission =>", lastSubmission);
 
   // Re-init dynamic state when questions load
   const [prevQLen, setPrevQLen] = useState(0);
@@ -262,7 +266,7 @@ export function RegistrationForm({
             <span className="font-semibold">Slot selected</span>
           </div>
           <div className="mt-1 pl-4 text-xs text-emerald-700 dark:text-emerald-400">
-            {selectedSlotInfo.date} · {selectedSlotInfo.time} · {selectedSlotInfo.label}
+            {selectedSlotInfo.date} · {selectedSlotInfo.duration}
           </div>
         </div>
       ) : (
@@ -389,7 +393,7 @@ export function RegistrationForm({
                   <div className="min-w-0">
                     <p className="text-sm font-semibold truncate">{lastSubmission.swimmerName}</p>
                     <p className="text-xs text-muted-foreground">
-                      Registered · {lastSubmission.slotInfo?.time ?? ""}
+                      Registered · {lastSubmission.slotInfo?.duration ?? ""}
                     </p>
                   </div>
                 </div>

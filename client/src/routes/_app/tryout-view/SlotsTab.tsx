@@ -5,13 +5,19 @@ import type { TryoutSlot } from "@/lib/api/tryouts.api";
 function fmtDate(d?: string) {
   if (!d) return "—";
   return new Date(d + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
 function fmtTime(t?: string) {
   if (!t) return "";
+  // Already 12h format — return as-is
+  if (/^\d{1,2}:\d{2}\s*[AaPp][Mm]$/.test(t)) return t;
+  // 24h format — convert to 12h
   const [h, m] = t.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return t;
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
@@ -31,7 +37,9 @@ export function SlotsTab({ slots }: Props) {
         <thead className="bg-gray-900 text-white text-xs uppercase">
           <tr>
             {["Session", "Date", "Time", "Capacity", "Registered", "Available"].map((h) => (
-              <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>
+              <th key={h} className="px-4 py-3 text-left font-semibold">
+                {h}
+              </th>
             ))}
           </tr>
         </thead>
@@ -55,7 +63,9 @@ export function SlotsTab({ slots }: Props) {
               <td className="px-4 py-3">
                 <span
                   className={`font-semibold ${
-                    parseInt(String(s.capacity - s.registeredCount)) > 0 ? "text-green-600" : "text-red-500"
+                    parseInt(String(s.capacity - s.registeredCount)) > 0
+                      ? "text-green-600"
+                      : "text-red-500"
                   }`}
                 >
                   {s.capacity - s.registeredCount}
