@@ -95,8 +95,8 @@ function CoachList() {
       </div>
     );
   }
-  if (!data) {
-    return null;
+  if (!data || data?.length === 0) {
+    return <div className="flex items-center justify-center">No coaches found</div>;
   }
 
   return (
@@ -142,6 +142,10 @@ function TryoutList() {
     <div className="flex items-center justify-center">
       <Clock10 className="animate-spin" />
     </div>;
+  }
+
+  if (!tryouts || tryouts.length === 0) {
+    return <div className="flex items-center justify-center">No tryouts found</div>;
   }
 
   return (
