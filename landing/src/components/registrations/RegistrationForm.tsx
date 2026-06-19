@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, PartyPopper, Check, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { qk, registrationQuestionsQuery } from "@/lib/queries";
 import { createRegistration, type RegistrationQuestion } from "@/lib/api/registrations";
 
@@ -35,6 +43,7 @@ interface Props {
   sessionId: string | null;
   selectedSlotInfo?: SlotInfo | null;
   segments: any[];
+  onAddAnotherSwimmer?: () => void;
 }
 
 // ─── Fixed-field Zod schema ───────────────────────────────────────────────────
@@ -117,7 +126,9 @@ export function RegistrationForm({
   sessionId,
   selectedSlotInfo,
   segments = [],
+  onAddAnotherSwimmer,
 }: Props) {
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
   // Fetch dynamic questions from API
@@ -170,6 +181,12 @@ export function RegistrationForm({
   const [dynamicState, setDynamicState] = useState<DynamicState>(() => initialDynamic(questions));
   const [dynamicErrors, setDynamicErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [lastSubmission, setLastSubmission] = useState<{
+    swimmerName: string;
+    guardianEmail: string;
+    slotInfo: SlotInfo | null;
+  } | null>(null);
 
   // Re-init dynamic state when questions load
   const [prevQLen, setPrevQLen] = useState(0);
@@ -210,10 +227,15 @@ export function RegistrationForm({
         dynamicAnswers,
       });
     },
-    onSuccess: async () => {
-      toast.success("Registration submitted!");
+    onSuccess: async (_data, variables) => {
       await qc.invalidateQueries({ queryKey: qk.registrations });
       await qc.invalidateQueries({ queryKey: qk.notifications });
+      setLastSubmission({
+        swimmerName: `${variables.swimmerFirstName} ${variables.swimmerLastName}`,
+        guardianEmail: variables.guardianEmail,
+        slotInfo: selectedSlotInfo ?? null,
+      });
+      setSuccessOpen(true);
       reset();
       setDynamicState(initialDynamic(questions));
       setDynamicErrors({});
@@ -337,6 +359,56 @@ export function RegistrationForm({
           </p>
         </div>
       </form>
+
+      {/* ── Success modal ────────────────────────────────────────────────────── */}
+      <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden gap-0 sm:rounded-2xl">
+          <div className="p-6 pb-4 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-500 dark:bg-amber-950 dark:text-amber-400">
+              <PartyPopper className="h-6 w-6" />
+            </div>
+            <DialogHeader className="space-y-2">
+              <DialogTitle className="text-lg font-bold">Registration confirmed!</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Confirmation will be sent to {lastSubmission?.guardianEmail || guardianEmail}.
+              </DialogDescription>
+            </DialogHeader>
+
+            {lastSubmission && (
+              <div className="mt-4 rounded-lg bg-muted px-4 py-3 text-left">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+                    <Check className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{lastSubmission.swimmerName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Registered · {lastSubmission.slotInfo?.time ?? ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-5 space-y-2.5">
+              <Button
+                variant="outline"
+                className="w-full rounded-lg border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-950"
+                onClick={() => {
+                  setSuccessOpen(false);
+                  onAddAnotherSwimmer?.();
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add another swimmer (sibling)
+              </Button>
+              <Button className="w-full rounded-lg" onClick={() => navigate("/registrations")}>
+                View my registrations
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

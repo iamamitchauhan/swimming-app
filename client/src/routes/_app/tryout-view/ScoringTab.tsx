@@ -17,17 +17,24 @@ function ScoreCell({
   value,
   onChange,
   bool = false,
+  disabled = false,
 }: {
   value: boolean | number | string | null | undefined;
   onChange: (v: boolean | string) => void;
   bool?: boolean;
+  disabled?: boolean;
 }) {
   if (bool) {
     return (
       <button
+        disabled={disabled}
         onClick={() => onChange(!(value as boolean))}
         className={`w-8 h-8 rounded-lg text-xs font-bold transition ${
-          value ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"
+          disabled
+            ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+            : value
+              ? "bg-green-100 text-green-700"
+              : "bg-gray-100 text-gray-400"
         }`}
       >
         {value ? "✓" : "✕"}
@@ -39,9 +46,22 @@ function ScoreCell({
       type="number"
       min={1}
       max={10}
-      value={value as string | number ?? ""}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-14 text-center border border-gray-200 rounded-lg px-1 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+      disabled={disabled}
+      value={(value as string | number) ?? ""}
+      onChange={(e) => {
+        const raw = e.target.value;
+        if (raw === "") {
+          onChange("");
+          return;
+        }
+        const num = Number(raw);
+        if (isNaN(num)) return;
+        const clamped = Math.min(10, Math.max(0, num));
+        onChange(String(clamped));
+      }}
+      className={`w-14 text-center border border-gray-200 rounded-lg px-1 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+        disabled ? "bg-gray-50 text-gray-400 cursor-not-allowed" : ""
+      }`}
     />
   );
 }
@@ -58,14 +78,22 @@ interface Props {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ScoringTab({ registered, onSaveScore }: Props) {
-  const [scoreEdits, setScoreEdits]   = useState<ScoreEdits>({});
+  const [scoreEdits, setScoreEdits] = useState<ScoreEdits>({});
   const [savingScores, setSavingScores] = useState<Record<string, boolean>>({});
 
   function getScore(id: string, field: keyof Registration, fallback: boolean | string | number) {
-    return scoreEdits[id]?.[field] ?? (registered.find((r) => r.id === id)?.[field] ?? fallback);
+    return scoreEdits[id]?.[field] ?? registered.find((r) => r.id === id)?.[field] ?? fallback;
   }
 
-  function editScore(id: string, field: keyof Registration, value: boolean | string) {
+  console.info("registered =>", registered);
+
+  function editScore(
+    id: string,
+    field: keyof Registration,
+    value: boolean | string,
+    status?: string,
+  ) {
+    if (status === "cancelled" || status === "rejected") return;
     setScoreEdits((prev) => ({
       ...prev,
       [id]: { ...prev[id], [field]: value },
@@ -121,59 +149,77 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
               const hasEdits = !!scoreEdits[r.id];
               const merged = { ...r, ...scoreEdits[r.id] };
               const avgScore = avg(merged);
+              const isBlocked = r.status === "cancelled" || r.status === "rejected";
               return (
                 <tr key={r.id} className="hover:bg-blue-50/30 transition">
-                  <td className="px-3 py-3 text-gray-400 text-xs sticky left-0 bg-white">{i + 1}</td>
+                  <td className="px-3 py-3 text-gray-400 text-xs sticky left-0 bg-white">
+                    {i + 1}
+                  </td>
                   <td className="px-3 py-3 sticky left-8 bg-white">
-                    <div className="font-medium text-gray-900 whitespace-nowrap">{r.swimmer_name}</div>
+                    <div className="font-medium text-gray-900 whitespace-nowrap">
+                      {r.swimmer_name}
+                    </div>
                     <div className="text-xs text-gray-400">{r.segment_name}</div>
+                    {isBlocked && (
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-red-500 mt-0.5">
+                        {r.status}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-center text-gray-500">{r.swimmer_age}</td>
                   <td className="px-3 py-3 text-center">
                     <ScoreCell
                       bool
+                      disabled={isBlocked}
                       value={getScore(r.id, "safety_entry_exit", false) as boolean}
-                      onChange={(v) => editScore(r.id, "safety_entry_exit", v)}
+                      onChange={(v) => editScore(r.id, "safety_entry_exit", v, r.status)}
                     />
                   </td>
                   <td className="px-3 py-3 text-center">
                     <ScoreCell
                       bool
+                      disabled={isBlocked}
                       value={getScore(r.id, "safety_float", false) as boolean}
-                      onChange={(v) => editScore(r.id, "safety_float", v)}
+                      onChange={(v) => editScore(r.id, "safety_float", v, r.status)}
                     />
                   </td>
                   <td className="px-3 py-3 text-center">
                     <ScoreCell
+                      disabled={isBlocked}
                       value={getScore(r.id, "freestyle", "") as string}
-                      onChange={(v) => editScore(r.id, "freestyle", v)}
+                      onChange={(v) => editScore(r.id, "freestyle", v, r.status)}
                     />
                   </td>
                   <td className="px-3 py-3 text-center">
                     <ScoreCell
+                      disabled={isBlocked}
                       value={getScore(r.id, "backstroke", "") as string}
-                      onChange={(v) => editScore(r.id, "backstroke", v)}
+                      onChange={(v) => editScore(r.id, "backstroke", v, r.status)}
                     />
                   </td>
                   <td className="px-3 py-3 text-center">
                     <ScoreCell
+                      disabled={isBlocked}
                       value={getScore(r.id, "breaststroke", "") as string}
-                      onChange={(v) => editScore(r.id, "breaststroke", v)}
+                      onChange={(v) => editScore(r.id, "breaststroke", v, r.status)}
                     />
                   </td>
                   <td className="px-3 py-3 text-center">
                     <ScoreCell
+                      disabled={isBlocked}
                       value={getScore(r.id, "butterfly", "") as string}
-                      onChange={(v) => editScore(r.id, "butterfly", v)}
+                      onChange={(v) => editScore(r.id, "butterfly", v, r.status)}
                     />
                   </td>
-                  <td className="px-3 py-3 text-center font-bold text-blue-600">{avgScore || "—"}</td>
+                  <td className="px-3 py-3 text-center font-bold text-blue-600">
+                    {avgScore || "—"}
+                  </td>
                   <td className="px-3 py-3 text-center">
                     <button
                       onClick={() => saveScore(r.id)}
-                      disabled={!hasEdits || savingScores[r.id]}
+                      disabled={!hasEdits || savingScores[r.id] || isBlocked}
                       className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${
-                        hasEdits
+                        hasEdits && !isBlocked
                           ? "bg-blue-600 text-white hover:bg-blue-500"
                           : "bg-gray-100 text-gray-300 cursor-default"
                       }`}

@@ -32,17 +32,40 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-const STROKES = ["Butterfly", "Backstroke", "Breaststroke", "Freestyle", "Knows some strokes", "None"] as const;
-const STARTS  = ["Racing Start off the blocks", "Backstroke Start", "Cannot perform starts"] as const;
-const TURNS   = ["Freestyle Flip Turn", "Backstroke Flip Turn", "Open Turns", "Cannot perform turns"] as const;
+const STROKES = [
+  "Butterfly",
+  "Backstroke",
+  "Breaststroke",
+  "Freestyle",
+  "Knows some strokes",
+  "None",
+] as const;
+const STARTS = [
+  "Racing Start off the blocks",
+  "Backstroke Start",
+  "Cannot perform starts",
+] as const;
+const TURNS = [
+  "Freestyle Flip Turn",
+  "Backstroke Flip Turn",
+  "Open Turns",
+  "Cannot perform turns",
+] as const;
 
 const SEGMENTS_BY_AGE: Record<string, string[]> = {
-  "6":  ["6 & Under"],
-  "7":  ["7-8"],  "8":  ["7-8"],
-  "9":  ["9-10"], "10": ["9-10"],
-  "11": ["11-12"], "12": ["11-12"],
-  "13": ["13-14"], "14": ["13-14"],
-  "15": ["15-18"], "16": ["15-18"], "17": ["15-18"], "18": ["15-18"],
+  "6": ["6 & Under"],
+  "7": ["7-8"],
+  "8": ["7-8"],
+  "9": ["9-10"],
+  "10": ["9-10"],
+  "11": ["11-12"],
+  "12": ["11-12"],
+  "13": ["13-14"],
+  "14": ["13-14"],
+  "15": ["15-18"],
+  "16": ["15-18"],
+  "17": ["15-18"],
+  "18": ["15-18"],
 };
 
 const blank = {
@@ -98,7 +121,6 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
         slotId: slot.id,
         swimmerFirstName: firstName,
         swimmerLastName: lastName,
-        swimmerDob: "",
         ageOnTryoutDay: 0,
         hasUsaMembership: false,
         guardianName: "",
@@ -133,7 +155,6 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
         </DialogHeader>
 
         <div className="space-y-4 py-1">
-
           {/* Swimmer's full name */}
           <Field label="Swimmer's full name" required>
             <Input
@@ -162,7 +183,10 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
             <Field label="Registration segment">
               <Input
                 readOnly
-                value={form.segment || (form.ageOnTryoutDay ? "No segment for this age" : "Enter age first")}
+                value={
+                  form.segment ||
+                  (form.ageOnTryoutDay ? "No segment for this age" : "Enter age first")
+                }
                 className="bg-muted text-muted-foreground cursor-default"
               />
             </Field>
@@ -189,9 +213,7 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
                   <Input
                     placeholder="Swim club name"
                     value={form.currentTeams[0] ?? ""}
-                    onChange={(e) =>
-                      set("currentTeams", e.target.value ? [e.target.value] : [])
-                    }
+                    onChange={(e) => set("currentTeams", e.target.value ? [e.target.value] : [])}
                   />
                 </Field>
               </div>
@@ -285,12 +307,13 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
               />
             </Field>
           </div>
-
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button disabled={!canSubmit} onClick={() => submitMut.mutate()}>
               {submitMut.isPending ? "Submitting…" : "Submit Registration"}
             </Button>

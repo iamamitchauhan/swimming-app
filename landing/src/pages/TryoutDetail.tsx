@@ -356,6 +356,11 @@ export default function TryoutDetailPage() {
               sessionId={activeSessionId}
               selectedSlotInfo={selectedSlotInfo}
               segments={segments}
+              onAddAnotherSwimmer={() => {
+                setActiveSlotId(null);
+                setActiveSessionId(null);
+                setSelectedSlotInfo(null);
+              }}
             />
           </section>
 

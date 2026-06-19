@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import type { LucideIcon } from "lucide-react";
 import { CheckCircle2, Clock, XCircle, MapPin, CalendarDays, PlusCircle, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { parentQuery, myTryoutsQuery, cancelRegistration } from "@/lib/queries";
@@ -41,9 +41,14 @@ export default function RegistrationsPage() {
   const navigate = useNavigate();
   const { data: parent, isLoading } = useQuery(parentQuery());
   const { data: tryouts = [], isLoading: loadingTryouts } = useQuery(myTryoutsQuery());
+  const queryClient = useQueryClient();
 
   const cancelReg = useMutation({
     mutationFn: (id: string) => cancelRegistrationById(id),
+    onSuccess: () => {
+      // Refresh the tryouts list after cancellation
+      queryClient.invalidateQueries({ queryKey: ["myTryouts"] });
+    },
   });
 
   useEffect(() => {
