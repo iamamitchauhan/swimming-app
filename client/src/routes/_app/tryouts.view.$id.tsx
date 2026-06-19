@@ -264,9 +264,6 @@ export default function TryoutViewPage() {
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-semibold">{tryout.name}</h2>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate(`/tryouts/edit/${id}`)}>
-          <Pencil className="h-4 w-4 mr-1.5" /> Edit
-        </Button>
       </div>
 
       {/* ── Tryout details ─────────────────────────────────────────────────── */}

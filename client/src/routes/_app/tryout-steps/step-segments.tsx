@@ -83,16 +83,14 @@ export function StepSegments({ register, control, errors, segmentsField }: Props
                   </Button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <FieldGroup label="Segment Name" required error={segErr?.name?.message}>
-                      <Input
-                        placeholder="e.g. U12 Competitive"
-                        {...register(`segments.${idx}.name`)}
-                        className={segErr?.name ? "border-destructive" : ""}
-                      />
-                    </FieldGroup>
-                  </div>
+                <div className="grid gap-4 sm:grid-cols-4">
+                  <FieldGroup label="Segment Name" required error={segErr?.name?.message}>
+                    <Input
+                      placeholder="e.g. U12 Competitive"
+                      {...register(`segments.${idx}.name`)}
+                      className={segErr?.name ? "border-destructive" : ""}
+                    />
+                  </FieldGroup>
 
                   <FieldGroup label="Min Age" required error={segErr?.minAge?.message}>
                     <Input
@@ -116,28 +114,26 @@ export function StepSegments({ register, control, errors, segmentsField }: Props
                     />
                   </FieldGroup>
 
-                  <div className="sm:col-span-2">
-                    <FieldGroup label="Skill Level">
-                      <Controller
-                        control={control}
-                        name={`segments.${idx}.level`}
-                        render={({ field }) => (
-                          <Select value={field.value} onValueChange={field.onChange}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Any level" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {LEVELS.map((l) => (
-                                <SelectItem key={l} value={l}>
-                                  {l}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
-                    </FieldGroup>
-                  </div>
+                  <FieldGroup label="Skill Level">
+                    <Controller
+                      control={control}
+                      name={`segments.${idx}.level`}
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Any level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LEVELS.map((l) => (
+                              <SelectItem key={l} value={l}>
+                                {l}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </FieldGroup>
                 </div>
               </div>
             );

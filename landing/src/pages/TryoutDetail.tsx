@@ -313,9 +313,6 @@ export default function TryoutDetailPage() {
                       </div>
                     );
                   })}
-                  <p className="px-5 py-3 text-center text-xs text-muted-foreground italic">
-                    ↑ Pick a slot above, or leave blank to be auto-assigned the earliest open one.
-                  </p>
                 </div>
               ) : (
                 <p className="px-5 py-8 text-center text-sm text-muted-foreground">

@@ -46,17 +46,17 @@ export function Header() {
         </Link>
         <nav className="hidden items-center gap-1 md:flex">
           {/* <HeaderLink to="/" end>Home</HeaderLink> */}
-          <HeaderLink to="/tryouts">Tryouts</HeaderLink>
-          {parent ? (
-            <>
-              {/* <HeaderLink to="/dashboard">Dashboard</HeaderLink> */}
-              <HeaderLink to="/registrations">My Registrations</HeaderLink>
-            </>
-          ) : null}
         </nav>
         <div className="flex items-center gap-2">
           {parent ? (
             <>
+              {parent && (
+                <>
+                  <HeaderLink to="/tryouts">Tryouts</HeaderLink>
+                  {/* <HeaderLink to="/dashboard">Dashboard</HeaderLink> */}
+                  <HeaderLink to="/registrations">My Registrations</HeaderLink>
+                </>
+              )}
               {/* <Button asChild variant="ghost" size="icon" className="relative" aria-label="Notifications">
                 <Link to="/notifications">
                   <Bell className="h-5 w-5" />

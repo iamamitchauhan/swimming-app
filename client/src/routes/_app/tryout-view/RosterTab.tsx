@@ -124,12 +124,12 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer capitalize">
-              {statusFilter === "" ? "All statuses" : statusFilter}
+              {statusFilter === "" ? "All status" : statusFilter}
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setStatusFilter("")}>All statuses</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter("")}>All status</DropdownMenuItem>
             {["registered", "offered", "rejected"].map((s) => (
               <DropdownMenuItem className="capitalize" key={s} onClick={() => setStatusFilter(s)}>
                 {s}

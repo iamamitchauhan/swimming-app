@@ -210,20 +210,13 @@ export default function TryoutsList() {
   }
 
   return (
-    <PageShell
-      title="Tryouts"
-      actions={
-        <Button onClick={() => navigate("/tryouts/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New tryout
-        </Button>
-      }
-    >
-      <div className="bg-card rounded-xl border border-border">
-        {/* ── Toolbar ─────────────────────────────────────────────────────── */}
-        <div className="p-4 flex flex-col gap-3 border-b border-border">
-          {/* Row 1: search + status + sort */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-            <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg p-1">
+    <PageShell title="Tryouts">
+      {/* ── Toolbar ─────────────────────────────────────────────────────── */}
+      <div className="pb-4 flex flex-col gap-3">
+        {/* Row 1: search + status + sort */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
+          <div className="flex items-start">
+            <div className="flex items-center gap-1.5 bg-[#f0f2f3] rounded-lg p-1">
               {STATUS_TABS.map((tab) => {
                 const active = statusFilter === tab.value;
                 return (
@@ -244,12 +237,14 @@ export default function TryoutsList() {
                 );
               })}
             </div>
-            <div className="p-4 border-b border-border flex gap-3">
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search tryouts..."
-                  className="pl-9 pr-8 h-9"
+                  className="pl-9 pr-8 h-9 bg-white"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -264,58 +259,13 @@ export default function TryoutsList() {
                 )}
               </div>
             </div>
-
-            {/* <Select value={sortBy} onValueChange={(v) => setSortBy(v as TryoutSortField)}>
-              <SelectTrigger className="h-9 w-full sm:w-40">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                {SORT_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select> */}
-
-            {/* <Button
-              variant="outline" size="sm" className="h-9 w-9 p-0 shrink-0"
-              title={sortOrder === "asc" ? "Ascending" : "Descending"}
-              onClick={() => setSortOrder((o) => (o === "asc" ? "desc" : "asc"))}
-            >
-              {sortOrder === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-            </Button> */}
-
-            {/* {hasActiveFilters && (
-              <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={clearFilters}>
-                <X className="h-4 w-4 mr-1" /> Clear
-              </Button>
-            )} */}
+            <Button onClick={() => navigate("/tryouts/new")}>
+              <Plus className="h-4 w-4 mr-1.5" /> New tryout
+            </Button>
           </div>
-
-          {/* Row 2: date range */}
-          {/* <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
-              <Input
-                type="date"
-                className="h-9 w-40 text-sm"
-                value={dateFrom}
-                max={dateTo || undefined}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">To</label>
-              <Input
-                type="date"
-                className="h-9 w-40 text-sm"
-                value={dateTo}
-                min={dateFrom || undefined}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
-            </div>
-          </div> */}
         </div>
-
+      </div>
+      <div className="bg-card rounded-xl border border-border">
         {/* ── Loading ─────────────────────────────────────────────────────── */}
         {isLoading && (
           <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">

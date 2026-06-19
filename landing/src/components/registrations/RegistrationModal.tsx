@@ -318,9 +318,6 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
               {submitMut.isPending ? "Submitting…" : "Submit Registration"}
             </Button>
           </div>
-          <p className="text-center text-xs text-muted-foreground">
-            15-minute evaluation · Instant confirmation · Email reminder before tryout
-          </p>
         </DialogFooter>
       </DialogContent>
     </Dialog>

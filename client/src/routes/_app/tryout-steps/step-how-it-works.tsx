@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TryoutFormValues } from "./shared";
 import { FieldGroup } from "./field-group";
 
@@ -15,6 +16,33 @@ export function StepHowItWorks({ register, stepsField }: Props) {
   return (
     <div className="space-y-8">
       {/* Steps */}
+
+      <div className="flex items-center justify-end gap-2">
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className={`${stepsField.fields.length >= 3 ? "opacity-50 cursor-not-allowed" : ""}`}
+                onClick={() => {
+                  if (stepsField.fields.length < 3) {
+                    stepsField.append({ title: "", description: "" });
+                  }
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1.5" /> Add step
+              </Button>
+            </TooltipTrigger>
+            {stepsField.fields.length >= 3 && (
+              <TooltipContent side="bottom" className="text-xs">
+                Maximum 3 steps allowed. Remove a step to add another.
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+      </div>
       <div className="space-y-3">
         {stepsField.fields.map((field, idx) => (
           <div key={field.id} className="flex gap-3 items-start">
@@ -39,20 +67,6 @@ export function StepHowItWorks({ register, stepsField }: Props) {
             </Button>
           </div>
         ))}
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={`w-full ${stepsField.fields.length >= 3 ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => {
-            if (stepsField.fields.length < 3) {
-              stepsField.append({ title: "", description: "" });
-            }
-          }}
-        >
-          <Plus className="h-4 w-4 mr-1.5" /> Add step
-        </Button>
       </div>
 
       {/* Additional instructions */}

@@ -15,7 +15,7 @@ const ClubsPage = lazy(() => import("./pages/app/ClubsPage"));
 const UsersPage = lazy(() => import("./pages/app/UsersPage"));
 const TryoutsPage = lazy(() => import("./pages/app/TryoutsPage"));
 const TryoutDetailPage = lazy(() => import("./pages/app/TryoutDetailPage"));
-const TryoutViewPage   = lazy(() => import("./pages/app/TryoutViewPage"));
+const TryoutViewPage = lazy(() => import("./pages/app/TryoutViewPage"));
 const TryoutNewPage = lazy(() => import("./pages/app/TryoutNewPage"));
 const TryoutEditPage = lazy(() => import("./pages/app/TryoutEditPage"));
 const TryoutPreviewPage = lazy(() => import("./pages/app/TryoutPreviewPage"));
@@ -43,7 +43,6 @@ export default function App() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -65,6 +64,7 @@ export default function App() {
             </RequireAuth>
           }
         >
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/clubs" element={<ClubsPage />} />
           <Route path="/users" element={<UsersPage />} />

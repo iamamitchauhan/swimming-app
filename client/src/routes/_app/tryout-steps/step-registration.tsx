@@ -341,7 +341,7 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
   }
 
   return (
-    <div className="flex gap-6 min-h-[500px]">
+    <div className="flex gap-6 h-[calc(100vh-310px)] overflow-hidden">
       {/* ── Left: Question Library ─────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 space-y-4">
         <div>
@@ -468,9 +468,6 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
               >
                 Submit Registration
               </button>
-              <p className="text-center text-xs text-muted-foreground">
-                15-minute evaluation · Instant confirmation · Email reminder before tryout
-              </p>
             </div>
           </div>
         )}

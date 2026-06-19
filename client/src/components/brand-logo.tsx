@@ -1,6 +1,8 @@
 import { Waves } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export function BrandLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+  const navigate = useNavigate();
   const dims = size === "lg" ? "h-11 w-11" : size === "sm" ? "h-7 w-7" : "h-9 w-9";
   const text = size === "lg" ? "text-xl" : size === "sm" ? "text-sm" : "text-base";
   return (
@@ -10,7 +12,12 @@ export function BrandLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
       >
         <Waves className="h-1/2 w-1/2 text-primary-foreground" strokeWidth={2.5} />
       </div>
-      <div className="flex flex-col leading-tight">
+      <div
+        className="flex flex-col leading-tight"
+        onClick={() => {
+          navigate("/");
+        }}
+      >
         <span className={`font-bold tracking-tight ${text}`}>Swim Tryouts</span>
         {size !== "sm" && (
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">

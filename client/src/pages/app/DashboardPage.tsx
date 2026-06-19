@@ -87,6 +87,7 @@ function ActivityFeed() {
 
 function CoachList() {
   const { data, isLoading, isError, error, isFetching } = useClubCoaches();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -96,7 +97,26 @@ function CoachList() {
     );
   }
   if (!data || data?.length === 0) {
-    return <div className="flex items-center justify-center">No coaches found</div>;
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+          <Users className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">
+            No coach applications in the last 24 hours.
+          </p>
+        </div>
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto p-0 text-xs font-medium text-primary"
+          onClick={() => navigate("/users")}
+        >
+          View all staff →
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -138,6 +158,8 @@ function TryoutList() {
   console.info("data =>", data);
   const tryouts = data?.tryouts ?? [];
 
+  console.info("tryouts =>", tryouts);
+
   if (isLoading) {
     <div className="flex items-center justify-center">
       <Clock10 className="animate-spin" />
@@ -145,7 +167,24 @@ function TryoutList() {
   }
 
   if (!tryouts || tryouts.length === 0) {
-    return <div className="flex items-center justify-center">No tryouts found</div>;
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+          <Waves className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">No upcoming tryouts.</p>
+        </div>
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto p-0 text-xs font-medium text-primary"
+          onClick={() => navigate("/tryouts")}
+        >
+          View all tryouts →
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -294,7 +333,7 @@ function AdminDash() {
           accent="warning"
         />
       </div>
-      <div className="grid gap-4 lg:grid-cols-3 items-start">
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card title="Club Summary">
           {stateLoading || !clubState ? (
             <div className="flex items-center justify-center h-24">

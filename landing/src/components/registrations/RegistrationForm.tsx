@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, PartyPopper, Check, Plus } from "lucide-react";
+import { Loader2, PartyPopper, Check, Plus, CrossIcon, Crosshair, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -268,8 +268,7 @@ export function RegistrationForm({
       ) : (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
           <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
-          No slot selected — pick a slot from the Registration Windows above, or we'll auto-assign
-          the earliest open one.
+          No slot selected — pick a slot from the Registration Windows above.
         </div>
       )}
 
@@ -354,22 +353,29 @@ export function RegistrationForm({
             {submitMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {submitMut.isPending ? "Submitting…" : "Submit Registration"}
           </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            15-minute evaluation · Instant confirmation · Email reminder before tryout
-          </p>
         </div>
       </form>
 
       {/* ── Success modal ────────────────────────────────────────────────────── */}
       <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
-        <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden gap-0 sm:rounded-2xl">
+        <DialogContent className="[&>button:last-child]:hidden max-w-sm rounded-2xl p-0 overflow-hidden gap-0 sm:rounded-2xl">
           <div className="p-6 pb-4 text-center">
+            <div className="flex justify-end">
+              <X
+                className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full p-1"
+                onClick={() => {
+                  navigate("/tryouts");
+                }}
+              />
+            </div>
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-500 dark:bg-amber-950 dark:text-amber-400">
               <PartyPopper className="h-6 w-6" />
             </div>
             <DialogHeader className="space-y-2">
-              <DialogTitle className="text-lg font-bold">Registration confirmed!</DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
+              <DialogTitle className="text-lg font-bold text-center">
+                Registration confirmed!
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground text-center">
                 Confirmation will be sent to {lastSubmission?.guardianEmail || guardianEmail}.
               </DialogDescription>
             </DialogHeader>

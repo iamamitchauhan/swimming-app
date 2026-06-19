@@ -112,6 +112,67 @@ export function StepSessions({ register, control, watch, setValue, errors, sessi
 
   return (
     <div className="space-y-8">
+      {/* Slot settings */}
+      <div className="rounded-xl border border-border p-5 space-y-4">
+        <p className="text-sm font-medium text-foreground">Slot Settings</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FieldGroup label="Minutes per slot">
+            <Controller
+              control={control}
+              name="slotDuration"
+              render={({ field }) => (
+                <Select
+                  value={String(field.value)}
+                  onValueChange={(v) => field.onChange(Number(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SLOT_DURATIONS.map((d) => (
+                      <SelectItem key={d} value={String(d)}>
+                        {d} min
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </FieldGroup>
+
+          <FieldGroup label="Swimmers per slot">
+            <Controller
+              control={control}
+              name="swimmersPerSlot"
+              render={({ field }) => (
+                <Select
+                  value={String(field.value)}
+                  onValueChange={(v) => field.onChange(Number(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 9 }, (_, i) => i + 2).map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n} swimmers
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </FieldGroup>
+        </div>
+
+        {totalCapacity > 0 && (
+          <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm">
+            <span className="text-muted-foreground">Total capacity across all sessions: </span>
+            <span className="font-semibold text-foreground">{totalCapacity} swimmers</span>
+          </div>
+        )}
+      </div>
+
       {/* Sessions list */}
       <div className="space-y-4">
         <div className="flex justify-end">
@@ -256,67 +317,6 @@ export function StepSessions({ register, control, watch, setValue, errors, sessi
             </div>
           );
         })}
-      </div>
-
-      {/* Slot settings */}
-      <div className="rounded-xl border border-border p-5 space-y-4">
-        <p className="text-sm font-medium text-foreground">Slot Settings</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FieldGroup label="Minutes per slot">
-            <Controller
-              control={control}
-              name="slotDuration"
-              render={({ field }) => (
-                <Select
-                  value={String(field.value)}
-                  onValueChange={(v) => field.onChange(Number(v))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SLOT_DURATIONS.map((d) => (
-                      <SelectItem key={d} value={String(d)}>
-                        {d} min
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </FieldGroup>
-
-          <FieldGroup label="Swimmers per slot">
-            <Controller
-              control={control}
-              name="swimmersPerSlot"
-              render={({ field }) => (
-                <Select
-                  value={String(field.value)}
-                  onValueChange={(v) => field.onChange(Number(v))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 9 }, (_, i) => i + 2).map((n) => (
-                      <SelectItem key={n} value={String(n)}>
-                        {n} swimmers
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </FieldGroup>
-        </div>
-
-        {totalCapacity > 0 && (
-          <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm">
-            <span className="text-muted-foreground">Total capacity across all sessions: </span>
-            <span className="font-semibold text-foreground">{totalCapacity} swimmers</span>
-          </div>
-        )}
       </div>
     </div>
   );

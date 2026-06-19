@@ -82,8 +82,7 @@ export function RegistrationFormPreview({ selectedQuestions }: Props) {
         {/* Slot selection banner (static amber — no slot selected in preview) */}
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
           <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
-          No slot selected — pick a slot from the Registration Windows above, or we'll auto-assign
-          the earliest open one.
+          No slot selected — pick a slot from the Registration Windows above.
         </div>
 
         {/* ── Fixed: Swimmer name ─────────────────────────────────────────────── */}
@@ -207,9 +206,6 @@ export function RegistrationFormPreview({ selectedQuestions }: Props) {
           >
             Submit Registration
           </button>
-          <p className="text-center text-xs text-muted-foreground">
-            15-minute evaluation · Instant confirmation · Email reminder before tryout
-          </p>
         </div>
       </div>
     </section>

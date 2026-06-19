@@ -135,20 +135,9 @@ export default function UsersPage() {
   };
 
   return (
-    <PageShell
-      title="Users"
-      actions={
-        <>
-          {canInvite && (
-            <Button onClick={() => setInviteOpen(true)}>
-              <UserPlus className="h-4 w-4 mr-1.5" /> Invite user
-            </Button>
-          )}
-        </>
-      }
-    >
-      <div className="bg-card rounded-xl border border-border">
-        <div className="p-4 border-b border-border flex gap-3">
+    <PageShell title="Users">
+      <div className="flex justify-between pb-4">
+        <div className="flex gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -168,7 +157,13 @@ export default function UsersPage() {
             )}
           </div>
         </div>
-
+        {canInvite && (
+          <Button onClick={() => setInviteOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-1.5" /> Invite user
+          </Button>
+        )}
+      </div>
+      <div className="bg-card rounded-xl border border-border">
         {isLoading && (
           <div className="p-4 space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -228,7 +223,9 @@ export default function UsersPage() {
                           <span className="font-medium text-muted-foreground">{inv.club?.name || '—'}</span>
                         </TableCell> */}
                         <TableCell>
-                          <Badge variant="secondary">{inv.role}</Badge>
+                          <Badge variant="secondary" className="capitalize">
+                            {inv.role}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -302,10 +299,15 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{u.email}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{ROLE_LABEL[u.role] ?? u.role}</Badge>
+                        <Badge variant="secondary" className="capitalize">
+                          {ROLE_LABEL[u.role] ?? u.role}
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={statusBadge(u.status ?? "")}>
+                        <Badge
+                          variant="outline"
+                          className={`capitalize ${statusBadge(u.status ?? "")}`}
+                        >
                           {(u.status ?? "").replace(/_/g, " ")}
                         </Badge>
                       </TableCell>
