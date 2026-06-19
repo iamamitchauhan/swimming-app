@@ -11,7 +11,18 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Building2, Calendar, CheckCircle2, Hash, Loader2, MapPin, Phone, Users, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Hash,
+  Loader2,
+  MapPin,
+  Phone,
+  Users,
+  XCircle,
+} from "lucide-react";
 import { useAllClubs, usePendingClubs, useApproveClub, useRejectClub } from "@/hooks/use-clubs";
 import { useAuthStore } from "@/lib/auth.store";
 import { useApiError } from "@/hooks/use-api-error";
@@ -25,9 +36,7 @@ export default function ClubsPage() {
   const allClubs = useAllClubs();
   const pendingClubs = usePendingClubs();
 
-  const clubs = isSuperAdmin
-    ? (allClubs.data ?? [])
-    : (pendingClubs.data ?? []);
+  const clubs = isSuperAdmin ? (allClubs.data ?? []) : (pendingClubs.data ?? []);
   const isLoading = isSuperAdmin ? allClubs.isLoading : pendingClubs.isLoading;
   const isError = isSuperAdmin ? allClubs.isError : pendingClubs.isError;
 
@@ -98,12 +107,14 @@ function ClubCard({ club, isSuperAdmin }: { club: Club; isSuperAdmin: boolean })
             <span>{club.phone || <em className="opacity-60">No phone</em>}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Hash className="h-3 w-3 shrink-0" />
-            <span className="font-mono truncate" title={club.ownerId}>{club.ownerId}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
             <Calendar className="h-3 w-3 shrink-0" />
-            <span>{new Date(club.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</span>
+            <span>
+              {new Date(club.createdAt).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
           </div>
           {club.clubSize && (
             <div className="flex items-center gap-1.5">
@@ -121,7 +132,10 @@ function ClubCard({ club, isSuperAdmin }: { club: Club; isSuperAdmin: boolean })
         {club.status === "rejected" && club.rejectionReason && (
           <div className="flex items-start gap-1.5 text-xs text-destructive bg-destructive/8 rounded-lg px-2.5 py-2">
             <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
-            <span className="line-clamp-2">{club.rejectionReason}</span>
+            <div>
+              <span className="font-semibold">Reason:</span>{" "}
+              <span className="line-clamp-2">{club.rejectionReason}</span>
+            </div>
           </div>
         )}
 
@@ -132,14 +146,14 @@ function ClubCard({ club, isSuperAdmin }: { club: Club; isSuperAdmin: boolean })
               variant="outline"
               className="flex-1 text-success border-success/30 hover:bg-success/10"
               disabled={approve.isPending}
-              onClick={() =>
-                approve.mutate(club._id, { onError: toastError })
-              }
+              onClick={() => approve.mutate(club._id, { onError: toastError })}
             >
               {approve.isPending ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <><CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Approve</>
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Approve
+                </>
               )}
             </Button>
             <Button
