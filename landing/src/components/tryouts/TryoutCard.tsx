@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { availableSlotsCount, tryoutStatus } from "@/lib/api/tryouts";
+import { tryoutStatus } from "@/lib/api/tryouts";
 import { formatDate, relativeFromNow } from "@/lib/format";
 import type { Tryout } from "@/lib/types";
 
@@ -21,9 +21,9 @@ export function TryoutCard({ tryout }: { tryout: Tryout }) {
   console.info("tryout =>", tryout);
 
   const status = tryoutStatus(tryout);
-  const slots = availableSlotsCount(tryout);
 
   const totalCap = tryout.slots.reduce((s, x) => s + x.capacity, 0);
+  const totalOpen = tryout.slots.reduce((s, x) => s + Math.max(0, x.capacity - x.taken), 0);
   const totalTaken = tryout.slots.reduce((s, x) => s + x.taken, 0);
   const pctFilled = totalCap > 0 ? Math.round((totalTaken / totalCap) * 100) : 0;
   const gradClass = themeBg(tryout.purpose);
@@ -77,7 +77,7 @@ export function TryoutCard({ tryout }: { tryout: Tryout }) {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="h-4 w-4 shrink-0 text-primary/70" />
               <span>
-                {slots} of {totalCap} spots open
+                {totalOpen} of {totalCap} spots open
               </span>
             </div>
           )}
@@ -108,7 +108,7 @@ export function TryoutCard({ tryout }: { tryout: Tryout }) {
             </div>
             <div className="mt-1 flex justify-between text-xs text-muted-foreground">
               <span>{pctFilled}% filled</span>
-              <span>{slots} spots left</span>
+              <span>{totalOpen} spots left</span>
             </div>
           </div>
         )}
