@@ -155,10 +155,7 @@ function TryoutList() {
 
   const navigate = useNavigate();
 
-  console.info("data =>", data);
   const tryouts = data?.tryouts ?? [];
-
-  console.info("tryouts =>", tryouts);
 
   if (isLoading) {
     <div className="flex items-center justify-center">
