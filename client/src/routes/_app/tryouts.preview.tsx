@@ -143,7 +143,7 @@ export default function TryoutPreviewPage() {
             )}
             {tryout.location && (
               <span className="flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-rose-400" />
+                <MapPin className="h-4 w-4" />
                 {tryout.location}
               </span>
             )}
