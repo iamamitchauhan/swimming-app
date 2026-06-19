@@ -955,22 +955,22 @@ export async function sendRegistrationReceivedEmail(opts: {
             color:#2563eb;
           "
         >
-          \${opts.swimmerName}
+          ${opts.swimmerName}
         </p>
       </div>
 
       <p style="font-size:15px;line-height:24px;">
-        Dear \${opts.parentName},
+        Dear ${opts.parentName},
       </p>
 
       <p style="font-size:15px;line-height:24px;">
         Thank you for registering
-        <strong>\${opts.swimmerName}</strong>
+        <strong>${opts.swimmerName}</strong>
         for a swimming tryout with our team.
       </p>
 
       <p style="font-size:15px;line-height:24px;">
-        We are excited to meet <strong>\${opts.swimmerName}</strong> and
+        We are excited to meet <strong>${opts.swimmerName}</strong> and
         evaluate their swimming skills, experience, and goals during the
         scheduled tryout session.
       </p>
@@ -1003,7 +1003,7 @@ export async function sendRegistrationReceivedEmail(opts: {
               Swimmer
             </td>
             <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
-              \${opts.swimmerName}
+              ${opts.swimmerName}
             </td>
           </tr>
 
@@ -1012,7 +1012,7 @@ export async function sendRegistrationReceivedEmail(opts: {
               Tryout
             </td>
             <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
-              \${opts.tryoutName}
+              ${opts.tryoutName}
             </td>
           </tr>
 
@@ -1021,25 +1021,16 @@ export async function sendRegistrationReceivedEmail(opts: {
               Location
             </td>
             <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
-              \${opts.location}
+              ${opts.location}
             </td>
           </tr>
 
           <tr>
             <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;font-weight:600;">
-              Date
+              Date and Time
             </td>
             <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
-              \${opts.sessionDate}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:14px 20px;font-weight:600;">
-              Time
-            </td>
-            <td style="padding:14px 20px;color:#2563eb;font-weight:600;">
-              \${opts.startTime} - \${opts.endTime}
+              ${opts.slotLabel}
             </td>
           </tr>
 
@@ -1072,7 +1063,7 @@ export async function sendRegistrationReceivedEmail(opts: {
 
       <p style="font-size:15px;line-height:24px;">
         Our coaching team looks forward to welcoming your family and getting
-        to know <strong>\${opts.swimmerName}</strong> in the pool.
+        to know <strong>${opts.swimmerName}</strong> in the pool.
       </p>
 
       <p style="font-size:15px;line-height:24px;font-weight:600;color:#2563eb;">
@@ -1097,7 +1088,7 @@ export async function sendRegistrationReceivedEmail(opts: {
       "
     >
       <p style="margin:0;font-size:13px;color:#6b7280;">
-        © \${currentYear} Swimming App. All rights reserved.
+        © ${currentYear} Swimming App. All rights reserved.
       </p>
     </td>
   </tr>
