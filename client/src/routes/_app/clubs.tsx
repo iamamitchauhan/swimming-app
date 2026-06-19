@@ -130,8 +130,11 @@ function ClubCard({ club, isSuperAdmin }: { club: Club; isSuperAdmin: boolean })
           )}
         </div>
         {club.status === "rejected" && club.rejectionReason && (
-          <div className="flex items-start gap-1.5 text-xs text-destructive bg-destructive/8 rounded-lg px-2.5 py-2">
-            <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+          <div className="flex flex-col gap-1.5 text-xs text-destructive bg-destructive/8 rounded-lg px-2.5 py-2">
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              <span className="font-bold uppercase tracking-wider">Rejected</span>
+            </div>
             <div>
               <span className="font-semibold">Reason:</span>{" "}
               <span className="line-clamp-2">{club.rejectionReason}</span>
