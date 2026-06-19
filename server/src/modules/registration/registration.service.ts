@@ -50,6 +50,22 @@ export class RegistrationService {
         status: string;
         scores: PlainRegistration["scores"];
         registeredAt: Date;
+        slot: {
+          id: string;
+          sessionDate: string;
+          startTime: string;
+          endTime: string;
+          label: string;
+          slotIndex: number;
+          capacity: number;
+        } | null;
+        session: {
+          id: string;
+          date: string;
+          startTime: string;
+          endTime: string;
+          label: string;
+        } | null;
       }>;
     }>
   > {
@@ -65,8 +81,12 @@ export class RegistrationService {
 
     for (const reg of registrations) {
       const tryout = reg.tryoutId as any;
+      const swimmer = reg.swimmerId as any;
+      const slot = reg.slotId as any;
+      const session = reg.sessionId as any;
 
-      console.info("tryout => ", tryout);
+      // Skip orphan registrations from deleted tryouts or swimmers
+      if (!tryout || !swimmer) continue;
 
       const tryoutId = tryout._id?.toString?.() ?? tryout.toString?.() ?? tryout;
 
@@ -86,7 +106,6 @@ export class RegistrationService {
         });
       }
 
-      const swimmer = reg.swimmerId as any;
       const entry = tryoutMap.get(tryoutId)!;
       entry.children.push({
         registrationId: reg._id,
@@ -97,6 +116,26 @@ export class RegistrationService {
         status: reg.status,
         scores: reg.scores,
         registeredAt: reg.registeredAt,
+        slot: slot
+          ? {
+              id: slot._id?.toString?.() ?? slot.toString?.() ?? slot,
+              sessionDate: slot.sessionDate ?? "",
+              startTime: slot.startTime ?? "",
+              endTime: slot.endTime ?? "",
+              label: slot.label ?? "",
+              slotIndex: slot.slotIndex ?? 0,
+              capacity: slot.capacity ?? 0,
+            }
+          : null,
+        session: session
+          ? {
+              id: session._id?.toString?.() ?? session.toString?.() ?? session,
+              date: session.date ?? "",
+              startTime: session.startTime ?? "",
+              endTime: session.endTime ?? "",
+              label: session.label ?? "",
+            }
+          : null,
       });
     }
 

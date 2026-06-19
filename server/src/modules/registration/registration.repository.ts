@@ -122,6 +122,8 @@ export class RegistrationRepository {
     return RegistrationModel.find({ parentId })
       .populate("tryoutId", "name status location description theme bannerUrl createdAt startAt")
       .populate("swimmerId", "firstName lastName birthDate")
+      .populate("slotId", "sessionDate startTime endTime label slotIndex capacity")
+      .populate("sessionId", "date startTime endTime label")
       .sort({ registeredAt: -1 })
       .lean<PlainRegistration[]>()
       .exec();

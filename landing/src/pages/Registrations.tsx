@@ -17,6 +17,15 @@ const THEME_CLASSES: Record<string, string> = {
   coral: "bg-linear-to-br from-rose-400 to-orange-500",
 };
 
+function fmtTime(t?: string) {
+  if (!t) return "";
+  if (/^\d{1,2}:\d{2}\s*[AaPp][Mm]$/.test(t)) return t;
+  const [h, m] = t.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return t;
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 function themeBg(theme?: string) {
   return THEME_CLASSES[theme ?? ""] ?? "bg-linear-to-br from-indigo-700 to-slate-900";
 }
@@ -123,6 +132,14 @@ export default function RegistrationsPage() {
                                 <CalendarDays className="size-3.5 shrink-0" />
                                 <span>Registered {formatDate(c.registeredAt)}</span>
                               </div>
+                              {c.slot && (
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <Clock className="size-3.5 shrink-0" />
+                                  <span>
+                                    {fmtTime(c.slot.startTime)} – {fmtTime(c.slot.endTime)}
+                                  </span>
+                                </div>
+                              )}
                             </div>
 
                             {/* <div className="mt-2 space-y-1">
