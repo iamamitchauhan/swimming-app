@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTryouts } from "@/hooks/use-tryouts";
 import { useClubCoaches, useClubState, useAdminState } from "@/hooks/use-clubs";
+import { useNavigate } from "react-router-dom";
 
 function MiniChart() {
   const bars = [40, 65, 50, 75, 60, 90, 70, 95, 80, 100, 85, 110];
@@ -121,8 +122,6 @@ function CoachList() {
 }
 
 function TryoutList() {
-  //  fetch tryout api http://localhost:3001/api/v1/tryouts?page=1&limit=10&sortBy=createdAt&sortOrder=desc
-
   const { data, isLoading, isError, error, isFetching } = useTryouts({
     page: 1,
     limit: 5,
@@ -133,6 +132,8 @@ function TryoutList() {
     sortBy: "createdAt",
     sortOrder: "desc",
   });
+
+  const navigate = useNavigate();
 
   console.info("data =>", data);
   const tryouts = data?.tryouts ?? [];
@@ -151,7 +152,14 @@ function TryoutList() {
             <Waves className="h-4 w-4" />
           </div>
           <div className="flex-1">
-            <div className="text-sm font-medium">{x.name}</div>
+            <div
+              className="text-sm font-medium hover:underline cursor-pointer"
+              onClick={() => {
+                navigate(`/tryouts/view/${x._id}`);
+              }}
+            >
+              {x.name}
+            </div>
             <div className="text-xs text-muted-foreground">
               {x.startAt ? format(new Date(x.startAt), "MMM d, yyyy") : ""}
               {x.startAt && x.endAt ? " · " : ""}
@@ -282,7 +290,7 @@ function AdminDash() {
           accent="warning"
         />
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3 items-start">
         <Card title="Club Summary">
           {stateLoading || !clubState ? (
             <div className="flex items-center justify-center h-24">
