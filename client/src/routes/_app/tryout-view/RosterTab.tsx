@@ -190,10 +190,10 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
                   <td className="px-4 py-3 text-gray-600">{r.segment_name || "—"}</td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                     {r.session_date ? fmtDate(r.session_date) : "—"}
-                    {r.slot_start && (
+                    {r.startTime && (
                       <span className="text-gray-400">
                         {" "}
-                        · {fmtTime(r.slot_start)}–{fmtTime(r.slot_end)}
+                        · {fmtTime(r.startTime)}–{fmtTime(r.endTime)}
                       </span>
                     )}
                   </td>
