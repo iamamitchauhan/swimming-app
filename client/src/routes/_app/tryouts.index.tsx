@@ -275,7 +275,7 @@ export default function TryoutsList() {
         {!isLoading && !isError && (
           <>
             <div
-              className={`overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden ${isFetching ? "opacity-60" : ""}`}
+              className={`overflow-x-auto bg-white rounded-xl rounded-bl-none rounded-br-none border border-gray-200 overflow-hidden ${isFetching ? "opacity-60" : ""}`}
             >
               <Table>
                 <TableHeader className="bg-gray-900 text-xs uppercase tracking-wide">

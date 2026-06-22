@@ -11,16 +11,16 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { TryoutCard } from "@/components/tryouts/TryoutCard";
-import { tryoutsQuery } from "@/lib/queries";
+import { tryoutsQuery, clubsQuery } from "@/lib/queries";
 import { uniqueValues, type TryoutFilters } from "@/lib/api/tryouts";
 
 export default function TryoutsPage() {
   const [filters, setFilters] = useState<TryoutFilters>({ sort: "latest" });
   const { data: tryouts = [], isFetching } = useQuery(tryoutsQuery(filters));
+  const { data: clubs = [] } = useQuery(clubsQuery());
   const ageGroups = uniqueValues("ageGroup");
   const states = uniqueValues("state");
   const cities = uniqueValues("city");
-  const clubs = uniqueValues("club");
   const update = <K extends keyof TryoutFilters>(k: K, v: TryoutFilters[K]) =>
     setFilters((f) => ({ ...f, [k]: v }));
 
@@ -32,18 +32,48 @@ export default function TryoutsPage() {
           {tryouts.length} tryout{tryouts.length === 1 ? "" : "s"} available
         </p>
       </header>
-      {/* <div className="mb-6 rounded-2xl border border-border/60 bg-card p-4 shadow-soft">
+      <div className="mb-6 rounded-2xl border border-border/60 bg-card p-4 shadow-soft">
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search by tryout name, club, or city…" value={filters.search ?? ""} onChange={(e) => update("search", e.target.value)} className="pl-9" />
+          <Input
+            placeholder="Search by tryout name, club, or city…"
+            value={filters.search ?? ""}
+            onChange={(e) => update("search", e.target.value)}
+            className="pl-9"
+          />
         </div>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-          <FilterSelect placeholder="Age group" value={filters.ageGroup} options={ageGroups} onChange={(v) => update("ageGroup", v)} />
-          <FilterSelect placeholder="State" value={filters.state} options={states} onChange={(v) => update("state", v)} />
-          <FilterSelect placeholder="City" value={filters.city} options={cities} onChange={(v) => update("city", v)} />
-          <FilterSelect placeholder="Club" value={filters.club} options={clubs} onChange={(v) => update("club", v)} />
-          <Select value={filters.sort} onValueChange={(v) => update("sort", v as TryoutFilters["sort"])}>
-            <SelectTrigger><SelectValue placeholder="Sort" /></SelectTrigger>
+          <FilterSelect
+            placeholder="Age group"
+            value={filters.ageGroup}
+            options={ageGroups}
+            onChange={(v) => update("ageGroup", v)}
+          />
+          {/* <FilterSelect
+            placeholder="State"
+            value={filters.state}
+            options={states}
+            onChange={(v) => update("state", v)}
+          />
+          <FilterSelect
+            placeholder="City"
+            value={filters.city}
+            options={cities}
+            onChange={(v) => update("city", v)}
+          /> */}
+          <FilterSelect
+            placeholder="Club"
+            value={filters.club}
+            options={clubs}
+            onChange={(v) => update("club", v)}
+          />
+          <Select
+            value={filters.sort}
+            onValueChange={(v) => update("sort", v as TryoutFilters["sort"])}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="latest">Latest</SelectItem>
               <SelectItem value="earliest">Earliest Date</SelectItem>
@@ -51,8 +81,12 @@ export default function TryoutsPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="mt-3 flex justify-end"><Button variant="ghost" size="sm" onClick={() => setFilters({ sort: "earliest" })}>Clear filters</Button></div>
-      </div> */}
+        <div className="mt-3 flex justify-end">
+          <Button variant="ghost" size="sm" onClick={() => setFilters({ sort: "earliest" })}>
+            Clear filters
+          </Button>
+        </div>
+      </div>
       {isFetching && tryouts.length === 0 ? (
         <p className="text-muted-foreground">Loading…</p>
       ) : tryouts.length === 0 ? (

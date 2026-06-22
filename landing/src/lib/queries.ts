@@ -1,5 +1,11 @@
 import { queryOptions } from "@tanstack/react-query";
-import { fetchStats, fetchTryoutById, fetchTryouts, type TryoutFilters } from "./api/tryouts";
+import {
+  fetchClubs,
+  fetchStats,
+  fetchTryoutById,
+  fetchTryouts,
+  type TryoutFilters,
+} from "./api/tryouts";
 import { fetchChildren } from "./api/children";
 import {
   cancelRegistrationById,
@@ -24,6 +30,7 @@ export const qk = {
   myTryouts: ["myTryouts"] as const,
   registrationQuestions: (tryoutId: string) => ["registrationQuestions", tryoutId] as const,
   cancelRegistration: ["cancelRegistration"] as const,
+  clubs: ["clubs"] as const,
 };
 
 export const parentQuery = () => queryOptions({ queryKey: qk.parent, queryFn: getCurrentParent });
@@ -61,5 +68,12 @@ export const registrationQuestionsQuery = (tryoutId: string) =>
     queryKey: qk.registrationQuestions(tryoutId),
     queryFn: () => fetchTryoutRegistrationQuestions(tryoutId),
     enabled: !!tryoutId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+export const clubsQuery = () =>
+  queryOptions({
+    queryKey: qk.clubs,
+    queryFn: fetchClubs,
     staleTime: 5 * 60 * 1000,
   });

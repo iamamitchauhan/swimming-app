@@ -104,7 +104,7 @@ function mapTryout(raw: any): Tryout {
   return {
     id: raw._id ?? raw.id,
     name: raw.name,
-    club: raw.clubId ?? "",
+    club: raw.clubName ?? raw.clubId ?? "",
     ageGroup: firstSegment ? `${firstSegment.minAge}–${firstSegment.maxAge}` : "",
     skillLevel: firstSegment?.level ?? "",
     state: "",
@@ -164,6 +164,13 @@ export async function fetchTryoutById(id: string): Promise<Tryout | null> {
   if (!response.ok) return null;
   const body = await response.json();
   return body.data ? mapTryout(body.data) : null;
+}
+
+export async function fetchClubs(): Promise<string[]> {
+  const response = await fetch(`${API_BASE}/public/clubs`);
+  if (!response.ok) throw new Error("Failed to fetch clubs");
+  const body = await response.json();
+  return body.data?.clubs ?? [];
 }
 
 export async function fetchStats() {

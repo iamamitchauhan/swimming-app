@@ -59,6 +59,19 @@ export class PublicController {
   };
 
   /**
+   * GET /public/clubs
+   * Returns unique club names that have open tryouts
+   */
+  getClubs = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const clubs = await this.tryoutRepo.findDistinctClubs();
+      sendSuccess(res, { clubs }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
    * GET /public/stats
    * Returns platform-wide stats for the public landing page
    */

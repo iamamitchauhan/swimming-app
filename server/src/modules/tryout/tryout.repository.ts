@@ -163,6 +163,14 @@ export class TryoutRepository {
               },
             },
             {
+              $lookup: {
+                from: "clubs",
+                localField: "clubId",
+                foreignField: "_id",
+                as: "_club",
+              },
+            },
+            {
               $project: {
                 _id: 1,
                 name: 1,
@@ -180,6 +188,7 @@ export class TryoutRepository {
                 steps: 1,
                 faqs: 1,
                 clubId: 1,
+                clubName: { $arrayElemAt: ["$_club.name", 0] },
                 createdBy: 1,
                 createdAt: 1,
                 updatedAt: 1,
@@ -303,7 +312,14 @@ export class TryoutRepository {
                 as: "_regCount",
               },
             },
-
+            {
+              $lookup: {
+                from: "clubs",
+                localField: "clubId",
+                foreignField: "_id",
+                as: "_club",
+              },
+            },
             {
               $project: {
                 _id: 1,
@@ -322,6 +338,7 @@ export class TryoutRepository {
                 steps: 1,
                 faqs: 1,
                 clubId: 1,
+                clubName: { $arrayElemAt: ["$_club.name", 0] },
                 createdBy: 1,
                 createdAt: 1,
                 updatedAt: 1,
@@ -386,6 +403,32 @@ export class TryoutRepository {
       waitlistCount: 0,
       totalCount: 0,
     };
+  }
+
+  async findDistinctClubs(): Promise<string[]> {
+    const pipeline: any[] = [
+      {
+        $addFields: {
+          status: {
+            $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }],
+          },
+        },
+      },
+      { $match: { status: "open" } },
+      {
+        $lookup: {
+          from: "clubs",
+          localField: "clubId",
+          foreignField: "_id",
+          as: "_club",
+        },
+      },
+      { $unwind: "$_club" },
+      { $group: { _id: "$_club.name" } },
+      { $sort: { _id: 1 } },
+    ];
+    const result = await TryoutModel.aggregate(pipeline).exec();
+    return result.map((r) => r._id as string);
   }
 
   async getPlatformStats(): Promise<{

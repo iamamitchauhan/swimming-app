@@ -18,6 +18,7 @@ const controller = new PublicController(tryoutRepository);
 const publicRouter = Router();
 
 publicRouter.get("/stats", controller.getStats);
+publicRouter.get("/clubs", controller.getClubs);
 publicRouter.get("/tryouts", controller.listTryouts);
 publicRouter.get("/tryouts/:id", controller.getTryoutById);
 
