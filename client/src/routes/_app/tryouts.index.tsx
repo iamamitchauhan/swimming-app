@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
+import { SegmentBadges } from "@/components/swimmer-tryout/SegmentBadges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -274,26 +275,20 @@ export default function TryoutsList() {
         {!isLoading && !isError && (
           <>
             <div
-              className={`overflow-x-auto transition-opacity duration-150 ${isFetching ? "opacity-60" : ""}`}
+              className={`overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden ${isFetching ? "opacity-60" : ""}`}
             >
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-gray-900 text-xs uppercase tracking-wide">
                   <TableRow>
                     <TableHead>
-                      <button
-                        className="flex items-center hover:text-foreground"
-                        onClick={() => handleSortField("name")}
-                      >
+                      <div className="flex items-center " onClick={() => handleSortField("name")}>
                         Title <SortIcon field="name" />
-                      </button>
+                      </div>
                     </TableHead>
                     <TableHead>
-                      <button
-                        className="flex items-center hover:text-foreground"
-                        onClick={() => handleSortField("status")}
-                      >
+                      <div className="flex items-center " onClick={() => handleSortField("status")}>
                         Status <SortIcon field="status" />
-                      </button>
+                      </div>
                     </TableHead>
                     <TableHead>Start Date</TableHead>
                     <TableHead>Location</TableHead>
@@ -332,7 +327,7 @@ export default function TryoutsList() {
                             {statusLabel(t.status)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
+                        <TableCell className="text-muted-foreground">
                           {firstSessionDate(t)}
                         </TableCell>
                         <TableCell
@@ -345,47 +340,17 @@ export default function TryoutsList() {
                               : t.location
                             : "—"}
                         </TableCell>
-                        <TableCell className="text-center font-medium">
+                        <TableCell className="text-center">
                           {t.sessionCount ?? t.sessions?.length ?? 0}
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {(t.segments ?? []).length === 0 ? (
-                              <span className="text-muted-foreground text-sm">—</span>
-                            ) : (
-                              (t.segments ?? []).slice(0, 3).map((seg, i) => {
-                                const badgeColors = [
-                                  "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-50",
-                                  "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50",
-                                  "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50",
-                                ];
-                                return (
-                                  <Badge
-                                    key={i}
-                                    variant="outline"
-                                    className={`text-[10px] font-medium whitespace-nowrap ${badgeColors[i % badgeColors.length]}`}
-                                  >
-                                    {seg.minAge}–{seg.maxAge} {seg.level}
-                                  </Badge>
-                                );
-                              })
-                            )}
-                            {(t.segments ?? []).length > 3 && (
-                              <span className="text-[10px] text-muted-foreground">
-                                +{t.segments.length - 3}
-                              </span>
-                            )}
-                          </div>
+                          <SegmentBadges segments={t.segments ?? []} />
                         </TableCell>
-                        <TableCell className="text-center font-medium">
-                          {t.totalSlots ?? 0}
-                        </TableCell>
+                        <TableCell className="text-center">{t.totalSlots ?? 0}</TableCell>
                         <TableCell className="text-center">
                           <span className="font-medium">{t.registeredCount ?? 0}</span>
                           {(t.totalSlots ?? 0) > 0 && (
-                            <span className="text-muted-foreground text-sm">
-                              /{t.totalSlots * t.swimmersPerSlot}
-                            </span>
+                            <span className="text-sm">/{t.totalSlots * t.swimmersPerSlot}</span>
                           )}
                         </TableCell>
                         <TableCell>

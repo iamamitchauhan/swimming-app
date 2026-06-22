@@ -177,23 +177,25 @@ export default function UsersPage() {
             <p className="text-sm">Failed to load users. Please refresh.</p>
           </div>
         )}
-        {!isLoading && !isError && isSuperAdmin && (
+        {/* {!isLoading && !isError && isSuperAdmin && (
           <div className="px-4 py-2 border-b border-border flex items-center gap-2 text-sm text-muted-foreground">
             <span>
               {total} user{total !== 1 ? "s" : ""}
             </span>
           </div>
-        )}
+        )} */}
         {!isLoading && !isError && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-gray-900 text-xs uppercase tracking-wide">
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  {(isAdmin || isSuperAdmin) && <TableHead className="w-16">Actions</TableHead>}
+                  <TableHead className="text-white">Name</TableHead>
+                  <TableHead className="text-white">Email</TableHead>
+                  <TableHead className="text-white">Role</TableHead>
+                  <TableHead className="text-white">Status</TableHead>
+                  {(isAdmin || isSuperAdmin) && (
+                    <TableHead className="w-16 text-white">Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>

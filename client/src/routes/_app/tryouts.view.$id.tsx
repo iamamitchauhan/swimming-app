@@ -259,7 +259,7 @@ export default function TryoutViewPage() {
         />
       </div>
       {/* ── Tab container ──────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="overflow-hidden">
         {/* Tab bar */}
 
         {/* Tab content */}

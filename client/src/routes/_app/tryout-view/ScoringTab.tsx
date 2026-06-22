@@ -120,9 +120,9 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
         <div className="text-xs text-gray-400">Scores 1–10 · Safety = Entry/Exit/Float</div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm min-w-max">
-          <thead className="bg-gray-900 text-white text-xs uppercase">
+          <thead className="bg-gray-900 text-white text-xs uppercase tracking-wide">
             <tr>
               <th className="px-3 py-3 text-left sticky left-0 bg-gray-900">#</th>
               <th className="px-3 py-3 text-left sticky left-8 bg-gray-900">Swimmer</th>
@@ -151,7 +151,7 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
               const avgScore = avg(merged);
               const isBlocked = r.status === "cancelled" || r.status === "rejected";
               return (
-                <tr key={r.id} className="hover:bg-blue-50/30 transition">
+                <tr key={r.id} className="hover:bg-blue-50/30 transition text-xs">
                   <td className="px-3 py-3 text-gray-400 text-xs sticky left-0 bg-white">
                     {i + 1}
                   </td>

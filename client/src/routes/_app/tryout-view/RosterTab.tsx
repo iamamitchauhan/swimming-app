@@ -97,16 +97,16 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
   return (
     <div>
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-50">
+      <div className="flex flex-wrap items-center gap-3 py-4 pt-0 border-b border-gray-50">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search swimmer or parent email…"
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1 min-w-48"
+          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1 min-w-48"
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
+            <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
               {tryout.segments?.find((seg) => (seg as any).id === segFilter)?.name ||
                 (segFilter === "" ? "All segments" : segFilter)}
               <ChevronDown className="h-4 w-4 text-gray-500" />
@@ -127,7 +127,7 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer capitalize">
+            <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer capitalize">
               {statusFilter === "" ? "All status" : statusFilter}
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </button>
@@ -144,9 +144,9 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-900 text-white text-xs uppercase tracking-wide">
+          <thead className="bg-gray-900 text-white uppercase tracking-wide">
             <tr>
               {[
                 "Swimmer",
@@ -159,7 +159,7 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
                 "Avg Score",
                 "Action",
               ].map((h) => (
-                <th key={h} className="px-4 py-3 text-left font-semibold">
+                <th key={h} className="px-4 py-3 text-left font-semibold text-xs">
                   {h}
                 </th>
               ))}
@@ -176,9 +176,9 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
             {filteredRoster.map((r) => {
               const verSt = r.usa_verification_status || "pending";
               return (
-                <tr key={r.id} className="hover:bg-gray-50 transition">
+                <tr key={r.id} className="hover:bg-gray-50 transition text-xs">
                   <td
-                    className="px-4 py-3 font-medium text-blue-700 cursor-pointer hover:underline"
+                    className="px-4 py-3 text-blue-700 cursor-pointer hover:underline"
                     onClick={() => {
                       setSelectedRegId(r.id);
                       setModalOpen(true);
@@ -190,10 +190,10 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
                   <td className="px-4 py-3 text-gray-600">{r.segment_name || "—"}</td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                     {r.session_date ? fmtDate(r.session_date) : "—"}
-                    {r.startTime && (
+                    {r.slot_start && (
                       <span className="text-gray-400">
                         {" "}
-                        · {fmtTime(r.startTime)}–{fmtTime(r.endTime)}
+                        · {fmtTime(r.slot_start)}–{fmtTime(r.slot_end)}
                       </span>
                     )}
                   </td>

@@ -32,9 +32,9 @@ interface Props {
 
 export function SlotsTab({ slots }: Props) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-900 text-white text-xs uppercase">
+    <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <table className="w-full">
+        <thead className="bg-gray-900 text-white text-xs uppercase tracking-wide">
           <tr>
             {["Session", "Date", "Time", "Capacity", "Registered", "Available"].map((h) => (
               <th key={h} className="px-4 py-3 text-left font-semibold">
@@ -52,7 +52,7 @@ export function SlotsTab({ slots }: Props) {
             </tr>
           )}
           {slots.map((s, i) => (
-            <tr key={s._id || i} className="hover:bg-gray-50">
+            <tr key={s._id || i} className="hover:bg-gray-50 text-xs">
               <td className="px-4 py-3 text-gray-600">{s.label || "—"}</td>
               <td className="px-4 py-3 text-gray-600">{fmtDate(s.sessionDate)}</td>
               <td className="px-4 py-3 whitespace-nowrap">

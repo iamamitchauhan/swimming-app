@@ -1,10 +1,29 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { CheckCircle2, Clock, XCircle, MapPin, CalendarDays, PlusCircle, X } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  XCircle,
+  MapPin,
+  CalendarDays,
+  PlusCircle,
+  X,
+  Loader2,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { parentQuery, myTryoutsQuery, cancelRegistration } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { cancelRegistrationById } from "@/lib/api/registrations";
@@ -51,6 +70,7 @@ export default function RegistrationsPage() {
   const { data: parent, isLoading } = useQuery(parentQuery());
   const { data: tryouts = [], isLoading: loadingTryouts } = useQuery(myTryoutsQuery());
   const queryClient = useQueryClient();
+  const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
 
   const cancelReg = useMutation({
     mutationFn: (id: string) => cancelRegistrationById(id),
@@ -161,15 +181,20 @@ export default function RegistrationsPage() {
 
                             {t.status === "open" &&
                             (["Registered", "Waitlisted"] as string[]).includes(s.label) ? (
-                              <span
-                                onClick={() => {
-                                  cancelReg.mutate(c.registrationId);
-                                }}
-                                className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 text-red-600 hover:text-red-700 cursor-pointer`}
-                              >
-                                <X className="size-3.5" />
-                                Cancel
-                              </span>
+                              cancelReg.isPending && cancelReg.variables === c.registrationId ? (
+                                <span className="text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 text-gray-400">
+                                  <Loader2 className="size-3.5 animate-spin" />
+                                  Cancelling…
+                                </span>
+                              ) : (
+                                <span
+                                  onClick={() => setPendingCancelId(c.registrationId)}
+                                  className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 text-red-600 hover:text-red-700 cursor-pointer`}
+                                >
+                                  <X className="size-3.5" />
+                                  Cancel
+                                </span>
+                              )
                             ) : null}
                           </div>
                         </div>
@@ -194,6 +219,36 @@ export default function RegistrationsPage() {
           })}
         </div>
       )}
+      <AlertDialog
+        open={!!pendingCancelId}
+        onOpenChange={(open) => !open && setPendingCancelId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Registration?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Your spot will be released and you may lose it if slots
+              fill up.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingCancelId(null)}>
+              Keep Registration
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (pendingCancelId) {
+                  cancelReg.mutate(pendingCancelId);
+                  setPendingCancelId(null);
+                }
+              }}
+            >
+              Yes, Cancel
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

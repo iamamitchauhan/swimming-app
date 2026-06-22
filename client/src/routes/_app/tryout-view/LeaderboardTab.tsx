@@ -27,13 +27,16 @@ export function LeaderboardTab({ leaderboard, onDecision }: Props) {
   const segments = [...new Set(leaderboard.map((l) => l.segment_name || l.age_segment || "Other"))];
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="py-4 space-y-6">
       {segments.map((seg) => {
         const group = leaderboard.filter(
           (l) => (l.segment_name || l.age_segment || "Other") === seg,
         );
         return (
-          <div key={seg} className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+          <div
+            key={seg}
+            className="overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden"
+          >
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
               <h3 className="font-semibold text-gray-800">{seg}</h3>
               <span className="text-xs text-gray-400">{group.length} scored</span>
@@ -53,7 +56,9 @@ export function LeaderboardTab({ leaderboard, onDecision }: Props) {
                     <span className="text-gray-400 text-sm ml-2">age {l.swimmer_age}</span>
                   </div>
                   <div className="w-12 text-right">
-                    <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Score</div>
+                    <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+                      Score
+                    </div>
                     <div className="text-xl font-bold text-gray-900">
                       {parseFloat(String(l.total_score)).toFixed(1)}
                     </div>

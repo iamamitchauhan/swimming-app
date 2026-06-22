@@ -4,17 +4,17 @@ import type { Registration } from "@/lib/api/tryouts.api";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const VERIFY_COLORS: Record<string, string> = {
-  pending:      "bg-gray-100 text-gray-500",
+  pending: "bg-gray-100 text-gray-500",
   needs_review: "bg-yellow-100 text-yellow-700",
-  verified:     "bg-green-100 text-green-700",
-  rejected:     "bg-red-100 text-red-500",
+  verified: "bg-green-100 text-green-700",
+  rejected: "bg-red-100 text-red-500",
 };
 
 const VERIFY_LABELS: Record<string, string> = {
-  pending:      "Pending",
+  pending: "Pending",
   needs_review: "Needs review",
-  verified:     "Verified",
-  rejected:     "Rejected",
+  verified: "Verified",
+  rejected: "Rejected",
 };
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -39,10 +39,16 @@ export function UsaVerifyTab({ roster, onSetVerifyStatus }: Props) {
   ).length;
 
   const filterOptions = [
-    { key: "all",         label: `All (${usaMembers.length})` },
+    { key: "all", label: `All (${usaMembers.length})` },
     { key: "needs_review", label: `Needs review (${needsReviewCount})` },
-    { key: "verified",    label: `Verified (${usaMembers.filter((r) => r.usa_verification_status === "verified").length})` },
-    { key: "rejected",    label: `Rejected (${usaMembers.filter((r) => r.usa_verification_status === "rejected").length})` },
+    {
+      key: "verified",
+      label: `Verified (${usaMembers.filter((r) => r.usa_verification_status === "verified").length})`,
+    },
+    {
+      key: "rejected",
+      label: `Rejected (${usaMembers.filter((r) => r.usa_verification_status === "rejected").length})`,
+    },
   ];
 
   const filtered = usaMembers.filter((r) => {
@@ -74,17 +80,22 @@ export function UsaVerifyTab({ roster, onSetVerifyStatus }: Props) {
           ))}
         </div>
         <p className="text-xs text-gray-400 mt-2">
-          Cross-check IDs against the USA Swimming member directory, then mark each swimmer Verified, Needs review, or Rejected.
+          Cross-check IDs against the USA Swimming member directory, then mark each swimmer
+          Verified, Needs review, or Rejected.
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="text-xs text-gray-500 uppercase border-b border-gray-100">
+          <thead className="bg-gray-900 text-white text-xs uppercase tracking-wide">
             <tr>
-              {["Swimmer", "Age", "Segment", "Previous Club", "USA-S ID", "Status & Actions"].map((h) => (
-                <th key={h} className="px-3 py-2 text-left">{h}</th>
-              ))}
+              {["Swimmer", "Age", "Segment", "Previous Club", "USA-S ID", "Status & Actions"].map(
+                (h) => (
+                  <th key={h} className="px-3 py-3 text-left">
+                    {h}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -101,7 +112,9 @@ export function UsaVerifyTab({ roster, onSetVerifyStatus }: Props) {
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="px-3 py-3">
                     <div className="font-medium text-gray-900">{r.swimmer_name}</div>
-                    <div className="text-xs text-gray-400">{r.guardian_email || r.parent_email}</div>
+                    <div className="text-xs text-gray-400">
+                      {r.guardian_email || r.parent_email}
+                    </div>
                   </td>
                   <td className="px-3 py-3 text-gray-500">{r.swimmer_age}</td>
                   <td className="px-3 py-3 text-gray-600">{r.segment_name || "—"}</td>

@@ -6,7 +6,13 @@ import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { tryoutSchema, TryoutFormValues, WIZARD_STEPS, STEP_FIELDS } from "./tryout-steps/shared";
+import {
+  tryoutSchema,
+  TryoutFormValues,
+  WIZARD_STEPS,
+  STEP_FIELDS,
+  LEVELS,
+} from "./tryout-steps/shared";
 import { StepBasics } from "./tryout-steps/step-basics";
 import { StepBranding } from "./tryout-steps/step-branding";
 import { StepSessions } from "./tryout-steps/step-sessions";
@@ -73,12 +79,19 @@ export default function TryoutEditPage() {
       sessions: [{ date: "", startTime: "", endTime: "", label: "" }],
       slotDuration: 30,
       swimmersPerSlot: 4,
-      segments: [],
+      segments: [
+        {
+          name: "",
+          minAge: 5,
+          maxAge: 10,
+          level: LEVELS[0],
+        },
+      ],
       steps: [],
       additionalInstructions: "",
       ctaLabel: "Reserve your slot",
       highlights: "",
-      faqs: [],
+      faqs: [{ question: "", answer: "" }],
     },
   });
 

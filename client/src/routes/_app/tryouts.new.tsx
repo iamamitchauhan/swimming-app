@@ -12,6 +12,7 @@ import {
   WIZARD_STEPS,
   STEP_FIELDS,
   DEFAULT_STEPS,
+  LEVELS,
 } from "./tryout-steps/shared";
 import { StepBasics } from "./tryout-steps/step-basics";
 import { StepBranding } from "./tryout-steps/step-branding";
@@ -65,12 +66,19 @@ export default function TryoutNewPage() {
       sessions: [{ date: "", startTime: "", endTime: "", label: "" }],
       slotDuration: 30,
       swimmersPerSlot: 4,
-      segments: [],
+      segments: [
+        {
+          name: "",
+          minAge: 5,
+          maxAge: 10,
+          level: LEVELS[0],
+        },
+      ],
       steps: DEFAULT_STEPS,
       additionalInstructions: "",
       ctaLabel: "Reserve your slot",
       highlights: "",
-      faqs: [],
+      faqs: [{ question: "", answer: "" }],
     },
   });
 
