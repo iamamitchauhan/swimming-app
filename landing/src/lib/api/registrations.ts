@@ -14,6 +14,7 @@ export interface RegistrationQuestion {
   required: boolean;
   placeholder?: string;
   options?: string[];
+  meta?: Record<string, any>;
 }
 
 export async function fetchTryoutRegistrationQuestions(

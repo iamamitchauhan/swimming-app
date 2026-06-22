@@ -184,11 +184,11 @@ export default function TryoutViewPage() {
     { key: "roster", label: `Roster (${registered.length})` },
     { key: "slots", label: "Slots" },
     { key: "waitlist", label: `Waitlist (${waitlisted.length})` },
-    {
-      key: "usa-verify",
-      label: "USA-S Verify",
-      badge: needsReviewCount > 0 ? needsReviewCount : null,
-    },
+    // {
+    //   key: "usa-verify",
+    //   label: "USA-S Verify",
+    //   badge: needsReviewCount > 0 ? needsReviewCount : null,
+    // },
     { key: "scoring", label: "Scoring" },
     { key: "leaderboard", label: "Leaderboard" },
     // { key: "comms",       label: "Comms" },
@@ -252,7 +252,7 @@ export default function TryoutViewPage() {
           tabs={TABS.map((t) => ({
             value: t.key,
             label: t.label,
-            badge: t.badge != null ? String(t.badge) : undefined,
+            // badge: t.badge != null ? String(t.badge) : undefined,
           }))}
           active={tab}
           onChange={(value) => (value === "leaderboard" ? loadLeaderboard() : setTab(value))}
@@ -271,9 +271,9 @@ export default function TryoutViewPage() {
 
         {tab === "waitlist" && <WaitlistTab waitlisted={waitlisted} onPromote={promoteWaitlist} />}
 
-        {tab === "usa-verify" && (
+        {/* {tab === "usa-verify" && (
           <UsaVerifyTab roster={roster} onSetVerifyStatus={setVerifyStatus} />
-        )}
+        )} */}
 
         {tab === "scoring" && <ScoringTab registered={registered} onSaveScore={saveScore} />}
 

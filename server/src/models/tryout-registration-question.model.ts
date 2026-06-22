@@ -1,8 +1,8 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type QuestionType = 'text' | 'textarea' | 'radio' | 'checkbox';
+export type QuestionType = "text" | "textarea" | "radio" | "checkbox";
 
 export interface IRegistrationQuestion {
   categoryId: string;
@@ -13,6 +13,7 @@ export interface IRegistrationQuestion {
   required: boolean;
   placeholder?: string;
   options?: string[];
+  meta?: Record<string, any>;
 }
 
 export interface ITryoutRegistrationQuestion extends Document {
@@ -31,12 +32,13 @@ const RegistrationQuestionSchema = new Schema<IRegistrationQuestion>(
     questionIndex: { type: Number, required: true },
     type: {
       type: String,
-      enum: ['text', 'textarea', 'radio', 'checkbox'],
+      enum: ["text", "textarea", "radio", "checkbox"],
       required: true,
     },
     label: { type: String, required: true, trim: true },
     required: { type: Boolean, default: false },
     placeholder: { type: String, default: null },
+    meta: { type: Schema.Types.Mixed, default: undefined },
     options: { type: [String], default: undefined },
   },
   { _id: false },
@@ -48,7 +50,7 @@ const TryoutRegistrationQuestionSchema = new Schema<ITryoutRegistrationQuestion>
   {
     tryoutId: {
       type: Schema.Types.ObjectId,
-      ref: 'Tryout',
+      ref: "Tryout",
       required: true,
       unique: true,
       index: true,
@@ -59,15 +61,14 @@ const TryoutRegistrationQuestionSchema = new Schema<ITryoutRegistrationQuestion>
     },
   },
   {
-    collection: 'tryout_registration_questions',
+    collection: "tryout_registration_questions",
     timestamps: true,
   },
 );
 
 // ─── Export ───────────────────────────────────────────────────────────────────
 
-export const TryoutRegistrationQuestionModel: Model<ITryoutRegistrationQuestion> =
-  mongoose.model<ITryoutRegistrationQuestion>(
-    'TryoutRegistrationQuestion',
-    TryoutRegistrationQuestionSchema,
-  );
+export const TryoutRegistrationQuestionModel: Model<ITryoutRegistrationQuestion> = mongoose.model<ITryoutRegistrationQuestion>(
+  "TryoutRegistrationQuestion",
+  TryoutRegistrationQuestionSchema,
+);

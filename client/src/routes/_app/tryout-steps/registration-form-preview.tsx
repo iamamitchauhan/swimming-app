@@ -74,6 +74,8 @@ interface Props {
 }
 
 export function RegistrationFormPreview({ selectedQuestions }: Props) {
+  console.info("selectedQuestions =>", selectedQuestions);
+
   return (
     <section id="registration-section" className="mt-10">
       <h2 className="mb-5 text-xl font-bold">Complete Registration</h2>
@@ -130,7 +132,43 @@ export function RegistrationFormPreview({ selectedQuestions }: Props) {
         {selectedQuestions.length > 0 && (
           <div className="space-y-5">
             {selectedQuestions.map((q, idx) => {
-              if (q.type === "text") {
+              const isSwimTime = q.meta?.inputType === "swim-time";
+              if (q.type === "text" && isSwimTime) {
+                return (
+                  <Field key={idx} label={q.label} required={q.required}>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <input
+                          disabled
+                          className="w-14 h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed text-center"
+                          placeholder="MM"
+                        />
+                        <span className="text-muted-foreground">:</span>
+                        <input
+                          disabled
+                          className="w-14 h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed text-center"
+                          placeholder="SS"
+                        />
+                        <span className="text-muted-foreground">.</span>
+                        <input
+                          disabled
+                          className="w-16 h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed text-center"
+                          placeholder="ms"
+                        />
+                      </div>
+                      <select
+                        disabled
+                        className="h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed"
+                      >
+                        {((q.meta?.unitOptions as string[]) ?? ["yards", "meters"]).map((u) => (
+                          <option key={u}>{u}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </Field>
+                );
+              }
+              if (q.type === "text" && !isSwimTime) {
                 return (
                   <Field key={idx} label={q.label} required={q.required}>
                     <input

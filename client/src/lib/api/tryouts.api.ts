@@ -58,7 +58,7 @@ export interface Tryout {
   ctaLabel: string;
   highlights?: string;
   additionalInstructions?: string;
-  status: "draft" | "open" | "published";
+  status: "draft" | "open" | "published" | "closed";
   sessions: Session[];
   segments: Segment[];
   steps: Step[];

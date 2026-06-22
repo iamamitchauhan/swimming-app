@@ -1,8 +1,8 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const QUESTION_TYPES = ['text', 'textarea', 'radio', 'checkbox'] as const;
+export const QUESTION_TYPES = ["text", "textarea", "radio", "checkbox"] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -13,6 +13,7 @@ export interface IQuestion {
   required: boolean;
   placeholder?: string;
   options?: string[];
+  meta?: Record<string, any>;
 }
 
 export interface IQuestionCategory extends Document {
@@ -45,6 +46,10 @@ const QuestionSchema = new Schema<IQuestion>(
       type: String,
       default: null,
     },
+    meta: {
+      type: Schema.Types.Mixed,
+      default: undefined,
+    },
     options: {
       type: [String],
       default: undefined,
@@ -73,7 +78,7 @@ const QuestionCategorySchema = new Schema<IQuestionCategory>(
     },
   },
   {
-    collection: 'question_library',
+    collection: "question_library",
     timestamps: true,
   },
 );
@@ -84,5 +89,4 @@ QuestionCategorySchema.index({ sortOrder: 1 });
 
 // ─── Export ───────────────────────────────────────────────────────────────────
 
-export const QuestionLibraryModel: Model<IQuestionCategory> =
-  mongoose.model<IQuestionCategory>('QuestionLibrary', QuestionCategorySchema);
+export const QuestionLibraryModel: Model<IQuestionCategory> = mongoose.model<IQuestionCategory>("QuestionLibrary", QuestionCategorySchema);

@@ -112,12 +112,13 @@ export default function TryoutPreviewPage() {
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
       {/* ── Preview banner ─────────────────────────────────────────── */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-amber-500/30 bg-white px-6 py-2.5">
-        <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
-          Preview Mode — this is how your tryout looks to registrants
-        </span>
         <Button size="sm" variant="ghost" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
+        <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
+          Preview Mode — this is how your tryout looks to registrants
+        </span>
+        <div></div>
       </div>
 
       {/* ── Hero ───────────────────────────────────────────────────── */}

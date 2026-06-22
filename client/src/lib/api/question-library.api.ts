@@ -10,6 +10,7 @@ export interface LibraryQuestion {
   required: boolean;
   placeholder?: string;
   options?: string[];
+  meta?: Record<string, any>;
 }
 
 export interface QuestionCategory {
@@ -31,6 +32,7 @@ export interface SelectedQuestion {
   label: string;
   required: boolean;
   placeholder?: string;
+  meta?: Record<string, any>;
   options?: string[];
 }
 

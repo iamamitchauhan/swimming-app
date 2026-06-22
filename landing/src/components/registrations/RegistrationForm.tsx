@@ -215,6 +215,12 @@ export function RegistrationForm({
         .filter(([, v]) => (Array.isArray(v) ? v.length > 0 : String(v).trim() !== ""))
         .map(([label, value]) => ({ label, value }));
 
+      // find label which match "USA Swimming ID Number"
+      const usaMembershipIdLabel = dynamicAnswers.find(
+        (answer) => answer.label === "USA Swimming ID Number",
+      );
+      const usaMembershipId = usaMembershipIdLabel?.value;
+
       return createRegistration({
         tryoutId,
         sessionId,
@@ -223,8 +229,8 @@ export function RegistrationForm({
         swimmerFirstName: fixed.swimmerFirstName,
         swimmerLastName: fixed.swimmerLastName,
         ageOnTryoutDay: Number(fixed.ageOnTryoutDay),
-        hasUsaMembership: fixed.hasUsaMembership,
-        usaMembershipId: fixed.usaMembershipId,
+        hasUsaMembership: !!usaMembershipId,
+        usaMembershipId: usaMembershipId ? String(usaMembershipId) : "",
         clubName: fixed.clubName,
         guardianName: fixed.guardianName,
         guardianEmail: fixed.guardianEmail,
@@ -425,6 +431,109 @@ export function RegistrationForm({
 
 // ─── Dynamic field renderer ───────────────────────────────────────────────────
 
+function parseSwimTime(value: string, defaultUnit: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return { minutes: "", seconds: "", ms: "", unit: defaultUnit };
+  const parts = trimmed.split(" ");
+  const timePart = parts[0] ?? "";
+  const unitPart = parts[1] ?? defaultUnit;
+  const timeMatch = timePart.match(/^(\d+)?:(\d+)?\.(\d+)?$/);
+  if (timeMatch) {
+    return {
+      minutes: timeMatch[1] ?? "",
+      seconds: timeMatch[2] ?? "",
+      ms: timeMatch[3] ?? "",
+      unit: unitPart,
+    };
+  }
+  return { minutes: "", seconds: "", ms: "", unit: unitPart };
+}
+
+function buildSwimTimeValue(minutes: string, seconds: string, ms: string, unit: string) {
+  const hasAny = minutes || seconds || ms;
+  if (!hasAny) return "";
+  const m = minutes || "0";
+  const s = seconds || "00";
+  const paddedMs = ms || "00";
+  return `${m}:${s}.${paddedMs} ${unit}`;
+}
+
+function SwimTimeField({
+  value,
+  unitOptions,
+  required,
+  error,
+  onChange,
+}: {
+  value: string;
+  unitOptions: string[];
+  required?: boolean;
+  error?: string;
+  onChange: (val: string) => void;
+}) {
+  const defaultUnit = unitOptions[0] ?? "yards";
+  const { minutes, seconds, ms, unit } = parseSwimTime(value, defaultUnit);
+
+  function update(next: Partial<{ minutes: string; seconds: string; ms: string; unit: string }>) {
+    const newVal = buildSwimTimeValue(
+      next.minutes ?? minutes,
+      next.seconds ?? seconds,
+      next.ms ?? ms,
+      next.unit ?? unit,
+    );
+    onChange(newVal);
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="MM"
+            value={minutes}
+            onChange={(e) => update({ minutes: e.target.value.replace(/\D/g, "") })}
+            className="w-14 h-9 rounded-md border border-input bg-background px-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          <span className="text-muted-foreground">:</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="SS"
+            value={seconds}
+            maxLength={2}
+            onChange={(e) => update({ seconds: e.target.value.replace(/\D/g, "").slice(0, 2) })}
+            className="w-14 h-9 rounded-md border border-input bg-background px-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          <span className="text-muted-foreground">.</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="ms"
+            value={ms}
+            maxLength={2}
+            onChange={(e) => update({ ms: e.target.value.replace(/\D/g, "").slice(0, 2) })}
+            className="w-16 h-9 rounded-md border border-input bg-background px-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+        <select
+          value={unit}
+          onChange={(e) => update({ unit: e.target.value })}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          {unitOptions.map((u) => (
+            <option key={u} value={u}>
+              {u}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
+
 function DynamicField({
   question,
   value,
@@ -437,10 +546,20 @@ function DynamicField({
   onChange: (val: string | string[]) => void;
 }) {
   const fieldId = `dyn-${question.label.replace(/\s+/g, "-").toLowerCase()}`;
+  const isSwimTime = question.meta?.inputType === "swim-time";
 
   return (
     <Field label={question.label} required={question.required} error={error}>
-      {question.type === "text" && (
+      {question.type === "text" && isSwimTime && (
+        <SwimTimeField
+          value={value as string}
+          unitOptions={(question.meta?.unitOptions as string[]) ?? ["yards", "meters"]}
+          required={question.required}
+          error={error}
+          onChange={(val) => onChange(val)}
+        />
+      )}
+      {question.type === "text" && !isSwimTime && (
         <Input
           id={fieldId}
           placeholder={question.placeholder ?? ""}

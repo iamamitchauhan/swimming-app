@@ -81,13 +81,47 @@ function buildKey(categoryId: string, questionIndex: number) {
 // ─── Preview field renderer ───────────────────────────────────────────────────
 
 function PreviewField({ q }: { q: SelectedQuestion }) {
+  console.info("q =>", q);
+
+  const isSwimTime = q.meta?.inputType === "swim-time";
   return (
     <div className="space-y-1.5">
       <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {q.label}
         {q.required && <span className="ml-0.5 text-destructive">*</span>}
       </label>
-      {q.type === "text" && (
+      {q.type === "text" && isSwimTime && (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <input
+              disabled
+              className="w-14 h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed text-center"
+              placeholder="MM"
+            />
+            <span className="text-muted-foreground">:</span>
+            <input
+              disabled
+              className="w-14 h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed text-center"
+              placeholder="SS"
+            />
+            <span className="text-muted-foreground">.</span>
+            <input
+              disabled
+              className="w-16 h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed text-center"
+              placeholder="ms"
+            />
+          </div>
+          <select
+            disabled
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed"
+          >
+            {((q.meta?.unitOptions as string[]) ?? ["yards", "meters"]).map((u) => (
+              <option key={u}>{u}</option>
+            ))}
+          </select>
+        </div>
+      )}
+      {q.type === "text" && !isSwimTime && (
         <input
           disabled
           className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm text-muted-foreground cursor-not-allowed"
@@ -324,6 +358,7 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
       required: q.required,
       placeholder: q.placeholder,
       options: q.options,
+      meta: q.meta,
     };
     onChange([...selectedQuestions, next]);
   }
