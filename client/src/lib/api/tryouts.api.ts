@@ -245,6 +245,28 @@ export const tryoutsApi = {
     ),
 
   /**
+   * GET /tryouts/:id/registrations
+   * Returns paginated, filtered, and sorted registrations.
+   */
+  getRegistrations: (
+    id: string,
+    params: RegistrationListParams = {},
+  ): Promise<RegistrationListResult> => {
+    const query = new URLSearchParams();
+    if (params.page) query.set("page", String(params.page));
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.search) query.set("search", params.search);
+    if (params.status) query.set("status", params.status);
+    if (params.segmentId) query.set("segmentId", params.segmentId);
+    if (params.sortBy) query.set("sortBy", params.sortBy);
+    if (params.sortOrder) query.set("sortOrder", params.sortOrder);
+    const qs = query.toString();
+    return api<RegistrationListResult>(
+      apiClient.get(`/tryouts/${id}/registrations${qs ? `?${qs}` : ""}`),
+    );
+  },
+
+  /**
    * GET /tryouts/:id/registrations/:regId
    * Returns full registration detail (admin/coach view)
    */
@@ -358,4 +380,26 @@ export interface RegistrationDetail {
   emailSent?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+// ─── Registration List (server-side) ─────────────────────────────────────────
+
+export type RegistrationSortField = "swimmer_name" | "swimmer_age" | "status";
+
+export interface RegistrationListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  segmentId?: string;
+  sortBy?: RegistrationSortField;
+  sortOrder?: SortOrder;
+}
+
+export interface RegistrationListResult {
+  registrations: Registration[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }

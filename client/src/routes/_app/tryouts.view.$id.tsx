@@ -8,7 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useTryout } from "@/hooks/use-tryouts";
 import { apiClient, api } from "@/lib/api/client";
-import type { Registration, TryoutSlot, LeaderboardEntry } from "@/lib/api/tryouts.api";
+import { tryoutsApi } from "@/lib/api/tryouts.api";
+import type {
+  Registration,
+  TryoutSlot,
+  LeaderboardEntry,
+  RegistrationListParams,
+  RegistrationListResult,
+} from "@/lib/api/tryouts.api";
 import { RosterTab } from "./tryout-view/RosterTab";
 import { SlotsTab } from "./tryout-view/SlotsTab";
 import { WaitlistTab } from "./tryout-view/WaitlistTab";
@@ -69,16 +76,30 @@ export default function TryoutViewPage() {
   const { data: tryout, isLoading: tryoutLoading, error: tryoutError } = useTryout(id);
 
   // ── Data state ───────────────────────────────────────────────────────────────
-  const [roster, setRoster] = useState<Registration[]>([]);
+  const [rosterResult, setRosterResult] = useState<RegistrationListResult>({
+    registrations: [],
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 0,
+  });
+  const [rosterParams, setRosterParams] = useState<RegistrationListParams>({
+    page: 1,
+    limit: 10,
+    sortBy: "swimmer_name",
+    sortOrder: "asc",
+  });
+  // Full (unpaginated) list used by ScoringTab, WaitlistTab, CommsTab
+  const [allRegistrations, setAllRegistrations] = useState<Registration[]>([]);
   const [slots, setSlots] = useState<TryoutSlot[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("roster");
 
   // ── Derived ──────────────────────────────────────────────────────────────────
-  const registered = roster.filter((r) => r.status !== "waitlisted");
-  const waitlisted = roster.filter((r) => r.status === "waitlisted");
-  const needsReviewCount = roster.filter(
+  const registered = allRegistrations.filter((r) => r.status !== "waitlisted");
+  const waitlisted = allRegistrations.filter((r) => r.status === "waitlisted");
+  const needsReviewCount = allRegistrations.filter(
     (r) =>
       r.usa_membership_id &&
       (r.usa_verification_status === "needs_review" ||
@@ -86,29 +107,53 @@ export default function TryoutViewPage() {
         !r.usa_verification_status),
   ).length;
 
-  // ── Load roster + slots ───────────────────────────────────────────────────
+  // ── Load roster (server-side, paginated) ─────────────────────────────────
+  const loadRoster = useCallback(
+    async (params: RegistrationListParams) => {
+      if (!id) return;
+      setLoading(true);
+      try {
+        const result = await tryoutsApi.getRegistrations(id, params).catch(() => null);
+        if (result) setRosterResult(result);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [id],
+  );
+
+  // ── Load all registrations (for Scoring/Waitlist/Comms tabs) ─────────────
+  const loadAllRegistrations = useCallback(async () => {
+    if (!id) return;
+    try {
+      const result = await tryoutsApi.getRegistrations(id, { limit: 1000 }).catch(() => null);
+      if (result) setAllRegistrations(result.registrations);
+    } catch {
+      // no-op
+    }
+  }, [id]);
+
+  // ── Load slots ────────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
     try {
-      const [rosterRes, slotsRes] = await Promise.all([
-        api<Registration[]>(apiClient.get(`/tryouts/${id}/registrations`)).catch(() => []),
+      const [slotsRes] = await Promise.all([
         api<{ slots: TryoutSlot[] }>(apiClient.get(`/tryouts/${id}/slots`))
           .then((r) => r.slots)
           .catch(() => []),
       ]);
-      setRoster(rosterRes);
       setSlots(slotsRes);
     } catch {
       // silently handled above
-    } finally {
-      setLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    loadRoster(rosterParams);
+    loadAllRegistrations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadData, loadRoster, loadAllRegistrations]);
 
   // ── Leaderboard (loaded on tab switch) ───────────────────────────────────
   async function loadLeaderboard() {
@@ -128,7 +173,7 @@ export default function TryoutViewPage() {
   async function sendDecision(regId: string, status: "offered" | "rejected") {
     try {
       await api(apiClient.put(`/tryouts/${id}/registrations/${regId}/decision`, { status }));
-      setRoster((prev) => prev.map((r) => (r.id === regId ? { ...r, status } : r)));
+      await Promise.all([loadRoster(rosterParams), loadAllRegistrations()]);
       toast.success(status === "offered" ? "Offer sent!" : "Rejected.");
     } catch {
       toast.error("Failed to update status.");
@@ -138,7 +183,7 @@ export default function TryoutViewPage() {
   async function promoteWaitlist(regId: string) {
     try {
       await api(apiClient.put(`/tryouts/${id}/registrations/${regId}/promote`));
-      await loadData();
+      await Promise.all([loadData(), loadRoster(rosterParams), loadAllRegistrations()]);
       toast.success("Promoted from waitlist!");
     } catch {
       toast.error("Failed to promote.");
@@ -148,9 +193,7 @@ export default function TryoutViewPage() {
   async function setVerifyStatus(regId: string, status: string) {
     try {
       await api(apiClient.put(`/tryouts/${id}/registrations/${regId}/verify`, { status }));
-      setRoster((prev) =>
-        prev.map((r) => (r.id === regId ? { ...r, usa_verification_status: status } : r)),
-      );
+      await Promise.all([loadRoster(rosterParams), loadAllRegistrations()]);
       toast.success("Verification status updated.");
     } catch {
       toast.error("Failed to update verification.");
@@ -159,7 +202,7 @@ export default function TryoutViewPage() {
 
   async function saveScore(regId: string, edits: Partial<Registration>) {
     await api(apiClient.put(`/tryouts/${id}/registrations/${regId}/score`, edits));
-    setRoster((prev) => prev.map((r) => (r.id === regId ? { ...r, ...edits } : r)));
+    await Promise.all([loadRoster(rosterParams), loadAllRegistrations()]);
     toast.success("Score saved.");
   }
 
@@ -181,7 +224,7 @@ export default function TryoutViewPage() {
 
   // ── Tabs definition ───────────────────────────────────────────────────────
   const TABS = [
-    { key: "roster", label: `Roster (${registered.length})` },
+    { key: "roster", label: `Roster (${rosterResult.total})` },
     { key: "slots", label: "Slots" },
     { key: "waitlist", label: `Waitlist (${waitlisted.length})` },
     // {
@@ -234,7 +277,7 @@ export default function TryoutViewPage() {
         <InfoTile
           icon={Users2}
           label="Registrations"
-          value={loading ? "…" : `${registered.length} registered`}
+          value={loading ? "…" : `${rosterResult.total} registered`}
         />
         <InfoTile
           icon={Waves}
@@ -264,7 +307,18 @@ export default function TryoutViewPage() {
 
         {/* Tab content */}
         {tab === "roster" && (
-          <RosterTab tryout={tryout} registered={registered} onDecision={sendDecision} />
+          <RosterTab
+            tryout={tryout}
+            rosterResult={rosterResult}
+            rosterParams={rosterParams}
+            loading={loading}
+            onParamsChange={(params) => {
+              const next = { ...rosterParams, ...params };
+              setRosterParams(next);
+              loadRoster(next);
+            }}
+            onDecision={sendDecision}
+          />
         )}
 
         {tab === "slots" && <SlotsTab slots={slots} />}
@@ -272,7 +326,7 @@ export default function TryoutViewPage() {
         {tab === "waitlist" && <WaitlistTab waitlisted={waitlisted} onPromote={promoteWaitlist} />}
 
         {/* {tab === "usa-verify" && (
-          <UsaVerifyTab roster={roster} onSetVerifyStatus={setVerifyStatus} />
+          <UsaVerifyTab roster={allRegistrations} onSetVerifyStatus={setVerifyStatus} />
         )} */}
 
         {tab === "scoring" && <ScoringTab registered={registered} onSaveScore={saveScore} />}
@@ -281,7 +335,9 @@ export default function TryoutViewPage() {
           <LeaderboardTab leaderboard={leaderboard} onDecision={sendDecision} />
         )}
 
-        {tab === "comms" && <CommsTab roster={roster} waitlisted={waitlisted} onSend={sendComm} />}
+        {tab === "comms" && (
+          <CommsTab roster={allRegistrations} waitlisted={waitlisted} onSend={sendComm} />
+        )}
       </div>
     </PageShell>
   );

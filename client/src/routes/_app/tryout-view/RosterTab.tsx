@@ -1,6 +1,31 @@
-import { useState } from "react";
-import { CheckCircle2, ChevronDown, XCircle } from "lucide-react";
-import type { Registration, Tryout } from "@/lib/api/tryouts.api";
+import { useState, useEffect, useRef } from "react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronsUpDown,
+  ChevronUp,
+  Loader2,
+  X,
+  XCircle,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import type {
+  Registration,
+  RegistrationListParams,
+  RegistrationListResult,
+  RegistrationSortField,
+  SortOrder,
+  Tryout,
+} from "@/lib/api/tryouts.api";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -9,6 +34,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -34,6 +69,8 @@ const VERIFY_LABELS: Record<string, string> = {
   rejected: "Rejected",
 };
 
+const ALL_STATUSES = ["registered", "waitlisted", "offered", "rejected", "cancelled"] as const;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDate(d?: string) {
@@ -47,9 +84,7 @@ function fmtDate(d?: string) {
 
 function fmtTime(t?: string) {
   if (!t) return "";
-  // Already 12h format — return as-is
   if (/^\d{1,2}:\d{2}\s*[AaPp][Mm]$/.test(t)) return t;
-  // 24h format — convert to 12h
   const [h, m] = t.split(":").map(Number);
   if (isNaN(h) || isNaN(m)) return t;
   const ampm = h >= 12 ? "PM" : "AM";
@@ -64,60 +99,253 @@ function avg(r: Registration) {
   return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
 }
 
+// ─── SortIcon ─────────────────────────────────────────────────────────────────
+
+function SortIcon({ field, active, order }: { field: string; active: string; order: SortOrder }) {
+  if (field !== active) return <ChevronsUpDown className="h-3.5 w-3.5 text-gray-400 ml-1 inline" />;
+  return order === "asc" ? (
+    <ChevronUp className="h-3.5 w-3.5 text-white ml-1 inline" />
+  ) : (
+    <ChevronDown className="h-3.5 w-3.5 text-white ml-1 inline" />
+  );
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
   tryout: Tryout;
-  registered: Registration[];
+  rosterResult: RegistrationListResult;
+  rosterParams: RegistrationListParams;
+  loading: boolean;
+  onParamsChange: (params: Partial<RegistrationListParams>) => void;
   onDecision: (id: string, status: "offered" | "rejected") => Promise<void>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function RosterTab({ tryout, registered, onDecision }: Props) {
-  const [search, setSearch] = useState("");
-  const [segFilter, setSegFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+// ─── Bulk Email Dialog ────────────────────────────────────────────────────────
+
+interface BulkEmailDialogProps {
+  open: boolean;
+  action: "offered" | "rejected" | null;
+  count: number;
+  onClose: () => void;
+  onSend: (subject: string, body: string) => Promise<void>;
+}
+
+function BulkEmailDialog({ open, action, count, onClose, onSend }: BulkEmailDialogProps) {
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setSubject(
+        action === "offered" ? "Congratulations – You've been offered a spot!" : "Tryout Decision",
+      );
+      setBody(
+        action === "offered"
+          ? "Dear swimmer,\n\nCongratulations! We are pleased to offer you a spot in the tryout. Please reply to confirm your acceptance.\n\nBest regards,\nThe Team"
+          : "Dear swimmer,\n\nThank you for participating. After careful review, we are unable to offer you a spot at this time.\n\nBest regards,\nThe Team",
+      );
+    }
+  }, [open, action]);
+
+  async function handleSend() {
+    setSending(true);
+    try {
+      await onSend(subject, body);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {action === "offered" ? "Send Offer Email" : "Send Rejection Email"}
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              ({count} swimmer{count !== 1 ? "s" : ""})
+            </span>
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="bulk-subject">Subject</Label>
+            <Input
+              id="bulk-subject"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Email subject…"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bulk-body">Email Body</Label>
+            <Textarea
+              id="bulk-body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={8}
+              placeholder="Write your email…"
+              className="resize-none"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={sending}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!subject.trim() || !body.trim() || sending}
+            onClick={handleSend}
+            className={
+              action === "offered"
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-red-600 hover:bg-red-700"
+            }
+          >
+            {sending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+            Send Email
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export function RosterTab({
+  tryout,
+  rosterResult,
+  rosterParams,
+  loading,
+  onParamsChange,
+  onDecision,
+}: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRegId, setSelectedRegId] = useState<string | null>(null);
 
-  const filteredRoster = registered.filter((r) => {
-    const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      r.swimmer_name.toLowerCase().includes(q) ||
-      (r.guardian_email || r.parent_email || "").toLowerCase().includes(q);
-    const matchSeg = !segFilter || r.segment_id === segFilter;
-    const matchStatus = !statusFilter || r.status === statusFilter;
-    return matchSearch && matchSeg && matchStatus;
-  });
-  console.info("tryout.segments =>", tryout.segments);
-  console.info("segFilter =>", segFilter);
+  // ── Bulk selection ─────────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
+
+  // Debounced search
+  const [searchInput, setSearchInput] = useState(rosterParams.search ?? "");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onParamsChange({ search: searchInput, page: 1 });
+    }, 350);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [rosterResult]);
+
+  const { registrations, total, page, totalPages } = rosterResult;
+  const registeredRows = registrations.filter((r) => r.status === "registered");
+  const allRegisteredSelected =
+    registeredRows.length > 0 && registeredRows.every((r) => selectedIds.has(r.id));
+  const someSelected = selectedIds.size > 0;
+
+  function toggleAll() {
+    if (allRegisteredSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        registeredRows.forEach((r) => next.delete(r.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        registeredRows.forEach((r) => next.add(r.id));
+        return next;
+      });
+    }
+  }
+
+  function toggleRow(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkSend(subject: string, emailBody: string) {
+    if (!bulkAction) return;
+    const ids = Array.from(selectedIds);
+    await Promise.all(ids.map((id) => onDecision(id, bulkAction)));
+    // TODO: wire up actual email sending via API here if needed
+    void subject;
+    void emailBody;
+    setSelectedIds(new Set());
+    setBulkEmailOpen(false);
+    setBulkAction(null);
+  }
+  const sortBy = rosterParams.sortBy ?? "swimmer_name";
+  const sortOrder = rosterParams.sortOrder ?? "asc";
+
+  function handleSort(field: RegistrationSortField) {
+    if (sortBy === field) {
+      onParamsChange({ sortBy: field, sortOrder: sortOrder === "asc" ? "desc" : "asc", page: 1 });
+    } else {
+      onParamsChange({ sortBy: field, sortOrder: "asc", page: 1 });
+    }
+  }
+
+  const segmentLabel =
+    tryout.segments?.find(
+      (s) => (s as any).id === rosterParams.segmentId || s.name === rosterParams.segmentId,
+    )?.name ?? (rosterParams.segmentId ? rosterParams.segmentId : "All segments");
+
+  const statusLabel = rosterParams.status
+    ? rosterParams.status.charAt(0).toUpperCase() + rosterParams.status.slice(1)
+    : "All status";
 
   return (
     <div>
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 py-4 pt-0 border-b border-gray-50">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+      {/* ── Filters ───────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-3 py-4 border-b border-gray-50 px-0.5 mt-1">
+        <Input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           placeholder="Search swimmer or parent email…"
-          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex-1 min-w-48"
+          className="bg-white flex-1 min-w-48 h-9"
         />
+
+        {/* Segment filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
-              {tryout.segments?.find((seg) => (seg as any).id === segFilter)?.name ||
-                (segFilter === "" ? "All segments" : segFilter)}
+              {segmentLabel}
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setSegFilter("")}>All segments</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onParamsChange({ segmentId: undefined, page: 1 })}>
+              All segments
+            </DropdownMenuItem>
             {tryout.segments?.map((seg, i) => (
               <DropdownMenuItem
                 key={i}
-                onClick={() => setSegFilter((seg as any).name || String(i))}
+                onClick={() => onParamsChange({ segmentId: (seg as any).id ?? seg.name, page: 1 })}
               >
                 {seg.name}
               </DropdownMenuItem>
@@ -125,17 +353,24 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Status filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer capitalize">
-              {statusFilter === "" ? "All status" : statusFilter}
+              {statusLabel}
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setStatusFilter("")}>All status</DropdownMenuItem>
-            {["registered", "offered", "rejected"].map((s) => (
-              <DropdownMenuItem className="capitalize" key={s} onClick={() => setStatusFilter(s)}>
+            <DropdownMenuItem onClick={() => onParamsChange({ status: undefined, page: 1 })}>
+              All status
+            </DropdownMenuItem>
+            {ALL_STATUSES.map((s) => (
+              <DropdownMenuItem
+                className="capitalize"
+                key={s}
+                onClick={() => onParamsChange({ status: s, page: 1 })}
+              >
                 {s}
               </DropdownMenuItem>
             ))}
@@ -143,154 +378,285 @@ export function RosterTab({ tryout, registered, onDecision }: Props) {
         </DropdownMenu>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-900 text-white uppercase tracking-wide">
-            <tr>
-              {[
-                "Swimmer",
-                "Age",
-                "Segment",
-                "When",
-                "USA-S ID",
-                "Parent",
-                "Status",
-                "Avg Score",
-                "Action",
-              ].map((h) => (
-                <th key={h} className="px-4 py-3 text-left font-semibold text-xs">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filteredRoster.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
-                  No registrations yet
-                </td>
-              </tr>
+      {/* ── Table ─────────────────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 overflow-hidden mt-4">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10 px-4">
+                <Checkbox
+                  checked={allRegisteredSelected}
+                  onCheckedChange={toggleAll}
+                  aria-label="Select all registered"
+                  className="cursor-pointer"
+                />
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none whitespace-nowrap"
+                onClick={() => handleSort("swimmer_name")}
+              >
+                Swimmer
+                <SortIcon field="swimmer_name" active={sortBy} order={sortOrder} />
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none whitespace-nowrap"
+                onClick={() => handleSort("swimmer_age")}
+              >
+                Age
+                <SortIcon field="swimmer_age" active={sortBy} order={sortOrder} />
+              </TableHead>
+              <TableHead>Segment</TableHead>
+              <TableHead>When</TableHead>
+              <TableHead>USA-S ID</TableHead>
+              <TableHead>Parent</TableHead>
+              <TableHead
+                className="cursor-pointer select-none whitespace-nowrap"
+                onClick={() => handleSort("status")}
+              >
+                Status
+                <SortIcon field="status" active={sortBy} order={sortOrder} />
+              </TableHead>
+              <TableHead>Avg Score</TableHead>
+              <TableHead>Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-50">
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={10} className="py-10 text-center text-gray-400">
+                  <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
+                  Loading…
+                </TableCell>
+              </TableRow>
             )}
-            {filteredRoster.map((r) => {
-              const verSt = r.usa_verification_status || "pending";
-              return (
-                <tr key={r.id} className="hover:bg-gray-50 transition text-xs">
-                  <td
-                    className="px-4 py-3 text-blue-700 cursor-pointer hover:underline"
-                    onClick={() => {
-                      setSelectedRegId(r.id);
-                      setModalOpen(true);
-                    }}
+            {!loading && registrations.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={10} className="py-10 text-center text-gray-400">
+                  No registrations found
+                </TableCell>
+              </TableRow>
+            )}
+            {!loading &&
+              registrations.map((r) => {
+                const verSt = r.usa_verification_status || "pending";
+                return (
+                  <TableRow
+                    key={r.id}
+                    className={`hover:bg-gray-50 transition ${selectedIds.has(r.id) ? "bg-blue-50" : ""}`}
                   >
-                    {r.swimmer_name}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{r.swimmer_age}</td>
-                  <td className="px-4 py-3 text-gray-600">{r.segment_name || "—"}</td>
-                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                    {r.session_date ? fmtDate(r.session_date) : "—"}
-                    {r.slot_start && (
-                      <span className="text-gray-400">
-                        {" "}
-                        · {fmtTime(r.slot_start)}–{fmtTime(r.slot_end)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {r.usa_membership_id ? (
-                      <div>
-                        <div className="font-mono text-xs text-gray-700">{r.usa_membership_id}</div>
-                        <span
-                          className={`text-xs px-1.5 py-0.5 rounded-full ${VERIFY_COLORS[verSt]}`}
-                        >
-                          {VERIFY_LABELS[verSt]}
+                    <TableCell className="w-10 px-4 py-3">
+                      {r.status === "registered" && (
+                        <Checkbox
+                          checked={selectedIds.has(r.id)}
+                          onCheckedChange={() => toggleRow(r.id)}
+                          aria-label={`Select ${r.swimmer_name}`}
+                          className="cursor-pointer"
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell
+                      className="text-blue-700 cursor-pointer hover:underline px-4 py-3"
+                      onClick={() => {
+                        setSelectedRegId(r.id);
+                        setModalOpen(true);
+                      }}
+                    >
+                      {r.swimmer_name}
+                    </TableCell>
+                    <TableCell className="text-gray-500 px-4 py-3">{r.swimmer_age}</TableCell>
+                    <TableCell className="text-gray-600 px-4 py-3">
+                      {r.segment_name || "—"}
+                    </TableCell>
+                    <TableCell className="text-gray-600 px-4 py-3 whitespace-nowrap">
+                      {r.session_date ? fmtDate(r.session_date) : "—"}
+                      {r.slot_start && (
+                        <span className="text-gray-400">
+                          {" "}
+                          · {fmtTime(r.slot_start)}–{fmtTime(r.slot_end)}
                         </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {r.usa_membership_id ? (
+                        <div>
+                          <div className="font-mono text-xs text-gray-700">
+                            {r.usa_membership_id}
+                          </div>
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded-full ${VERIFY_COLORS[verSt]}`}
+                          >
+                            {VERIFY_LABELS[verSt]}
+                          </span>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="text-gray-700">{r.guardian_name || r.parent_name}</div>
+                      <div className="text-xs text-gray-400">
+                        {r.guardian_email || r.parent_email}
                       </div>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="text-gray-700">{r.guardian_name || r.parent_name}</div>
-                    <div className="text-xs text-gray-400">
-                      {r.guardian_email || r.parent_email}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
                       <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status]}`}
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${STATUS_COLORS[r.status]}`}
                       >
                         {r.status}
                       </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-blue-700">{avg(r) || "—"}</td>
-                  <td>
-                    {(() => {
-                      if (r.status !== "registered") {
-                        return <div className="flex items-center gap-2 pl-4">-</div>;
-                      }
-                      const hasAvg = !!avg(r);
-                      const offerBtn = (
-                        <button
-                          disabled={!hasAvg}
-                          onClick={() => onDecision(r.id, "offered")}
-                          className="text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Offer
-                        </button>
-                      );
-                      const rejectBtn = (
-                        <button
-                          disabled={!hasAvg}
-                          onClick={() => onDecision(r.id, "rejected")}
-                          className="text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          <XCircle className="h-3.5 w-3.5" /> Reject
-                        </button>
-                      );
-                      return (
-                        <div className="flex items-center gap-2 pl-4">
-                          {hasAvg ? (
-                            offerBtn
-                          ) : (
-                            <TooltipProvider delayDuration={0}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="block">{offerBtn}</span>
-                                </TooltipTrigger>
-                                <TooltipContent side="left">
-                                  Cannot offer without an average score.
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          {hasAvg ? (
-                            rejectBtn
-                          ) : (
-                            <TooltipProvider delayDuration={0}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="block">{rejectBtn}</span>
-                                </TooltipTrigger>
-                                <TooltipContent side="left">
-                                  Cannot reject without an average score.
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-semibold text-blue-700">
+                      {avg(r) || "—"}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {r.status !== "registered" ? (
+                        <span className="text-gray-400">—</span>
+                      ) : (
+                        (() => {
+                          const hasAvg = !!avg(r);
+                          const offerBtn = (
+                            <button
+                              disabled={!hasAvg}
+                              onClick={() => onDecision(r.id, "offered")}
+                              className="text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Offer
+                            </button>
+                          );
+                          const rejectBtn = (
+                            <button
+                              disabled={!hasAvg}
+                              onClick={() => onDecision(r.id, "rejected")}
+                              className="text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <XCircle className="h-3.5 w-3.5" /> Reject
+                            </button>
+                          );
+                          return (
+                            <div className="flex items-center gap-2">
+                              {hasAvg ? (
+                                offerBtn
+                              ) : (
+                                <TooltipProvider delayDuration={0}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="block">{offerBtn}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">
+                                      Cannot offer without an average score.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                              {hasAvg ? (
+                                rejectBtn
+                              ) : (
+                                <TooltipProvider delayDuration={0}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="block">{rejectBtn}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">
+                                      Cannot reject without an average score.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                          );
+                        })()
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+          </TableBody>
+        </Table>
       </div>
+
+      {/* ── Bulk action bar ───────────────────────────────────────────────── */}
+      {someSelected && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-xl bg-gray-900 text-white shadow-2xl px-5 py-3 text-sm">
+          <span className="flex items-center gap-2 font-semibold">
+            <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-500 text-xs font-bold">
+              {selectedIds.size}
+            </span>
+            Selected
+          </span>
+          <div className="h-4 w-px bg-gray-600" />
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="flex items-center gap-1.5 text-gray-300 hover:text-white transition cursor-pointer"
+          >
+            <X className="h-3.5 w-3.5" /> Clear all
+          </button>
+          <div className="h-4 w-px bg-gray-600" />
+          <button
+            onClick={() => {
+              setBulkAction("offered");
+              setBulkEmailOpen(true);
+            }}
+            className="flex items-center gap-1.5 text-green-400 hover:text-green-300 transition cursor-pointer font-medium"
+          >
+            <CheckCircle2 className="h-4 w-4" /> Offer
+          </button>
+          <button
+            onClick={() => {
+              setBulkAction("rejected");
+              setBulkEmailOpen(true);
+            }}
+            className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition cursor-pointer font-medium"
+          >
+            <XCircle className="h-4 w-4" /> Reject
+          </button>
+        </div>
+      )}
+
+      {/* ── Pagination ────────────────────────────────────────────────────── */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+          <span>
+            Showing{" "}
+            <span className="font-medium">
+              {(page - 1) * (rosterParams.limit ?? 20) + 1}–
+              {Math.min(page * (rosterParams.limit ?? 20), total)}
+            </span>{" "}
+            of <span className="font-medium">{total}</span> results
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => onParamsChange({ page: page - 1 })}
+            >
+              Previous
+            </Button>
+            <span className="text-xs text-gray-500">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => onParamsChange({ page: page + 1 })}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <BulkEmailDialog
+        open={bulkEmailOpen}
+        action={bulkAction}
+        count={selectedIds.size}
+        onClose={() => {
+          setBulkEmailOpen(false);
+          setBulkAction(null);
+        }}
+        onSend={handleBulkSend}
+      />
 
       <RegistrationDetailModal
         tryoutId={tryout._id}

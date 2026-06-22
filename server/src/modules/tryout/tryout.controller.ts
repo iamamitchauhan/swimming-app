@@ -459,18 +459,81 @@ export class TryoutController {
 
   /**
    * GET /tryouts/:id/registrations
-   * Returns all registrations for a tryout with enriched swimmer/parent/session data.
+   * Returns paginated, filtered, and sorted registrations for a tryout.
+   *
+   * Query params:
+   *   page        — page number (default 1)
+   *   limit       — page size (default 20)
+   *   search      — swimmer name or parent/guardian email (case-insensitive)
+   *   status      — one of: registered | waitlisted | offered | rejected | cancelled
+   *   segmentId   — filter by segmentId value
+   *   sortBy      — swimmer_name | swimmer_age | status (default: swimmer_name)
+   *   sortOrder   — asc | desc (default: asc)
    */
   getRegistrations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
-      const registrations = await RegistrationModel.find({ tryoutId: id })
+
+      // ── Parse query params ────────────────────────────────────────────────
+      const page = Math.max(1, parseInt(req.query["page"] as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query["limit"] as string) || 20));
+      const search = ((req.query["search"] as string) || "").trim().toLowerCase();
+      const statusFilter = (req.query["status"] as string) || "";
+      const segmentIdFilter = (req.query["segmentId"] as string) || "";
+      const sortBy = (req.query["sortBy"] as string) || "swimmer_name";
+      const sortOrder = req.query["sortOrder"] === "desc" ? -1 : 1;
+
+      // ── Build MongoDB filter ──────────────────────────────────────────────
+      const mongoFilter: Record<string, any> = { tryoutId: id };
+      if (statusFilter) mongoFilter["status"] = statusFilter;
+      if (segmentIdFilter) mongoFilter["segmentId"] = segmentIdFilter;
+
+      // Search by swimmer name (first, last, or combined) or guardian email.
+      // Split into tokens so "John Doe" matches firstName="John" AND lastName="Doe".
+      if (search) {
+        const tokens = search.split(/\s+/).filter(Boolean);
+        if (tokens.length === 1) {
+          // Single token — match against firstName, lastName, or guardianEmail
+          mongoFilter["$or"] = [
+            { "swimmerDetails.firstName": { $regex: tokens[0], $options: "i" } },
+            { "swimmerDetails.lastName": { $regex: tokens[0], $options: "i" } },
+            { "swimmerDetails.guardianEmail": { $regex: tokens[0], $options: "i" } },
+          ];
+        } else {
+          // Multiple tokens — each token must appear somewhere in first or last name
+          mongoFilter["$and"] = tokens.map((token) => ({
+            $or: [{ "swimmerDetails.firstName": { $regex: token, $options: "i" } }, { "swimmerDetails.lastName": { $regex: token, $options: "i" } }],
+          }));
+          // Also allow the full string to match guardianEmail
+          mongoFilter["$or"] = [{ "swimmerDetails.guardianEmail": { $regex: search, $options: "i" } }, { $and: mongoFilter["$and"] }];
+          delete mongoFilter["$and"];
+        }
+      }
+
+      // ── Build sort ────────────────────────────────────────────────────────
+      const sortFieldMap: Record<string, string> = {
+        swimmer_name: "swimmerDetails.firstName",
+        swimmer_age: "swimmerDetails.ageOnTryoutDay",
+        status: "status",
+      };
+      const mongoSortField = sortFieldMap[sortBy] ?? "swimmerDetails.firstName";
+      const mongoSort: Record<string, 1 | -1> = { [mongoSortField]: sortOrder as 1 | -1 };
+
+      // ── Count total (for pagination) ──────────────────────────────────────
+      const total = await RegistrationModel.countDocuments(mongoFilter);
+
+      // ── Fetch page ────────────────────────────────────────────────────────
+      const registrations = await RegistrationModel.find(mongoFilter)
+        .sort(mongoSort)
+        .skip((page - 1) * limit)
+        .limit(limit)
         .populate("swimmerId", "firstName lastName birthDate")
         .populate("parentId", "firstName lastName email")
         .populate("slotId", "startTime endTime")
         .lean()
         .exec();
 
+      // ── Enrich with session/slot/segment data ─────────────────────────────
       const tryout = await this.service.getById(id, req.user?.clubId ?? "");
       const sessions = await sessionRepo.findByTryout(id);
       const slots = await slotRepo.findByTryout(id);
@@ -486,7 +549,6 @@ export class TryoutController {
         const session = sessionMap.get(r.sessionId?.toString?.() ?? r.sessionId);
         const slot = slotMap.get(r.slotId?.toString?.() ?? r.slotId);
         const scores = r.scores || {};
-        console.info("swimmerSlot => ", swimmerSlot);
 
         return {
           id: r._id.toString(),
@@ -519,7 +581,18 @@ export class TryoutController {
         };
       });
 
-      sendSuccess(res, data, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+      sendSuccess(
+        res,
+        {
+          registrations: data,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+        MESSAGES.SUCCESS,
+        HTTP_STATUS.OK,
+      );
     } catch (err) {
       next(err);
     }

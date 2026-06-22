@@ -82,6 +82,30 @@ export class TryoutRepository {
             // status: { $ne: "closed" },
           },
         },
+        {
+          $lookup: {
+            from: "registrations",
+            let: { tid: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ["$tryoutId", "$$tid"] },
+                  status: { $nin: ["cancelled"] },
+                },
+              },
+              { $count: "count" },
+            ],
+            as: "_regCount",
+          },
+        },
+        {
+          $addFields: {
+            registeredCount: { $ifNull: [{ $arrayElemAt: ["$_regCount.count", 0] }, 0] },
+          },
+        },
+        {
+          $project: { _regCount: 0 },
+        },
       ]);
 
       return data[0] || null;

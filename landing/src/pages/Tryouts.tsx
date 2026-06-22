@@ -18,7 +18,7 @@ export default function TryoutsPage() {
   const [filters, setFilters] = useState<TryoutFilters>({ sort: "latest" });
   const { data: tryouts = [], isFetching } = useQuery(tryoutsQuery(filters));
   const { data: clubs = [] } = useQuery(clubsQuery());
-  const ageGroups = uniqueValues("ageGroup");
+  const ageGroups = ["0-5", "6-10", "11-20", "21-30", "31-40", "41-50", "51-60", "60+"];
   const states = uniqueValues("state");
   const cities = uniqueValues("city");
   const update = <K extends keyof TryoutFilters>(k: K, v: TryoutFilters[K]) =>

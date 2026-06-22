@@ -95,6 +95,16 @@ export default function TryoutEditPage() {
     },
   });
 
+  // ── Guard: redirect if tryout is not editable ────────────────────────────────
+  useEffect(() => {
+    if (!tryout) return;
+
+    const isEditable =
+      tryout.status === "draft" ||
+      (["published", "open"].includes(tryout.status) && (tryout.registeredCount ?? 0) === 0);
+    if (!isEditable) navigate("/tryouts", { replace: true });
+  }, [tryout, navigate]);
+
   // ── Populate form once data loads ────────────────────────────────────────────
   useEffect(() => {
     if (!tryout) return;

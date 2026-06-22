@@ -375,8 +375,9 @@ export default function TryoutsList() {
                               </DropdownMenuItem>
                               {(() => {
                                 const isEditDisabled =
-                                  ["open", "published"].includes(t.status) &&
-                                  (t.registeredCount ?? 0) >= 1;
+                                  !["draft", "published", "open"].includes(t.status) ||
+                                  (["published", "open"].includes(t.status) &&
+                                    (t.registeredCount ?? 0) >= 1);
                                 const editItem = (
                                   <DropdownMenuItem
                                     className="cursor-pointer"
@@ -412,7 +413,9 @@ export default function TryoutsList() {
                               <DropdownMenuSeparator />
                               {(() => {
                                 const isDeleteDisabled =
-                                  t.status !== "published" && t.status !== "draft";
+                                  !["draft", "published", "open"].includes(t.status) ||
+                                  (["published", "open"].includes(t.status) &&
+                                    (t.registeredCount ?? 0) >= 1);
                                 const deleteItem = (
                                   <DropdownMenuItem
                                     disabled={isDeleteDisabled}
@@ -429,7 +432,8 @@ export default function TryoutsList() {
                                         <span className="block">{deleteItem}</span>
                                       </TooltipTrigger>
                                       <TooltipContent side="left">
-                                        Only published tryouts can be deleted.
+                                        Can only delete drafts or published tryouts with no
+                                        registrations.
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
