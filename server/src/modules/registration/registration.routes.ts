@@ -9,13 +9,17 @@ import { TryoutSlotRepository } from "../tryout/tryout-slot.repository";
 import { SwimmerRepository } from "../swimmer/swimmer.repository";
 import { RegistrationService } from "./registration.service";
 import { RegistrationController } from "./registration.controller";
+import { WaitlistRepository } from "../waitlist/waitlist.repository";
+import { WaitlistService } from "../waitlist/waitlist.service";
 
 const repository = new RegistrationRepository();
 const tryoutRepository = new TryoutRepository();
 const sessionRepository = new TryoutSessionRepository();
 const slotRepository = new TryoutSlotRepository();
 const swimmerRepository = new SwimmerRepository();
-const service = new RegistrationService(repository, tryoutRepository, sessionRepository, slotRepository, swimmerRepository);
+const waitlistRepository = new WaitlistRepository();
+const waitlistService = new WaitlistService(waitlistRepository, tryoutRepository);
+const service = new RegistrationService(repository, tryoutRepository, sessionRepository, slotRepository, swimmerRepository, waitlistService);
 const controller = new RegistrationController(service);
 
 /**

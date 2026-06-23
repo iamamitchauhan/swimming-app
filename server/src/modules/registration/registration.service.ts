@@ -8,6 +8,7 @@ import { CreateRegistrationInput } from "./registration.validation";
 import logger from "../../shared/utils/logger";
 import { sendRegistrationReceivedEmail } from "../../shared/utils/mailer";
 import { UserModel } from "../auth/auth.schema";
+import { WaitlistService } from "../waitlist/waitlist.service";
 
 export class RegistrationService {
   constructor(
@@ -16,6 +17,7 @@ export class RegistrationService {
     private readonly sessionRepo: TryoutSessionRepository,
     private readonly slotRepo: TryoutSlotRepository,
     private readonly swimmerRepo: SwimmerRepository,
+    private readonly waitlistService: WaitlistService,
   ) {}
 
   /**
@@ -255,7 +257,7 @@ export class RegistrationService {
     // 9 Send successfully registered email
 
     // fetch tryout detail
-    const parentDetail = await UserModel.findById({ _id: parentId }).lean();
+    const parentDetail = await UserModel.findById(parentId).lean();
     console.info("parentDetail => ", parentDetail);
 
     if (parentDetail) {
@@ -297,10 +299,18 @@ export class RegistrationService {
     const updated = await this.repo.update(id, { status });
     if (!updated) throw new NotFoundError("Registration not found");
 
-    // Update tryout counts
-    await this.tryoutRepo.updateRegistrationCounts(existing.tryoutId);
+    // When cancelled, decrement the slot count
+    if (status === "cancelled" && existing.slotId) {
+      await this.slotRepo.decrementRegisteredCount(String(existing.slotId));
+    }
 
     logger.info({ registrationId: id, status }, "registration.status.updated");
+
+    // When cancelled, notify all waitlisted parents for this tryout (fire-and-forget)
+    if (status === "cancelled") {
+      const tryoutIdStr = this.extractId(existing.tryoutId);
+      this.waitlistService.notifyWaitlistForTryout(tryoutIdStr).catch((err: unknown) => logger.error({ err }, "waitlist.notify.failed"));
+    }
 
     return updated;
   }
@@ -329,6 +339,16 @@ export class RegistrationService {
   }
 
   /**
+   * Extracts a plain string ID from a field that may be a populated Mongoose document or a raw ObjectId.
+   */
+  private extractId(field: unknown): string {
+    if (field !== null && typeof field === "object" && "_id" in (field as object)) {
+      return String((field as any)._id);
+    }
+    return String(field);
+  }
+
+  /**
    * Calculates age from birth date
    */
   private calculateAge(birthDate: Date): number {
@@ -348,6 +368,8 @@ export class RegistrationService {
    */
   async registrationCancelByParent(id: string, parentId: string, status: PlainRegistration["status"]): Promise<PlainRegistration> {
     // Validate ownership
+
+    console.log("registrationCancelByParent", { id, parentId, status });
     const existing = await this.repo.findById(id);
     if (!existing) throw new NotFoundError("Registration not found");
     if (String(existing.parentId) !== parentId) throw new ForbiddenError("Access denied");
@@ -356,8 +378,16 @@ export class RegistrationService {
     const updated = await this.repo.update(id, { status });
     if (!updated) throw new NotFoundError("Registration not found");
 
-    // Update tryout counts
-    // await this.tryoutRepo.updateRegistrationCounts(existing.tryoutId);
+    // When cancelled, decrement the slot count
+    if (status === "cancelled" && existing.slotId) {
+      await this.slotRepo.decrementRegisteredCount(String(existing.slotId));
+    }
+
+    // When cancelled, notify all waitlisted parents for this tryout (fire-and-forget)
+    if (status === "cancelled") {
+      const tryoutIdStr = this.extractId(existing.tryoutId);
+      this.waitlistService.notifyWaitlistForTryout(tryoutIdStr).catch((err: unknown) => logger.error({ err }, "waitlist.notify.failed"));
+    }
 
     logger.info({ registrationId: id, status }, "registration.status.updated");
 

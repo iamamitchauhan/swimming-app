@@ -114,13 +114,15 @@ export function TryoutCard({ tryout }: { tryout: Tryout }) {
         )}
 
         <p className="mb-3 text-xs text-muted-foreground">
-          Registration closes {relativeFromNow(tryout.startAt)}
+          Registration {totalOpen > 0 ? relativeFromNow(tryout.startAt) : "closed"}
         </p>
 
         {/* Action buttons */}
         <div className="flex gap-2">
-          <Button asChild variant="outline" className="flex-1">
-            <Link to={`/tryouts/${tryout.id}`}>View Details</Link>
+          <Button asChild variant={totalOpen > 0 ? "outline" : "secondary"} className="flex-1">
+            <Link to={`/tryouts/${tryout.id}`}>
+              {totalOpen > 0 ? "View Details" : "Join Waitlist"}
+            </Link>
           </Button>
         </div>
       </div>

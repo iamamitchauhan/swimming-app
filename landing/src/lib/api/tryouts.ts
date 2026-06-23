@@ -12,12 +12,8 @@ export interface AgeGroupOption {
 export const AGE_GROUP_OPTIONS: AgeGroupOption[] = [
   { label: "0–5", minAge: 0, maxAge: 5 },
   { label: "6–10", minAge: 6, maxAge: 10 },
-  { label: "11–20", minAge: 11, maxAge: 20 },
-  { label: "21–30", minAge: 21, maxAge: 30 },
-  { label: "31–40", minAge: 31, maxAge: 40 },
-  { label: "41–50", minAge: 41, maxAge: 50 },
-  { label: "51–60", minAge: 51, maxAge: 60 },
-  { label: "60+", minAge: 60, maxAge: 999 },
+  { label: "11–15", minAge: 11, maxAge: 15 },
+  { label: "16–20", minAge: 16, maxAge: 20 },
 ];
 
 export interface TryoutFilters {
@@ -92,9 +88,9 @@ function mapTryout(raw: any): Tryout {
 
   // When the list endpoint returns aggregated totals instead of embedded slots,
   // synthesise a single summary slot so capacity/taken calculations work on the card.
-  const swimmersPerSlot = raw.swimmersPerSlot ?? 4;
   if (slots.length === 0 && (raw.totalSlots ?? 0) > 0) {
-    const totalCap = (raw.totalSlots as number) * swimmersPerSlot;
+    const totalCap = raw.totalCapacity ?? (raw.totalSlots as number) * (raw.swimmersPerSlot ?? 4);
+    const taken = Math.min(raw.registeredCount ?? 0, totalCap);
     slots = [
       {
         id: `${raw._id ?? raw.id}-summary`,
@@ -102,8 +98,8 @@ function mapTryout(raw: any): Tryout {
         label: "Summary",
         time: "",
         capacity: totalCap,
-        taken: raw.registeredCount ?? 0,
-        availableSlots: Math.max(0, totalCap - (raw.registeredCount ?? 0)),
+        taken,
+        availableSlots: Math.max(0, totalCap - taken),
       },
     ];
   }

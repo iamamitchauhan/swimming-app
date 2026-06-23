@@ -9,7 +9,7 @@ export function Footer() {
           <span className="font-display font-semibold text-foreground">SwimTryouts</span>
           <span>· Helping young swimmers find their lane.</span>
         </div>
-        <p>© {new Date().getFullYear()} SwimTryouts. Demo data only.</p>
+        <p>© {new Date().getFullYear()} SwimTryouts.</p>
       </div>
     </footer>
   );

@@ -175,18 +175,10 @@ export class TryoutRepository {
             },
             {
               $lookup: {
-                from: "registrations",
-                let: { tid: "$_id" },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: { $eq: ["$tryoutId", "$$tid"] },
-                      status: { $nin: ["cancelled"] },
-                    },
-                  },
-                  { $count: "count" },
-                ],
-                as: "_regCount",
+                from: "tryout_slots",
+                localField: "_id",
+                foreignField: "tryoutId",
+                as: "_slots",
               },
             },
             {
@@ -223,18 +215,9 @@ export class TryoutRepository {
                 endAt: 1,
                 sessionCount: { $size: "$_sessions" },
                 startDate: { $min: "$_sessions.date" },
-                totalSlots: {
-                  $sum: {
-                    $map: {
-                      input: "$_sessions",
-                      as: "s",
-                      in: "$$s.totalSlots",
-                    },
-                  },
-                },
-                registeredCount: {
-                  $ifNull: [{ $arrayElemAt: ["$_regCount.count", 0] }, 0],
-                },
+                totalSlots: { $size: "$_slots" },
+                totalCapacity: { $sum: "$_slots.capacity" },
+                registeredCount: { $sum: "$_slots.registeredCount" },
               },
             },
           ],
@@ -338,18 +321,10 @@ export class TryoutRepository {
             },
             {
               $lookup: {
-                from: "registrations",
-                let: { tid: "$_id" },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: { $eq: ["$tryoutId", "$$tid"] },
-                      status: { $nin: ["cancelled"] },
-                    },
-                  },
-                  { $count: "count" },
-                ],
-                as: "_regCount",
+                from: "tryout_slots",
+                localField: "_id",
+                foreignField: "tryoutId",
+                as: "_slots",
               },
             },
             {
@@ -384,21 +359,11 @@ export class TryoutRepository {
                 updatedAt: 1,
                 startAt: 1,
                 endAt: 1,
-                computedStatus: 1,
                 sessionCount: { $size: "$_sessions" },
                 startDate: { $min: "$_sessions.date" },
-                totalSlots: {
-                  $sum: {
-                    $map: {
-                      input: "$_sessions",
-                      as: "s",
-                      in: "$$s.totalSlots",
-                    },
-                  },
-                },
-                registeredCount: {
-                  $ifNull: [{ $arrayElemAt: ["$_regCount.count", 0] }, 0],
-                },
+                totalSlots: { $size: "$_slots" },
+                totalCapacity: { $sum: "$_slots.capacity" },
+                registeredCount: { $sum: "$_slots.registeredCount" },
               },
             },
           ],

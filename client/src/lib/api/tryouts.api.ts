@@ -291,6 +291,23 @@ export const tryoutsApi = {
     },
   ): Promise<{ queued: number }> =>
     api<{ queued: number }>(apiClient.post(`/tryouts/${tryoutId}/bulk-email`, payload)),
+
+  /**
+   * GET /waitlist/tryout/:tryoutId
+   * Returns paginated, searchable, sortable waitlist entries for a tryout.
+   */
+  getWaitlist: (tryoutId: string, params: WaitlistListParams = {}): Promise<WaitlistListResult> => {
+    const query = new URLSearchParams();
+    if (params.page) query.set("page", String(params.page));
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.search) query.set("search", params.search);
+    if (params.sortBy) query.set("sortBy", params.sortBy);
+    if (params.sortOrder) query.set("sortOrder", params.sortOrder);
+    const qs = query.toString();
+    return api<WaitlistListResult>(
+      apiClient.get(`/waitlist/tryout/${tryoutId}${qs ? `?${qs}` : ""}`),
+    );
+  },
 };
 
 // ─── Admin View Types ─────────────────────────────────────────────────────────
@@ -397,6 +414,46 @@ export interface RegistrationDetail {
   emailSent?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+// ─── Waitlist ─────────────────────────────────────────────────────────────────
+
+export interface WaitlistEntry {
+  _id: string;
+  tryoutId: string;
+  parentId?: string;
+  swimmerFirstName: string;
+  swimmerLastName: string;
+  ageOnTryoutDay: number;
+  segmentId?: string;
+  guardianName: string;
+  guardianEmail: string;
+  waitlistPosition: number;
+  notifiedAt?: string;
+  joinedAt: string;
+  createdAt: string;
+}
+
+export type WaitlistSortField =
+  | "waitlistPosition"
+  | "swimmerFirstName"
+  | "guardianEmail"
+  | "joinedAt";
+
+export interface WaitlistListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: WaitlistSortField;
+  sortOrder?: SortOrder;
+}
+
+export interface WaitlistListResult {
+  entries: WaitlistEntry[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 // ─── Registration List (server-side) ─────────────────────────────────────────

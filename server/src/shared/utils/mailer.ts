@@ -1102,6 +1102,186 @@ export async function sendRegistrationReceivedEmail(opts: {
   });
 }
 
+// ─── Waitlist confirmation email ─────────────────────────────────────────────
+
+export async function sendWaitlistConfirmationEmail(opts: { to: string; swimmerName: string; tryoutName: string }): Promise<void> {
+  const html = `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    </head>
+    <body style="margin:0;padding:0;background-color:#f4f7fb;font-family:Arial,Helvetica,sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f7fb;padding:40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+
+              <!-- Header -->
+              <tr>
+                <td align="center" style="background:#2563eb;padding:30px;">
+                  <h1 style="margin:0;color:#ffffff;font-size:28px;">SwimTryout</h1>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding:40px 30px;color:#374151;">
+                  <h2 style="margin-top:0;color:#111827;">You're on the Waitlist!</h2>
+
+                  <p style="font-size:16px;line-height:24px;">Hello Parent/Guardian,</p>
+
+                  <p style="font-size:16px;line-height:24px;">
+                    Thank you for registering for the SwimTryout for your swimmer <strong>${opts.swimmerName}</strong>.
+                  </p>
+
+                  <p style="font-size:16px;line-height:24px;">
+                    We have received your registration for <strong>${opts.tryoutName}</strong> and your swimmer has been added to the waitlist.
+                    We will notify you as soon as a spot becomes available.
+                  </p>
+
+                  <p style="font-size:16px;line-height:24px;">
+                    If a slot opens up, you will receive an email with a link to complete the signup process.
+                    Spots will be offered on a first-come, first-served basis, so please complete the registration
+                    as soon as possible once you receive the invitation.
+                  </p>
+
+                  <p style="font-size:16px;line-height:24px;">
+                    Thank you for your patience, and we look forward to seeing your swimmer at the tryout.
+                  </p>
+
+                  <p style="font-size:16px;line-height:24px;margin-bottom:0;">
+                    Best,<br/>
+                    <strong>SwimTryout Team</strong>
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td align="center" style="background:#f9fafb;padding:20px;border-top:1px solid #e5e7eb;">
+                  <p style="margin:0;color:#6b7280;font-size:13px;">
+                    &copy; ${new Date().getFullYear()} SwimTryout. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+  </html>`;
+
+  await sendMail({
+    to: opts.to,
+    subject: "Your SwimTryout Registration is on the Waitlist",
+    html,
+  });
+}
+
+// ─── Slot available email ─────────────────────────────────────────────────────
+
+export async function sendSlotAvailableEmail(opts: { to: string; swimmerName: string; tryoutName: string; signupLink: string }): Promise<void> {
+  const html = `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    </head>
+    <body style="margin:0;padding:0;background-color:#f4f7fb;font-family:Arial,Helvetica,sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f7fb;padding:40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+
+              <!-- Header -->
+              <tr>
+                <td align="center" style="background:#16a34a;padding:30px;">
+                  <h1 style="margin:0;color:#ffffff;font-size:28px;">SwimTryout</h1>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding:40px 30px;color:#374151;">
+                  <h2 style="margin-top:0;color:#111827;">A Spot is Available!</h2>
+
+                  <p style="font-size:16px;line-height:24px;">Hello Parent/Guardian,</p>
+
+                  <p style="font-size:16px;line-height:24px;">
+                    Good news! A spot has become available for your swimmer <strong>${opts.swimmerName}</strong>'s
+                    SwimTryout registration for <strong>${opts.tryoutName}</strong>.
+                  </p>
+
+                  <p style="font-size:16px;line-height:24px;">
+                    You can now complete your signup using the link below:
+                  </p>
+
+                  <div style="text-align:center;margin:36px 0;">
+                    <a
+                      href="${opts.signupLink}"
+                      style="
+                        background:#16a34a;
+                        color:#ffffff;
+                        text-decoration:none;
+                        padding:14px 32px;
+                        border-radius:8px;
+                        font-size:16px;
+                        font-weight:600;
+                        display:inline-block;
+                      "
+                    >
+                      Complete Your Registration
+                    </a>
+                  </div>
+
+                  <p style="font-size:14px;line-height:22px;color:#6b7280;">
+                    Or copy this link into your browser:<br/>
+                    <a href="${opts.signupLink}" style="color:#2563eb;">${opts.signupLink}</a>
+                  </p>
+
+                  <p style="font-size:16px;line-height:24px;">
+                    Please note that this opportunity is available on a first-come, first-served basis.
+                    The spot will be reserved once the registration process is completed.
+                  </p>
+
+                  <p style="font-size:16px;line-height:24px;">
+                    We look forward to welcoming your swimmer to the tryout!
+                  </p>
+
+                  <p style="font-size:16px;line-height:24px;margin-bottom:0;">
+                    Best,<br/>
+                    <strong>SwimTryout Team</strong>
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td align="center" style="background:#f9fafb;padding:20px;border-top:1px solid #e5e7eb;">
+                  <p style="margin:0;color:#6b7280;font-size:13px;">
+                    &copy; ${new Date().getFullYear()} SwimTryout. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+  </html>`;
+
+  await sendMail({
+    to: opts.to,
+    subject: "A Spot is Available — Complete Your SwimTryout Signup",
+    html,
+  });
+}
+
 // ─── Bulk template email ──────────────────────────────────────────────────────
 
 export interface BulkEmailRecipient {

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Calendar, CheckCircle2, Clock, MapPin } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -10,7 +10,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { RegistrationForm } from "@/components/registrations/RegistrationForm";
-import { parentQuery, tryoutQuery } from "@/lib/queries";
+import { WaitlistForm } from "@/components/registrations/WaitlistForm";
+import { parentQuery, tryoutQuery, waitlistEntryQuery } from "@/lib/queries";
 import { tryoutStatus } from "@/lib/api/tryouts";
 import { formatDate } from "@/lib/format";
 import type { Slot, TryoutSession } from "@/lib/types";
@@ -44,8 +45,11 @@ function getThemeBg(theme: string): string {
 
 export default function TryoutDetailPage() {
   const { id = "" } = useParams();
+  const [searchParams] = useSearchParams();
+  const waitlistId = searchParams.get("q") ?? "";
   const { data: tryout, isLoading } = useQuery(tryoutQuery(id));
   const { data: parent } = useQuery(parentQuery());
+  const { data: waitlistEntry } = useQuery(waitlistEntryQuery(waitlistId));
   const navigate = useNavigate();
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -176,10 +180,11 @@ export default function TryoutDetailPage() {
                     size="lg"
                     className="bg-white font-semibold text-slate-900 hover:bg-white/90"
                     onClick={() => {
-                      // call waitlist api with tryoutId, parentId
+                      const el = document.getElementById("registration-section");
+                      el?.scrollIntoView({ behavior: "smooth", block: "start" });
                     }}
                   >
-                    All slots filled - Join waitlist
+                    Join Waitlist
                   </Button>
                 )}
               </>
@@ -375,22 +380,34 @@ export default function TryoutDetailPage() {
             </section>
           )}
 
-          {/* Registration */}
+          {/* Registration / Waitlist */}
 
           <section id="registration-section" className="mt-10">
-            <h2 className="mb-5 font-display text-xl font-bold">Complete Registration</h2>
-            <RegistrationForm
-              tryoutId={tryout.id}
-              slotId={activeSlotId}
-              sessionId={activeSessionId}
-              selectedSlotInfo={selectedSlotInfo}
-              segments={segments}
-              onAddAnotherSwimmer={() => {
-                setActiveSlotId(null);
-                setActiveSessionId(null);
-                setSelectedSlotInfo(null);
-              }}
-            />
+            <h2 className="mb-5 font-display text-xl font-bold">
+              {totalOpen > 0 ? "Complete Registration" : "Join Waitlist"}
+            </h2>
+            {totalOpen > 0 ? (
+              <RegistrationForm
+                tryoutId={tryout.id}
+                slotId={activeSlotId}
+                sessionId={activeSessionId}
+                selectedSlotInfo={selectedSlotInfo}
+                segments={segments}
+                waitlistId={waitlistId || undefined}
+                prefillData={waitlistEntry ?? undefined}
+                onAddAnotherSwimmer={() => {
+                  setActiveSlotId(null);
+                  setActiveSessionId(null);
+                  setSelectedSlotInfo(null);
+                }}
+              />
+            ) : (
+              <WaitlistForm
+                tryoutId={tryout.id}
+                tryoutName={tryout.name ?? ""}
+                segments={segments}
+              />
+            )}
           </section>
 
           {/* Common questions / FAQs */}

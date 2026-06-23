@@ -14,6 +14,7 @@ import {
   fetchRegistrationById,
   fetchRegistrations,
   fetchTryoutRegistrationQuestions,
+  fetchWaitlistEntry,
 } from "./api/registrations";
 import { getCurrentParent } from "./api/auth";
 import { id } from "date-fns/locale";
@@ -31,6 +32,7 @@ export const qk = {
   registrationQuestions: (tryoutId: string) => ["registrationQuestions", tryoutId] as const,
   cancelRegistration: ["cancelRegistration"] as const,
   clubs: ["clubs"] as const,
+  waitlistEntry: (id: string) => ["waitlistEntry", id] as const,
 };
 
 export const parentQuery = () => queryOptions({ queryKey: qk.parent, queryFn: getCurrentParent });
@@ -75,5 +77,13 @@ export const clubsQuery = () =>
   queryOptions({
     queryKey: qk.clubs,
     queryFn: fetchClubs,
+    staleTime: 5 * 60 * 1000,
+  });
+
+export const waitlistEntryQuery = (id: string) =>
+  queryOptions({
+    queryKey: qk.waitlistEntry(id),
+    queryFn: () => fetchWaitlistEntry(id),
+    enabled: !!id,
     staleTime: 5 * 60 * 1000,
   });
