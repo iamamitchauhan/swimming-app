@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import { TryoutService } from "./tryout.service";
 import { TryoutSlotRepository } from "./tryout-slot.repository";
 import { TryoutSessionRepository } from "./tryout-session.repository";
@@ -439,6 +440,9 @@ export class TryoutController {
         | "createdAt"
         | "updatedAt";
       const sortOrder = (req.query["sortOrder"] === "asc" ? "asc" : "desc") as "asc" | "desc";
+      const clubId = (req.query["clubId"] as string | undefined)?.trim() || undefined;
+      const minAge = req.query["minAge"] !== undefined ? parseInt(req.query["minAge"] as string) : undefined;
+      const maxAge = req.query["maxAge"] !== undefined ? parseInt(req.query["maxAge"] as string) : undefined;
 
       const result = await this.service.listActive({
         page,
@@ -446,6 +450,9 @@ export class TryoutController {
         search,
         sortBy,
         sortOrder,
+        clubId,
+        minAge: isNaN(minAge as number) ? undefined : minAge,
+        maxAge: isNaN(maxAge as number) ? undefined : maxAge,
       });
 
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
@@ -481,6 +488,7 @@ export class TryoutController {
       const search = ((req.query["search"] as string) || "").trim().toLowerCase();
       const statusFilter = (req.query["status"] as string) || "";
       const segmentIdFilter = (req.query["segmentId"] as string) || "";
+      const registerId = ((req.query["registerId"] as string) || "").trim();
       const sortBy = (req.query["sortBy"] as string) || "swimmer_name";
       const sortOrder = req.query["sortOrder"] === "desc" ? -1 : 1;
 
@@ -488,6 +496,9 @@ export class TryoutController {
       const mongoFilter: Record<string, any> = { tryoutId: id };
       if (statusFilter) mongoFilter["status"] = statusFilter;
       if (segmentIdFilter) mongoFilter["segmentId"] = segmentIdFilter;
+      if (registerId && mongoose.Types.ObjectId.isValid(registerId)) {
+        mongoFilter["_id"] = new mongoose.Types.ObjectId(registerId);
+      }
 
       // Search by swimmer name (first, last, or combined) or guardian email.
       // Split into tokens so "John Doe" matches firstName="John" AND lastName="Doe".

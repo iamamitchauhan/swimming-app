@@ -161,14 +161,28 @@ export default function TryoutDetailPage() {
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
             {tryout.status === "open" ? (
-              <Button
-                size="lg"
-                className="bg-white font-semibold text-slate-900 hover:bg-white/90"
-                onClick={() => openSlot && handleSelectSlot(openSlot)}
-                disabled={!openSlot}
-              >
-                Reserve your slot →
-              </Button>
+              <>
+                {totalOpen > 0 ? (
+                  <Button
+                    size="lg"
+                    className="bg-white font-semibold text-slate-900 hover:bg-white/90"
+                    onClick={() => openSlot && handleSelectSlot(openSlot)}
+                    disabled={!openSlot}
+                  >
+                    Reserve your slot →
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    className="bg-white font-semibold text-slate-900 hover:bg-white/90"
+                    onClick={() => {
+                      // call waitlist api with tryoutId, parentId
+                    }}
+                  >
+                    All slots filled - Join waitlist
+                  </Button>
+                )}
+              </>
             ) : (
               <Button
                 size="lg"

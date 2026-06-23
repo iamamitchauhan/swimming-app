@@ -258,6 +258,7 @@ export const tryoutsApi = {
     if (params.search) query.set("search", params.search);
     if (params.status) query.set("status", params.status);
     if (params.segmentId) query.set("segmentId", params.segmentId);
+    if (params.registerId) query.set("registerId", params.registerId);
     if (params.sortBy) query.set("sortBy", params.sortBy);
     if (params.sortOrder) query.set("sortOrder", params.sortOrder);
     const qs = query.toString();
@@ -408,6 +409,7 @@ export interface RegistrationListParams {
   search?: string;
   status?: string;
   segmentId?: string;
+  registerId?: string;
   sortBy?: RegistrationSortField;
   sortOrder?: SortOrder;
 }

@@ -55,6 +55,9 @@ export interface TryoutListParams {
   dateTo?: string;
   sortBy?: TryoutSortField;
   sortOrder?: SortOrder;
+  clubId?: string;
+  minAge?: number;
+  maxAge?: number;
 }
 
 export interface TryoutListResult {
@@ -268,7 +271,7 @@ export class TryoutRepository {
   }
 
   async list(params: TryoutListParams = {}): Promise<TryoutListResult> {
-    const { page = 1, limit = 10, search, status, dateFrom, dateTo, sortBy = "createdAt", sortOrder = "desc" } = params;
+    const { page = 1, limit = 10, search, status, dateFrom, dateTo, sortBy = "createdAt", sortOrder = "desc", clubId, minAge, maxAge } = params;
 
     const matchStage: any = {};
 
@@ -281,6 +284,19 @@ export class TryoutRepository {
     // Status filter
     if (status && status !== "all") {
       matchStage["status"] = status;
+    }
+
+    // Club filter
+    if (clubId && mongoose.Types.ObjectId.isValid(clubId)) {
+      matchStage["clubId"] = new mongoose.Types.ObjectId(clubId);
+    }
+
+    // Age group filter — match tryouts that have at least one segment overlapping the requested range
+    if (minAge !== undefined || maxAge !== undefined) {
+      const ageFilter: any = {};
+      if (minAge !== undefined) ageFilter["segments.maxAge"] = { $gte: minAge };
+      if (maxAge !== undefined) ageFilter["segments.minAge"] = { $lte: maxAge };
+      Object.assign(matchStage, ageFilter);
     }
 
     // Date range filter
@@ -429,7 +445,7 @@ export class TryoutRepository {
     };
   }
 
-  async findDistinctClubs(): Promise<string[]> {
+  async findDistinctClubs(): Promise<{ id: string; name: string }[]> {
     const pipeline: any[] = [
       {
         $addFields: {
@@ -448,11 +464,11 @@ export class TryoutRepository {
         },
       },
       { $unwind: "$_club" },
-      { $group: { _id: "$_club.name" } },
-      { $sort: { _id: 1 } },
+      { $group: { _id: "$_club._id", name: { $first: "$_club.name" } } },
+      { $sort: { name: 1 } },
     ];
     const result = await TryoutModel.aggregate(pipeline).exec();
-    return result.map((r) => r._id as string);
+    return result.map((r) => ({ id: String(r._id), name: r.name as string }));
   }
 
   async getPlatformStats(): Promise<{

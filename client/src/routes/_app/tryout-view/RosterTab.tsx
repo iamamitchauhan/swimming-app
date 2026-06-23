@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   CheckCircle2,
   ChevronDown,
@@ -113,6 +114,8 @@ interface Props {
 
 export function RosterTab({ tryoutId }: Props) {
   const { data: tryout } = useTryout(tryoutId);
+  const navigate = useNavigate();
+  const location = useLocation();
   const [rosterParams, setRosterParams] = useState<RegistrationListParams>({
     page: 1,
     limit: 10,
@@ -134,7 +137,13 @@ export function RosterTab({ tryoutId }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
+  const [pendingRegId, setPendingRegId] = useState<string | null>(null);
 
+  function openDecisionDialog(regId: string, status: "offered" | "rejected") {
+    setPendingRegId(regId);
+    setBulkAction(status);
+    setBulkEmailOpen(true);
+  }
 
   useEffect(() => {
     setSelectedIds(new Set());
@@ -172,14 +181,25 @@ export function RosterTab({ tryoutId }: Props) {
 
   async function handleBulkSend(subject: string, emailBody: string) {
     if (!bulkAction) return;
-    const ids = Array.from(selectedIds);
-    await tryoutsApi.bulkEmail(tryoutId, {
-      registrationIds: ids,
-      subject,
-      body: emailBody,
-      action: bulkAction,
-    });
-    setSelectedIds(new Set());
+    if (pendingRegId) {
+      await tryoutsApi.bulkEmail(tryoutId, {
+        registrationIds: [pendingRegId],
+        subject,
+        body: emailBody,
+        action: bulkAction,
+      });
+      sendDecision.mutate({ regId: pendingRegId, status: bulkAction });
+      setPendingRegId(null);
+    } else {
+      const ids = Array.from(selectedIds);
+      await tryoutsApi.bulkEmail(tryoutId, {
+        registrationIds: ids,
+        subject,
+        body: emailBody,
+        action: bulkAction,
+      });
+      setSelectedIds(new Set());
+    }
     setBulkEmailOpen(false);
     setBulkAction(null);
   }
@@ -391,7 +411,15 @@ export function RosterTab({ tryoutId }: Props) {
                       </span>
                     </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
-                      {avg(r) || "—"}
+                      <button
+                        onClick={() =>
+                          navigate(`${location.pathname}?tab=scoring&registerId=${r.id}`)
+                        }
+                        className="hover:underline cursor-pointer"
+                        title="Open in Scoring tab"
+                      >
+                        {avg(r) || "—"}
+                      </button>
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       {r.status !== "registered" ? (
@@ -402,7 +430,7 @@ export function RosterTab({ tryoutId }: Props) {
                           const offerBtn = (
                             <button
                               disabled={!hasAvg}
-                              onClick={() => sendDecision.mutate({ regId: r.id, status: "offered" })}
+                              onClick={() => openDecisionDialog(r.id, "offered")}
                               className="text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" /> Offer
@@ -411,7 +439,7 @@ export function RosterTab({ tryoutId }: Props) {
                           const rejectBtn = (
                             <button
                               disabled={!hasAvg}
-                              onClick={() => sendDecision.mutate({ regId: r.id, status: "rejected" })}
+                              onClick={() => openDecisionDialog(r.id, "rejected")}
                               className="text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <XCircle className="h-3.5 w-3.5" /> Reject
@@ -535,10 +563,11 @@ export function RosterTab({ tryoutId }: Props) {
       <BulkEmailDialog
         open={bulkEmailOpen}
         action={bulkAction}
-        count={selectedIds.size}
+        count={pendingRegId ? 1 : selectedIds.size}
         onClose={() => {
           setBulkEmailOpen(false);
           setBulkAction(null);
+          setPendingRegId(null);
         }}
         onSend={handleBulkSend}
       />
