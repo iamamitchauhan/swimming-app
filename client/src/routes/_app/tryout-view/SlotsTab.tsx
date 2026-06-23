@@ -1,4 +1,5 @@
-import type { TryoutSlot } from "@/lib/api/tryouts.api";
+import { Loader2 } from "lucide-react";
+import { useTryoutSlots } from "@/hooks/use-tryout-dashboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -25,12 +26,22 @@ function fmtTime(t?: string) {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  slots: TryoutSlot[];
+  tryoutId: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function SlotsTab({ slots }: Props) {
+export function SlotsTab({ tryoutId }: Props) {
+  const { data: slots = [], isLoading } = useTryoutSlots(tryoutId);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-gray-400">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading slots…
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden">
       <table className="w-full">

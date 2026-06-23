@@ -1,5 +1,8 @@
 import { useState } from "react";
-import type { Registration } from "@/lib/api/tryouts.api";
+import { Loader2 } from "lucide-react";
+import { apiClient, api } from "@/lib/api/client";
+import { useTryoutRegistration } from "@/hooks/use-tryout-dashboard";
+import { toast } from "sonner";
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
@@ -33,19 +36,17 @@ const COMM_TEMPLATES: Record<string, { label: string; sub: string; subject: stri
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  roster: Registration[];
-  waitlisted: Registration[];
-  onSend: (params: {
-    audience: string;
-    subject: string;
-    body: string;
-    recipients: Registration[];
-  }) => Promise<void>;
+  tryoutId: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function CommsTab({ roster, waitlisted, onSend }: Props) {
+export function CommsTab({ tryoutId }: Props) {
+  const { data, isLoading } = useTryoutRegistration(tryoutId, { limit: 1000 });
+  const allRegistrations = data?.registrations ?? [];
+  const roster = allRegistrations.filter((r) => r.status !== "waitlisted");
+  const waitlisted = allRegistrations.filter((r) => r.status === "waitlisted");
+
   const [commTemplate, setCommTemplate] = useState("general");
   const [commAudience, setCommAudience] = useState("all");
   const [commSubject, setCommSubject]   = useState("");
@@ -77,10 +78,27 @@ export function CommsTab({ roster, waitlisted, onSend }: Props) {
     if (!commSubject.trim() || !commBody.trim()) return;
     setSending(true);
     try {
-      await onSend({ audience: commAudience, subject: commSubject, body: commBody, recipients });
+      await api(
+        apiClient.post(`/tryouts/${tryoutId}/comms`, {
+          audience: commAudience,
+          subject: commSubject,
+          body: commBody,
+        }),
+      );
+      toast.success(`Sent to ${recipients.length} recipient${recipients.length !== 1 ? "s" : ""}!`);
+    } catch {
+      toast.error("Failed to send communication.");
     } finally {
       setSending(false);
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-gray-400">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…
+      </div>
+    );
   }
 
   return (

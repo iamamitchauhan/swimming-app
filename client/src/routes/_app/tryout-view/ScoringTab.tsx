@@ -1,5 +1,18 @@
-import { useState } from "react";
-import type { Registration } from "@/lib/api/tryouts.api";
+import { useState, useEffect } from "react";
+import type {
+  Registration,
+  RegistrationListParams,
+  RegistrationSortField,
+  SortOrder,
+} from "@/lib/api/tryouts.api";
+import {
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
+  Loader2,
+} from "lucide-react";
+import { useTryout } from "@/hooks/use-tryouts";
+import { useTryoutRegistration, useSaveScore } from "@/hooks/use-tryout-dashboard";
 import {
   Table,
   TableBody,
@@ -8,6 +21,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { SearchInput } from "@/components/search-input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,24 +97,72 @@ function ScoreCell({
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
+const ALL_STATUSES = ["registered", "waitlisted", "offered", "rejected", "cancelled"] as const;
+
 type ScoreEdits = Record<string, Partial<Registration>>;
 
 interface Props {
-  registered: Registration[];
-  onSaveScore: (id: string, edits: Partial<Registration>) => Promise<void>;
+  tryoutId: string;
+}
+
+function SortIcon({ field, active, order }: { field: string; active: string; order: SortOrder }) {
+  if (field !== active) return <ChevronsUpDown className="h-3.5 w-3.5 text-gray-400 ml-1 inline" />;
+  return order === "asc" ? (
+    <ChevronUp className="h-3.5 w-3.5 text-gray-700 ml-1 inline" />
+  ) : (
+    <ChevronDown className="h-3.5 w-3.5 text-gray-700 ml-1 inline" />
+  );
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ScoringTab({ registered, onSaveScore }: Props) {
+export function ScoringTab({ tryoutId }: Props) {
+  const { data: tryout } = useTryout(tryoutId);
+  const [params, setParams] = useState<RegistrationListParams>({
+    page: 1,
+    limit: 10,
+    sortBy: "swimmer_name",
+    sortOrder: "asc",
+  });
+  const { data: result, isFetching: loading } = useTryoutRegistration(tryoutId, params);
+  const { registrations = [], total = 0, page = 1, totalPages = 0 } = result ?? {};
+  const saveScoreMutation = useSaveScore(tryoutId);
+
+  function onParamsChange(next: Partial<RegistrationListParams>) {
+    setParams((prev) => ({ ...prev, ...next }));
+  }
+
   const [scoreEdits, setScoreEdits] = useState<ScoreEdits>({});
   const [savingScores, setSavingScores] = useState<Record<string, boolean>>({});
 
-  function getScore(id: string, field: keyof Registration, fallback: boolean | string | number) {
-    return scoreEdits[id]?.[field] ?? registered.find((r) => r.id === id)?.[field] ?? fallback;
+
+  useEffect(() => {
+    setScoreEdits({});
+  }, [result]);
+
+  const sortBy = params.sortBy ?? "swimmer_name";
+  const sortOrder = params.sortOrder ?? "asc";
+
+  function handleSort(field: RegistrationSortField) {
+    if (sortBy === field) {
+      onParamsChange({ sortBy: field, sortOrder: sortOrder === "asc" ? "desc" : "asc", page: 1 });
+    } else {
+      onParamsChange({ sortBy: field, sortOrder: "asc", page: 1 });
+    }
   }
 
-  console.info("registered =>", registered);
+  const segmentLabel =
+    tryout?.segments?.find(
+      (s) => (s as any).id === params.segmentId || s.name === params.segmentId,
+    )?.name ?? (params.segmentId ? params.segmentId : "All segments");
+
+  const statusLabel = params.status
+    ? params.status.charAt(0).toUpperCase() + params.status.slice(1)
+    : "All status";
+
+  function getScore(id: string, field: keyof Registration, fallback: boolean | string | number) {
+    return scoreEdits[id]?.[field] ?? registrations.find((r) => r.id === id)?.[field] ?? fallback;
+  }
 
   function editScore(
     id: string,
@@ -112,7 +181,7 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
     if (!scoreEdits[id]) return;
     setSavingScores((prev) => ({ ...prev, [id]: true }));
     try {
-      await onSaveScore(id, scoreEdits[id]);
+      await saveScoreMutation.mutateAsync({ regId: id, edits: scoreEdits[id] });
       setScoreEdits((prev) => {
         const next = { ...prev };
         delete next[id];
@@ -123,18 +192,97 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
     }
   }
 
+  if (loading && registrations.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-16 text-gray-400">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…
+      </div>
+    );
+  }
+
   return (
     <div>
+      {/* ── Filters ───────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-3 py-4 border-b border-gray-50 px-0.5 mt-1">
+        <SearchInput
+          value={params.search ?? ""}
+          onChange={(v) => onParamsChange({ search: v, page: 1 })}
+          placeholder="Search swimmer or parent email…"
+          className="flex-1 w-lg bg-white"
+          debounceMs={350}
+        />
+
+        {/* Segment filter */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
+              {segmentLabel}
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => onParamsChange({ segmentId: undefined, page: 1 })}>
+              All segments
+            </DropdownMenuItem>
+            {tryout?.segments?.map((seg, i) => (
+              <DropdownMenuItem
+                key={i}
+                onClick={() => onParamsChange({ segmentId: (seg as any).id ?? seg.name, page: 1 })}
+              >
+                {seg.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Status filter */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer capitalize">
+              {statusLabel}
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => onParamsChange({ status: undefined, page: 1 })}>
+              All status
+            </DropdownMenuItem>
+            {ALL_STATUSES.map((s) => (
+              <DropdownMenuItem
+                className="capitalize"
+                key={s}
+                onClick={() => onParamsChange({ status: s, page: 1 })}
+              >
+                {s}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
         <div className="text-xs text-gray-400">Scores 1–10 · Safety = Entry/Exit/Float</div>
       </div>
+
       <div className="rounded-xl border border-gray-200 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-10 px-4">#</TableHead>
-              <TableHead>Swimmer</TableHead>
-              <TableHead className="text-center">Age</TableHead>
+              <TableHead
+                className="cursor-pointer select-none whitespace-nowrap"
+                onClick={() => handleSort("swimmer_name")}
+              >
+                Swimmer
+                <SortIcon field="swimmer_name" active={sortBy} order={sortOrder} />
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none whitespace-nowrap text-center"
+                onClick={() => handleSort("swimmer_age")}
+              >
+                Age
+                <SortIcon field="swimmer_age" active={sortBy} order={sortOrder} />
+              </TableHead>
               <TableHead className="text-center">Entry/Exit</TableHead>
               <TableHead className="text-center">Float</TableHead>
               <TableHead className="text-center">Freestyle</TableHead>
@@ -146,14 +294,22 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-50">
-            {registered.length === 0 && (
+            {loading && registrations.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="py-8 text-center text-gray-400">
-                  No registered swimmers yet
+                <TableCell colSpan={11} className="py-10 text-center text-gray-400">
+                  <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
+                  Loading…
                 </TableCell>
               </TableRow>
             )}
-            {registered.map((r, i) => {
+            {!loading && registrations.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={11} className="py-8 text-center text-gray-400">
+                  No swimmers found
+                </TableCell>
+              </TableRow>
+            )}
+            {registrations.map((r, i) => {
               const hasEdits = !!scoreEdits[r.id];
               const merged = { ...r, ...scoreEdits[r.id] };
               const avgScore = avg(merged);
@@ -161,7 +317,7 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
               return (
                 <TableRow key={r.id} className="hover:bg-gray-50 transition">
                   <TableCell className="text-gray-400 text-xs px-4 py-3">
-                    {i + 1}
+                    {(page - 1) * (params.limit ?? 10) + i + 1}
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="font-medium text-gray-900 whitespace-nowrap">
@@ -241,6 +397,41 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
           </TableBody>
         </Table>
       </div>
+
+      {/* ── Pagination ────────────────────────────────────────────────────── */}
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
+          <span>
+            Showing{" "}
+            <span className="font-medium">
+              {(page - 1) * (params.limit ?? 10) + 1}–
+              {Math.min(page * (params.limit ?? 10), total)}
+            </span>{" "}
+            of <span className="font-medium">{total}</span> results
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => onParamsChange({ page: page - 1 })}
+            >
+              Previous
+            </Button>
+            <span className="text-xs text-gray-500">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => onParamsChange({ page: page + 1 })}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

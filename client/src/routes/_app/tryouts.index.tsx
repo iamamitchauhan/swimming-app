@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { PageShell } from "@/components/page-shell";
 import { SegmentBadges } from "@/components/swimmer-tryout/SegmentBadges";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -38,7 +38,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Plus,
-  Search,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -49,7 +48,6 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
-  X,
   Eye,
   Rocket,
   LayoutDashboard,
@@ -101,7 +99,6 @@ export default function TryoutsList() {
   const navigate = useNavigate();
 
   // ── Filter / sort / pagination state ────────────────────────────────────────
-  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -112,17 +109,6 @@ export default function TryoutsList() {
 
   const [deleteTarget, setDeleteTarget] = useState<Tryout | null>(null);
 
-  // Debounce search input → search param (400 ms)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleSearchChange = useCallback((val: string) => {
-    setSearchInput(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setSearch(val);
-      setPage(1);
-    }, 400);
-  }, []);
-
   // Reset page when any filter/sort changes
   useEffect(() => {
     setPage(1);
@@ -131,7 +117,6 @@ export default function TryoutsList() {
   const hasActiveFilters = search || statusFilter !== "all" || dateFrom || dateTo;
 
   function clearFilters() {
-    setSearchInput("");
     setSearch("");
     setStatusFilter("all");
     setDateFrom("");
@@ -228,26 +213,13 @@ export default function TryoutsList() {
             />
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search tryouts..."
-                  className="pl-9 pr-8 h-9 bg-white"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
+            <SearchInput
+              value={search}
+              onChange={(v) => { setSearch(v); setPage(1); }}
+              placeholder="Search tryouts..."
+              className="w-lg"
+              debounceMs={400}
+            />
             <Button onClick={() => navigate("/tryouts/new")}>
               <Plus className="h-4 w-4 mr-1.5" /> New tryout
             </Button>

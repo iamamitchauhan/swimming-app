@@ -1,4 +1,5 @@
-import type { Registration } from "@/lib/api/tryouts.api";
+import { Loader2 } from "lucide-react";
+import { useTryoutRegistration, usePromoteWaitlist } from "@/hooks/use-tryout-dashboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -25,16 +26,27 @@ function fmtTime(t?: string) {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  waitlisted: Registration[];
-  onPromote: (id: string) => Promise<void>;
+  tryoutId: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function WaitlistTab({ waitlisted, onPromote }: Props) {
+export function WaitlistTab({ tryoutId }: Props) {
+  const { data, isLoading } = useTryoutRegistration(tryoutId, { limit: 1000 });
+  const promote = usePromoteWaitlist(tryoutId);
+
+  const waitlisted = (data?.registrations ?? []).filter((r) => r.status === "waitlisted");
   const sorted = [...waitlisted].sort(
     (a, b) => (a.waitlist_position ?? 0) - (b.waitlist_position ?? 0),
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-gray-400">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">
@@ -60,10 +72,11 @@ export function WaitlistTab({ waitlisted, onPromote }: Props) {
               {r.slot_start && `${fmtTime(r.slot_start)} · ${fmtDate(r.session_date)}`}
             </div>
             <button
-              onClick={() => onPromote(r.id)}
-              className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+              onClick={() => promote.mutate(r.id)}
+              disabled={promote.isPending}
+              className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition disabled:opacity-50"
             >
-              Promote →
+              {promote.isPending ? "…" : "Promote →"}
             </button>
           </div>
         ))}

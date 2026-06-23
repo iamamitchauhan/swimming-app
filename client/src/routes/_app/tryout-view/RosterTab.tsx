@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   CheckCircle2,
   ChevronDown,
@@ -14,11 +14,11 @@ import { tryoutsApi } from "@/lib/api/tryouts.api";
 import type {
   Registration,
   RegistrationListParams,
-  RegistrationListResult,
   RegistrationSortField,
   SortOrder,
-  Tryout,
 } from "@/lib/api/tryouts.api";
+import { useTryout } from "@/hooks/use-tryouts";
+import { useTryoutRegistration, useSendDecision } from "@/hooks/use-tryout-dashboard";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -36,7 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/search-input";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -106,24 +106,27 @@ function SortIcon({ field, active, order }: { field: string; active: string; ord
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  tryout: Tryout;
-  rosterResult: RegistrationListResult;
-  rosterParams: RegistrationListParams;
-  loading: boolean;
-  onParamsChange: (params: Partial<RegistrationListParams>) => void;
-  onDecision: (id: string, status: "offered" | "rejected") => Promise<void>;
+  tryoutId: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function RosterTab({
-  tryout,
-  rosterResult,
-  rosterParams,
-  loading,
-  onParamsChange,
-  onDecision,
-}: Props) {
+export function RosterTab({ tryoutId }: Props) {
+  const { data: tryout } = useTryout(tryoutId);
+  const [rosterParams, setRosterParams] = useState<RegistrationListParams>({
+    page: 1,
+    limit: 10,
+    sortBy: "swimmer_name",
+    sortOrder: "asc",
+  });
+  const { data: rosterResult, isFetching: loading } = useTryoutRegistration(tryoutId, rosterParams);
+  const { registrations = [], total = 0, page = 1, totalPages = 0 } = rosterResult ?? {};
+  const sendDecision = useSendDecision(tryoutId);
+
+  function onParamsChange(params: Partial<RegistrationListParams>) {
+    setRosterParams((prev) => ({ ...prev, ...params }));
+  }
+
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRegId, setSelectedRegId] = useState<string | null>(null);
 
@@ -132,26 +135,11 @@ export function RosterTab({
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
 
-  // Debounced search
-  const [searchInput, setSearchInput] = useState(rosterParams.search ?? "");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onParamsChange({ search: searchInput, page: 1 });
-    }, 350);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchInput]);
 
   useEffect(() => {
     setSelectedIds(new Set());
   }, [rosterResult]);
 
-  const { registrations, total, page, totalPages } = rosterResult;
   const registeredRows = registrations.filter((r) => r.status === "registered");
   const allRegisteredSelected =
     registeredRows.length > 0 && registeredRows.every((r) => selectedIds.has(r.id));
@@ -185,7 +173,7 @@ export function RosterTab({
   async function handleBulkSend(subject: string, emailBody: string) {
     if (!bulkAction) return;
     const ids = Array.from(selectedIds);
-    await tryoutsApi.bulkEmail(tryout._id, {
+    await tryoutsApi.bulkEmail(tryoutId, {
       registrationIds: ids,
       subject,
       body: emailBody,
@@ -207,7 +195,7 @@ export function RosterTab({
   }
 
   const segmentLabel =
-    tryout.segments?.find(
+    tryout?.segments?.find(
       (s) => (s as any).id === rosterParams.segmentId || s.name === rosterParams.segmentId,
     )?.name ?? (rosterParams.segmentId ? rosterParams.segmentId : "All segments");
 
@@ -219,11 +207,12 @@ export function RosterTab({
     <div>
       {/* ── Filters ───────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3 py-4 border-b border-gray-50 px-0.5 mt-1">
-        <Input
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
+        <SearchInput
+          value={rosterParams.search ?? ""}
+          onChange={(v) => onParamsChange({ search: v, page: 1 })}
           placeholder="Search swimmer or parent email…"
-          className="bg-white flex-1 min-w-48 h-9"
+          className="flex-1 min-w-48 bg-white"
+          debounceMs={350}
         />
 
         {/* Segment filter */}
@@ -238,7 +227,7 @@ export function RosterTab({
             <DropdownMenuItem onClick={() => onParamsChange({ segmentId: undefined, page: 1 })}>
               All segments
             </DropdownMenuItem>
-            {tryout.segments?.map((seg, i) => (
+            {tryout?.segments?.map((seg, i) => (
               <DropdownMenuItem
                 key={i}
                 onClick={() => onParamsChange({ segmentId: (seg as any).id ?? seg.name, page: 1 })}
@@ -413,7 +402,7 @@ export function RosterTab({
                           const offerBtn = (
                             <button
                               disabled={!hasAvg}
-                              onClick={() => onDecision(r.id, "offered")}
+                              onClick={() => sendDecision.mutate({ regId: r.id, status: "offered" })}
                               className="text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" /> Offer
@@ -422,7 +411,7 @@ export function RosterTab({
                           const rejectBtn = (
                             <button
                               disabled={!hasAvg}
-                              onClick={() => onDecision(r.id, "rejected")}
+                              onClick={() => sendDecision.mutate({ regId: r.id, status: "rejected" })}
                               className="text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <XCircle className="h-3.5 w-3.5" /> Reject
@@ -555,7 +544,7 @@ export function RosterTab({
       />
 
       <RegistrationDetailModal
-        tryoutId={tryout._id}
+        tryoutId={tryoutId}
         registrationId={selectedRegId}
         open={modalOpen}
         onOpenChange={setModalOpen}

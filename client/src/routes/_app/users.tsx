@@ -3,6 +3,7 @@ import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/search-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -32,11 +33,9 @@ import {
   Loader2,
   MoreHorizontal,
   Plus,
-  Search,
   Shield,
   Trash2,
   UserPlus,
-  X,
   XCircle,
 } from "lucide-react";
 import { useAllUsers, useChangeRole, useRemoveFromClub, useUsersByClub } from "@/hooks/use-users";
@@ -69,18 +68,9 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setDebouncedSearch(search.trim());
-      setPage(1);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [search]);
 
   const allUsers = useAllUsers(
-    isSuperAdmin ? { page, limit: PAGE_SIZE, search: debouncedSearch || undefined } : undefined,
+    isSuperAdmin ? { page, limit: PAGE_SIZE, search: search.trim() || undefined } : undefined,
   );
   const clubUsers = useUsersByClub(clubId);
   const changeRole = useChangeRole(clubId);
@@ -138,24 +128,13 @@ export default function UsersPage() {
     <PageShell title="Users">
       <div className="flex justify-between pb-4">
         <div className="flex gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users…"
-              className="pl-9 pr-8 h-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+          <SearchInput
+            value={search}
+            onChange={(v) => { setSearch(v); setPage(1); }}
+            placeholder="Search users…"
+            className="w-lg"
+            debounceMs={350}
+          />
         </div>
         {canInvite && (
           <Button onClick={() => setInviteOpen(true)}>

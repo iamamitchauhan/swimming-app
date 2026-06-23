@@ -1,25 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { Loader2, CalendarDays, MapPin, Users2, Waves, Pencil, ChevronLeft } from "lucide-react";
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { Loader2, CalendarDays, MapPin, Users2, Waves } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useTryout } from "@/hooks/use-tryouts";
-import { apiClient, api } from "@/lib/api/client";
-import { tryoutsApi } from "@/lib/api/tryouts.api";
-import type {
-  Registration,
-  TryoutSlot,
-  LeaderboardEntry,
-  RegistrationListParams,
-  RegistrationListResult,
-} from "@/lib/api/tryouts.api";
+import { useTryoutRegistration } from "@/hooks/use-tryout-dashboard";
 import { RosterTab } from "./tryout-view/RosterTab";
 import { SlotsTab } from "./tryout-view/SlotsTab";
 import { WaitlistTab } from "./tryout-view/WaitlistTab";
-import { UsaVerifyTab } from "./tryout-view/UsaVerifyTab";
 import { ScoringTab } from "./tryout-view/ScoringTab";
 import { LeaderboardTab } from "./tryout-view/LeaderboardTab";
 import { CommsTab } from "./tryout-view/CommsTab";
@@ -71,136 +60,20 @@ function InfoTile({
 
 export default function TryoutViewPage() {
   const { id = "" } = useParams<{ id: string }>();
-  const navigate = useNavigate();
 
   const { data: tryout, isLoading: tryoutLoading, error: tryoutError } = useTryout(id);
-
-  // ── Data state ───────────────────────────────────────────────────────────────
-  const [rosterResult, setRosterResult] = useState<RegistrationListResult>({
-    registrations: [],
-    total: 0,
-    page: 1,
-    limit: 20,
-    totalPages: 0,
-  });
-  const [rosterParams, setRosterParams] = useState<RegistrationListParams>({
-    page: 1,
-    limit: 10,
-    sortBy: "swimmer_name",
-    sortOrder: "asc",
-  });
-  // Full (unpaginated) list used by ScoringTab, WaitlistTab, CommsTab
-  const [allRegistrations, setAllRegistrations] = useState<Registration[]>([]);
-  const [slots, setSlots] = useState<TryoutSlot[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: rosterResult } = useTryoutRegistration(id, { page: 1, limit: 1 });
   const [tab, setTab] = useState("roster");
 
-  // ── Derived ──────────────────────────────────────────────────────────────────
-  const registered = allRegistrations.filter((r) => r.status !== "waitlisted");
-  const waitlisted = allRegistrations.filter((r) => r.status === "waitlisted");
-
-  // ── Load roster (server-side, paginated) ─────────────────────────────────
-  const loadRoster = useCallback(
-    async (params: RegistrationListParams) => {
-      if (!id) return;
-      setLoading(true);
-      try {
-        const result = await tryoutsApi.getRegistrations(id, params).catch(() => null);
-        if (result) setRosterResult(result);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [id],
-  );
-
-  // ── Load all registrations (for Scoring/Waitlist/Comms tabs) ─────────────
-  const loadAllRegistrations = useCallback(async () => {
-    if (!id) return;
-    try {
-      const result = await tryoutsApi.getRegistrations(id, { limit: 1000 }).catch(() => null);
-      if (result) setAllRegistrations(result.registrations);
-    } catch {
-      // no-op
-    }
-  }, [id]);
-
-  // ── Load slots ────────────────────────────────────────────────────────────
-  const loadData = useCallback(async () => {
-    if (!id) return;
-    try {
-      const [slotsRes] = await Promise.all([
-        api<{ slots: TryoutSlot[] }>(apiClient.get(`/tryouts/${id}/slots`))
-          .then((r) => r.slots)
-          .catch(() => []),
-      ]);
-      setSlots(slotsRes);
-    } catch {
-      // silently handled above
-    }
-  }, [id]);
-
-
-
-  // ── Leaderboard (loaded on tab switch) ───────────────────────────────────
-  async function loadLeaderboard() {
-    setTab("leaderboard");
-    try {
-      const data = await api<LeaderboardEntry[]>(apiClient.get(`/tryouts/${id}/leaderboard`)).catch(
-        () => [],
-      );
-      setLeaderboard(data);
-    } catch {
-      /* no-op */
-    }
-  }
-
-  // ── Actions ───────────────────────────────────────────────────────────────
-
-  async function sendDecision(regId: string, status: "offered" | "rejected") {
-    try {
-      await api(apiClient.put(`/tryouts/${id}/registrations/${regId}/decision`, { status }));
-      await Promise.all([loadRoster(rosterParams), loadAllRegistrations()]);
-      toast.success(status === "offered" ? "Offer sent!" : "Rejected.");
-    } catch {
-      toast.error("Failed to update status.");
-    }
-  }
-
-  async function promoteWaitlist(regId: string) {
-    try {
-      await api(apiClient.put(`/tryouts/${id}/registrations/${regId}/promote`));
-      await Promise.all([loadData(), loadRoster(rosterParams), loadAllRegistrations()]);
-      toast.success("Promoted from waitlist!");
-    } catch {
-      toast.error("Failed to promote.");
-    }
-  }
-
-  async function saveScore(regId: string, edits: Partial<Registration>) {
-    await api(apiClient.put(`/tryouts/${id}/registrations/${regId}/score`, edits));
-    await Promise.all([loadRoster(rosterParams), loadAllRegistrations()]);
-    toast.success("Score saved.");
-  }
-
-    useEffect(() => {
-    loadData();
-    loadRoster(rosterParams);
-    loadAllRegistrations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadData, loadRoster, loadAllRegistrations]);
-
-  // ── Tabs definition ───────────────────────────────────────────────────────
   const TABS = [
-    { key: "roster", label: `Roster (${rosterResult.total})` },
+    { key: "roster", label: `Roster (${rosterResult?.total ?? 0})` },
     { key: "slots", label: "Slots" },
-    { key: "waitlist", label: `Waitlist (${waitlisted.length})` },
+    { key: "waitlist", label: "Waitlist" },
     { key: "scoring", label: "Scoring" },
     { key: "leaderboard", label: "Leaderboard" },
+    // { key: "comms", label: "Comms" },
   ];
 
-  // ── Loading / error states ────────────────────────────────────────────────
   if (tryoutLoading) {
     return (
       <PageShell title="Loading…" crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: "…" }]}>
@@ -218,8 +91,6 @@ export default function TryoutViewPage() {
       </PageShell>
     );
   }
-
-  console.info("tryout =>", tryout);
 
   return (
     <PageShell
@@ -240,7 +111,7 @@ export default function TryoutViewPage() {
         <InfoTile
           icon={Users2}
           label="Registrations"
-          value={loading ? "…" : `${rosterResult.total} registered`}
+          value={`${rosterResult?.total ?? "…"} registered`}
         />
         <InfoTile
           icon={Waves}
@@ -255,46 +126,19 @@ export default function TryoutViewPage() {
 
       <div className="flex items-center gap-1.5 mb-4">
         <SegmentedTabs
-          tabs={TABS.map((t) => ({
-            value: t.key,
-            label: t.label,
-            // badge: t.badge != null ? String(t.badge) : undefined,
-          }))}
+          tabs={TABS.map((t) => ({ value: t.key, label: t.label }))}
           active={tab}
-          onChange={(value) => (value === "leaderboard" ? loadLeaderboard() : setTab(value))}
+          onChange={setTab}
         />
       </div>
-      {/* ── Tab container ──────────────────────────────────────────────────── */}
+
       <div className="overflow-hidden">
-        {/* Tab bar */}
-
-        {/* Tab content */}
-        {tab === "roster" && (
-          <RosterTab
-            tryout={tryout}
-            rosterResult={rosterResult}
-            rosterParams={rosterParams}
-            loading={loading}
-            onParamsChange={(params) => {
-              const next = { ...rosterParams, ...params };
-              setRosterParams(next);
-              loadRoster(next);
-            }}
-            onDecision={sendDecision}
-          />
-        )}
-
-        {tab === "slots" && <SlotsTab slots={slots} />}
-
-        {tab === "waitlist" && <WaitlistTab waitlisted={waitlisted} onPromote={promoteWaitlist} />}
-
-        {tab === "scoring" && <ScoringTab registered={registered} onSaveScore={saveScore} />}
-
-        {tab === "leaderboard" && (
-          <LeaderboardTab leaderboard={leaderboard} onDecision={sendDecision} />
-        )}
-
-        
+        {tab === "roster" && <RosterTab tryoutId={id} />}
+        {tab === "slots" && <SlotsTab tryoutId={id} />}
+        {tab === "waitlist" && <WaitlistTab tryoutId={id} />}
+        {tab === "scoring" && <ScoringTab tryoutId={id} />}
+        {tab === "leaderboard" && <LeaderboardTab tryoutId={id} />}
+        {tab === "comms" && <CommsTab tryoutId={id} />}
       </div>
     </PageShell>
   );

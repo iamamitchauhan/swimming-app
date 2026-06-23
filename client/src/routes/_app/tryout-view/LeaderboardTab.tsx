@@ -1,10 +1,11 @@
-import type { LeaderboardEntry } from "@/lib/api/tryouts.api";
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { useTryoutLeaderboard, useSendDecision } from "@/hooks/use-tryout-dashboard";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  leaderboard: LeaderboardEntry[];
-  onDecision: (id: string, status: "offered" | "rejected") => Promise<void>;
+  tryoutId: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -15,7 +16,21 @@ const RANK_COLORS = [
   "bg-amber-600 text-white",
 ];
 
-export function LeaderboardTab({ leaderboard, onDecision }: Props) {
+export function LeaderboardTab({ tryoutId }: Props) {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => { setEnabled(true); }, []);
+
+  const { data: leaderboard = [], isLoading } = useTryoutLeaderboard(tryoutId, enabled);
+  const decision = useSendDecision(tryoutId);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-gray-400">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading leaderboard…
+      </div>
+    );
+  }
+
   if (leaderboard.length === 0) {
     return (
       <div className="p-4">
@@ -66,8 +81,9 @@ export function LeaderboardTab({ leaderboard, onDecision }: Props) {
                   <div className="flex gap-1.5 ml-3">
                     {l.status !== "offered" ? (
                       <button
-                        onClick={() => onDecision(l.registration_id, "offered")}
-                        className="text-xs text-gray-500 hover:text-green-600 font-medium hover:underline"
+                        onClick={() => decision.mutate({ regId: l.registration_id, status: "offered" })}
+                        disabled={decision.isPending}
+                        className="text-xs text-gray-500 hover:text-green-600 font-medium hover:underline disabled:opacity-50"
                       >
                         Mark offer
                       </button>
