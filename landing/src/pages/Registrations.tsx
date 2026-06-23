@@ -51,19 +51,20 @@ function themeBg(theme?: string) {
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; Icon: LucideIcon; label: string }> =
   {
-    offered: { bg: "bg-blue-100", text: "text-blue-700", Icon: CheckCircle2, label: "Offered" },
     registered: {
-      bg: "bg-green-100",
-      text: "text-green-700",
+      bg: "bg-blue-100",
+      text: "text-blue-700",
       Icon: CheckCircle2,
       label: "Registered",
     },
+    offered: { bg: "bg-green-100", text: "text-green-700", Icon: CheckCircle2, label: "Offered" },
     waitlisted: { bg: "bg-yellow-100", text: "text-yellow-700", Icon: Clock, label: "Waitlisted" },
-    cancelled: { bg: "bg-red-100", text: "text-red-600", Icon: XCircle, label: "Cancelled" },
+    cancelled: { bg: "bg-gray-100", text: "text-gray-500", Icon: XCircle, label: "Cancelled" },
     pending: { bg: "bg-blue-100", text: "text-blue-700", Icon: Clock, label: "Pending" },
     approved: { bg: "bg-green-100", text: "text-green-700", Icon: CheckCircle2, label: "Approved" },
     rejected: { bg: "bg-red-100", text: "text-red-600", Icon: XCircle, label: "Rejected" },
   };
+
 
 export default function RegistrationsPage() {
   const navigate = useNavigate();

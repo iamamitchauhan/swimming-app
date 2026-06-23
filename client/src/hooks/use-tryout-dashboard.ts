@@ -18,6 +18,8 @@ import {
   type TryoutSlot,
   type LeaderboardEntry,
   type Registration,
+  type WaitlistListParams,
+  type WaitlistListResult,
 } from "../lib/api/tryouts.api";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
@@ -28,6 +30,8 @@ export const tryoutDashboardKeys = {
   allRegistrations: (id: string) => ["tryouts", id, "all-registrations"] as const,
   slots: (id: string) => ["tryouts", id, "slots"] as const,
   leaderboard: (id: string) => ["tryouts", id, "leaderboard"] as const,
+  waitlist: (id: string, params: WaitlistListParams) =>
+    ["tryouts", id, "waitlist", params] as const,
 };
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
@@ -54,10 +58,19 @@ export function useTryoutSlots(id: string) {
 export function useTryoutLeaderboard(id: string, enabled: boolean) {
   return useQuery<LeaderboardEntry[]>({
     queryKey: tryoutDashboardKeys.leaderboard(id),
-    queryFn: () =>
-      api<LeaderboardEntry[]>(apiClient.get(`/tryouts/${id}/leaderboard`)),
+    queryFn: () => api<LeaderboardEntry[]>(apiClient.get(`/tryouts/${id}/leaderboard`)),
     enabled: !!id && enabled,
     staleTime: 30_000,
+  });
+}
+
+export function useWaitlistByTryout(id: string, params: WaitlistListParams = {}) {
+  return useQuery<WaitlistListResult>({
+    queryKey: tryoutDashboardKeys.waitlist(id, params),
+    queryFn: () => tryoutsApi.getWaitlist(id, params),
+    enabled: !!id,
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
 }
 

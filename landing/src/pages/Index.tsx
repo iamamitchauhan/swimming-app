@@ -9,7 +9,8 @@ import CountUp from "react-countup";
 
 export default function LandingPage() {
   const { data: stats } = useQuery(statsQuery());
-  const { data: tryouts = [] } = useQuery(tryoutsQuery({ sort: "latest" }));
+  const { data: tryoutsResult } = useQuery(tryoutsQuery({ sort: "latest", page: 1, limit: 12 }));
+  const tryouts = tryoutsResult?.tryouts || [];
   const featured = tryouts.slice(0, 6);
 
   return (

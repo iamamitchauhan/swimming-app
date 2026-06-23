@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Loader2, CalendarDays, MapPin, Users2, Waves } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +63,20 @@ export default function TryoutViewPage() {
 
   const { data: tryout, isLoading: tryoutLoading, error: tryoutError } = useTryout(id);
   const { data: rosterResult } = useTryoutRegistration(id, { page: 1, limit: 1 });
-  const [tab, setTab] = useState("roster");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => searchParams.get("tab") ?? "roster");
+  const registerId = searchParams.get("registerId") ?? undefined;
+
+  useEffect(() => {
+    const urlTab = searchParams.get("tab");
+    if (urlTab && urlTab !== tab) setTab(urlTab);
+  }, [searchParams]);
+
+  function handleTabChange(next: string) {
+    setTab(next);
+    const params: Record<string, string> = { tab: next };
+    setSearchParams(params, { replace: true });
+  }
 
   const TABS = [
     { key: "roster", label: `Roster (${rosterResult?.total ?? 0})` },
@@ -128,7 +141,7 @@ export default function TryoutViewPage() {
         <SegmentedTabs
           tabs={TABS.map((t) => ({ value: t.key, label: t.label }))}
           active={tab}
-          onChange={setTab}
+          onChange={handleTabChange}
         />
       </div>
 
@@ -136,7 +149,7 @@ export default function TryoutViewPage() {
         {tab === "roster" && <RosterTab tryoutId={id} />}
         {tab === "slots" && <SlotsTab tryoutId={id} />}
         {tab === "waitlist" && <WaitlistTab tryoutId={id} />}
-        {tab === "scoring" && <ScoringTab tryoutId={id} />}
+        {tab === "scoring" && <ScoringTab tryoutId={id} registerId={registerId} />}
         {tab === "leaderboard" && <LeaderboardTab tryoutId={id} />}
         {tab === "comms" && <CommsTab tryoutId={id} />}
       </div>

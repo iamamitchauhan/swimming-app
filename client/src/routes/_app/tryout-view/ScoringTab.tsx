@@ -1,16 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import type {
   Registration,
   RegistrationListParams,
   RegistrationSortField,
   SortOrder,
 } from "@/lib/api/tryouts.api";
-import {
-  ChevronDown,
-  ChevronUp,
-  ChevronsUpDown,
-  Loader2,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Loader2 } from "lucide-react";
 import { useTryout } from "@/hooks/use-tryouts";
 import { useTryoutRegistration, useSaveScore } from "@/hooks/use-tryout-dashboard";
 import {
@@ -103,6 +99,7 @@ type ScoreEdits = Record<string, Partial<Registration>>;
 
 interface Props {
   tryoutId: string;
+  registerId?: string;
 }
 
 function SortIcon({ field, active, order }: { field: string; active: string; order: SortOrder }) {
@@ -116,17 +113,35 @@ function SortIcon({ field, active, order }: { field: string; active: string; ord
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ScoringTab({ tryoutId }: Props) {
+export function ScoringTab({ tryoutId, registerId }: Props) {
   const { data: tryout } = useTryout(tryoutId);
-  const [params, setParams] = useState<RegistrationListParams>({
+  const [, setSearchParams] = useSearchParams();
+  const [params, setParams] = useState<RegistrationListParams>(() => ({
     page: 1,
     limit: 10,
     sortBy: "swimmer_name",
     sortOrder: "asc",
-  });
+    ...(registerId ? { registerId } : {}),
+  }));
   const { data: result, isFetching: loading } = useTryoutRegistration(tryoutId, params);
   const { registrations = [], total = 0, page = 1, totalPages = 0 } = result ?? {};
   const saveScoreMutation = useSaveScore(tryoutId);
+
+  useEffect(() => {
+    if (registerId) {
+      setParams((prev) => ({ ...prev, registerId, page: 1 }));
+    }
+  }, [registerId]);
+
+  const clearRegisterFilter = useCallback(() => {
+    setParams((prev) => {
+      const next = { ...prev };
+      delete next.registerId;
+      next.page = 1;
+      return next;
+    });
+    setSearchParams({ tab: "scoring" }, { replace: true });
+  }, [setSearchParams]);
 
   function onParamsChange(next: Partial<RegistrationListParams>) {
     setParams((prev) => ({ ...prev, ...next }));
@@ -134,7 +149,6 @@ export function ScoringTab({ tryoutId }: Props) {
 
   const [scoreEdits, setScoreEdits] = useState<ScoreEdits>({});
   const [savingScores, setSavingScores] = useState<Record<string, boolean>>({});
-
 
   useEffect(() => {
     setScoreEdits({});
@@ -152,9 +166,8 @@ export function ScoringTab({ tryoutId }: Props) {
   }
 
   const segmentLabel =
-    tryout?.segments?.find(
-      (s) => (s as any).id === params.segmentId || s.name === params.segmentId,
-    )?.name ?? (params.segmentId ? params.segmentId : "All segments");
+    tryout?.segments?.find((s) => (s as any).id === params.segmentId || s.name === params.segmentId)
+      ?.name ?? (params.segmentId ? params.segmentId : "All segments");
 
   const statusLabel = params.status
     ? params.status.charAt(0).toUpperCase() + params.status.slice(1)
@@ -205,11 +218,17 @@ export function ScoringTab({ tryoutId }: Props) {
       {/* ── Filters ───────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3 py-4 border-b border-gray-50 px-0.5 mt-1">
         <SearchInput
-          value={params.search ?? ""}
-          onChange={(v) => onParamsChange({ search: v, page: 1 })}
+          value={params.registerId ? (registrations[0]?.swimmer_name ?? "") : (params.search ?? "")}
+          onChange={(v) => {
+            if (params.registerId) {
+              clearRegisterFilter();
+            } else {
+              onParamsChange({ search: v, page: 1 });
+            }
+          }}
           placeholder="Search swimmer or parent email…"
           className="flex-1 w-lg bg-white"
-          debounceMs={350}
+          debounceMs={params.registerId ? 0 : 350}
         />
 
         {/* Segment filter */}
@@ -330,7 +349,9 @@ export function ScoringTab({ tryoutId }: Props) {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="text-center text-gray-500 px-4 py-3">{r.swimmer_age}</TableCell>
+                  <TableCell className="text-center text-gray-500 px-4 py-3">
+                    {r.swimmer_age}
+                  </TableCell>
                   <TableCell className="text-center px-4 py-3">
                     <ScoreCell
                       bool
@@ -404,8 +425,7 @@ export function ScoringTab({ tryoutId }: Props) {
           <span>
             Showing{" "}
             <span className="font-medium">
-              {(page - 1) * (params.limit ?? 10) + 1}–
-              {Math.min(page * (params.limit ?? 10), total)}
+              {(page - 1) * (params.limit ?? 10) + 1}–{Math.min(page * (params.limit ?? 10), total)}
             </span>{" "}
             of <span className="font-medium">{total}</span> results
           </span>

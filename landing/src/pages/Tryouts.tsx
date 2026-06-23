@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/search-input";
 import {
   Select,
   SelectContent,
@@ -12,17 +11,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { TryoutCard } from "@/components/tryouts/TryoutCard";
 import { tryoutsQuery, clubsQuery } from "@/lib/queries";
-import { uniqueValues, type TryoutFilters } from "@/lib/api/tryouts";
+import { AGE_GROUP_OPTIONS, type TryoutFilters } from "@/lib/api/tryouts";
 
 export default function TryoutsPage() {
-  const [filters, setFilters] = useState<TryoutFilters>({ sort: "latest" });
-  const { data: tryouts = [], isFetching } = useQuery(tryoutsQuery(filters));
+  const [filters, setFilters] = useState<TryoutFilters>({ sort: "latest", page: 1, limit: 12 });
+
+  const { data: result, isFetching } = useQuery(tryoutsQuery(filters));
+  const { tryouts = [], total = 0, page = 1, totalPages = 1 } = result ?? {};
   const { data: clubs = [] } = useQuery(clubsQuery());
-  const ageGroups = ["0-5", "6-10", "11-20", "21-30", "31-40", "41-50", "51-60", "60+"];
-  const states = uniqueValues("state");
-  const cities = uniqueValues("city");
+
   const update = <K extends keyof TryoutFilters>(k: K, v: TryoutFilters[K]) =>
-    setFilters((f) => ({ ...f, [k]: v }));
+    setFilters((f) => ({ ...f, [k]: v, page: 1 }));
+
+  const selectedAgeGroup = AGE_GROUP_OPTIONS.find(
+    (g) => g.minAge === filters.minAge && g.maxAge === filters.maxAge,
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
@@ -33,57 +36,74 @@ export default function TryoutsPage() {
         </p>
       </header>
       <div className="mb-6 rounded-2xl border border-border/60 bg-card p-4 shadow-soft">
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by tryout name, club, or city…"
+        <div className="flex items-center gap-2">
+          <SearchInput
+            placeholder="Search by tryout name, club"
             value={filters.search ?? ""}
-            onChange={(e) => update("search", e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-          <FilterSelect
-            placeholder="Age group"
-            value={filters.ageGroup}
-            options={ageGroups}
-            onChange={(v) => update("ageGroup", v)}
-          />
-          {/* <FilterSelect
-            placeholder="State"
-            value={filters.state}
-            options={states}
-            onChange={(v) => update("state", v)}
-          />
-          <FilterSelect
-            placeholder="City"
-            value={filters.city}
-            options={cities}
-            onChange={(v) => update("city", v)}
-          /> */}
-          <FilterSelect
-            placeholder="Club"
-            value={filters.club}
-            options={clubs}
-            onChange={(v) => update("club", v)}
+            onChange={(v) => update("search", v)}
+            className="flex-1"
+            debounceMs={300}
           />
           <Select
-            value={filters.sort}
+            value={selectedAgeGroup ? selectedAgeGroup.label : "__all"}
+            onValueChange={(v) => {
+              if (v === "__all") {
+                setFilters((f) => ({ ...f, minAge: undefined, maxAge: undefined, page: 1 }));
+              } else {
+                const g = AGE_GROUP_OPTIONS.find((o) => o.label === v);
+                if (g) setFilters((f) => ({ ...f, minAge: g.minAge, maxAge: g.maxAge, page: 1 }));
+              }
+            }}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Age group" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All age groups</SelectItem>
+              {AGE_GROUP_OPTIONS.map((g) => (
+                <SelectItem key={g.label} value={g.label}>
+                  {g.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={filters.clubId ?? "__all"}
+            onValueChange={(v) => update("clubId", v === "__all" ? undefined : v)}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Club" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all">All clubs</SelectItem>
+              {clubs.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={filters.sort ?? "latest"}
             onValueChange={(v) => update("sort", v as TryoutFilters["sort"])}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-36">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="latest">Latest</SelectItem>
               <SelectItem value="earliest">Earliest Date</SelectItem>
-              <SelectItem value="most_slots">Most Available Slots</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        <div className="mt-3 flex justify-end">
-          <Button variant="ghost" size="sm" onClick={() => setFilters({ sort: "earliest" })}>
-            Clear filters
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFilters({ sort: "latest", page: 1, limit: 12 })}
+          >
+            Clear
           </Button>
         </div>
       </div>
@@ -94,11 +114,36 @@ export default function TryoutsPage() {
           No tryouts match your filters.
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {tryouts.map((t) => (
-            <TryoutCard key={t.id} tryout={t} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {tryouts.map((t) => (
+              <TryoutCard key={t.id} tryout={t} />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages} &middot; {total} tryouts
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

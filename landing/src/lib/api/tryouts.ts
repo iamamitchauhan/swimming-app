@@ -3,13 +3,27 @@ import type { Tryout, TryoutStatus } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api/v1";
 
+export interface AgeGroupOption {
+  label: string;
+  minAge: number;
+  maxAge: number;
+}
+
+export const AGE_GROUP_OPTIONS: AgeGroupOption[] = [
+  { label: "0–5", minAge: 0, maxAge: 5 },
+  { label: "6–10", minAge: 6, maxAge: 10 },
+  { label: "11–15", minAge: 11, maxAge: 15 },
+  { label: "16–20", minAge: 16, maxAge: 20 },
+];
+
 export interface TryoutFilters {
   search?: string;
-  ageGroup?: string;
-  state?: string;
-  city?: string;
-  club?: string;
-  sort?: "latest" | "earliest" | "most_slots";
+  minAge?: number;
+  maxAge?: number;
+  clubId?: string;
+  sort?: "latest" | "earliest";
+  page?: number;
+  limit?: number;
 }
 
 export function tryoutStatus(t: Tryout): TryoutStatus {
@@ -26,14 +40,8 @@ export function availableSlotsCount(t: Tryout) {
 }
 
 function mapSortToApi(sort: TryoutFilters["sort"]): { sortBy: string; sortOrder: string } {
-  switch (sort) {
-    case "earliest":
-      return { sortBy: "createdAt", sortOrder: "asc" };
-    case "most_slots":
-      return { sortBy: "createdAt", sortOrder: "desc" };
-    default:
-      return { sortBy: "createdAt", sortOrder: "desc" };
-  }
+  if (sort === "earliest") return { sortBy: "createdAt", sortOrder: "asc" };
+  return { sortBy: "createdAt", sortOrder: "desc" };
 }
 
 // Maps backend PlainTryout shape to frontend Tryout interface
@@ -80,9 +88,9 @@ function mapTryout(raw: any): Tryout {
 
   // When the list endpoint returns aggregated totals instead of embedded slots,
   // synthesise a single summary slot so capacity/taken calculations work on the card.
-  const swimmersPerSlot = raw.swimmersPerSlot ?? 4;
   if (slots.length === 0 && (raw.totalSlots ?? 0) > 0) {
-    const totalCap = (raw.totalSlots as number) * swimmersPerSlot;
+    const totalCap = raw.totalCapacity ?? (raw.totalSlots as number) * (raw.swimmersPerSlot ?? 4);
+    const taken = Math.min(raw.registeredCount ?? 0, totalCap);
     slots = [
       {
         id: `${raw._id ?? raw.id}-summary`,
@@ -90,8 +98,8 @@ function mapTryout(raw: any): Tryout {
         label: "Summary",
         time: "",
         capacity: totalCap,
-        taken: raw.registeredCount ?? 0,
-        availableSlots: Math.max(0, totalCap - (raw.registeredCount ?? 0)),
+        taken,
+        availableSlots: Math.max(0, totalCap - taken),
       },
     ];
   }
@@ -134,29 +142,39 @@ function mapTryout(raw: any): Tryout {
   };
 }
 
-export async function fetchTryouts(filters: TryoutFilters = {}): Promise<Tryout[]> {
+export interface TryoutListResult {
+  tryouts: Tryout[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export async function fetchTryouts(filters: TryoutFilters = {}): Promise<TryoutListResult> {
   const { sortBy, sortOrder } = mapSortToApi(filters.sort);
-  const params = new URLSearchParams({ limit: "50", sortBy, sortOrder });
+  const params = new URLSearchParams({
+    page: String(filters.page ?? 1),
+    limit: String(filters.limit ?? 12),
+    sortBy,
+    sortOrder,
+  });
   if (filters.search) params.set("search", filters.search);
+  if (filters.clubId) params.set("clubId", filters.clubId);
+  if (filters.minAge !== undefined) params.set("minAge", String(filters.minAge));
+  if (filters.maxAge !== undefined) params.set("maxAge", String(filters.maxAge));
 
   const response = await fetch(`${API_BASE}/tryouts/public?${params.toString()}`);
   if (!response.ok) throw new Error("Failed to fetch tryouts");
 
   const body = await response.json();
   const rawList: any[] = body.data?.tryouts ?? [];
-  let list = rawList.map(mapTryout);
-
-  // Client-side filters not supported by the public API
-  if (filters.ageGroup) list = list.filter((t) => t.ageGroup === filters.ageGroup);
-  if (filters.state) list = list.filter((t) => t.state === filters.state);
-  if (filters.city) list = list.filter((t) => t.city === filters.city);
-  if (filters.club) list = list.filter((t) => t.club === filters.club);
-
-  if (filters.sort === "most_slots") {
-    list.sort((a, b) => availableSlotsCount(b) - availableSlotsCount(a));
-  }
-
-  return list;
+  return {
+    tryouts: rawList.map(mapTryout),
+    total: body.data?.total ?? rawList.length,
+    page: body.data?.page ?? 1,
+    limit: body.data?.limit ?? 12,
+    totalPages: body.data?.totalPages ?? 1,
+  };
 }
 
 export async function fetchTryoutById(id: string): Promise<Tryout | null> {
@@ -166,7 +184,7 @@ export async function fetchTryoutById(id: string): Promise<Tryout | null> {
   return body.data ? mapTryout(body.data) : null;
 }
 
-export async function fetchClubs(): Promise<string[]> {
+export async function fetchClubs(): Promise<{ id: string; name: string }[]> {
   const response = await fetch(`${API_BASE}/public/clubs`);
   if (!response.ok) throw new Error("Failed to fetch clubs");
   const body = await response.json();

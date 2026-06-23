@@ -102,6 +102,67 @@ export async function markAllNotificationsRead() {
   db.setNotifications(db.getNotifications().map((n) => ({ ...n, read: true })));
 }
 
+export interface JoinWaitlistInput {
+  swimmerFirstName: string;
+  swimmerLastName: string;
+  ageOnTryoutDay: number;
+  segmentId?: string;
+  guardianName: string;
+  guardianEmail: string;
+}
+
+export async function joinWaitlist(
+  tryoutId: string,
+  input: JoinWaitlistInput,
+): Promise<{ position: number; joinedAt: string }> {
+  const token = localStorage.getItem("auth_token");
+  const res = await fetch(`${API_BASE}/waitlist/${tryoutId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(input),
+  });
+
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(body?.message ?? "Failed to join waitlist. Please try again.");
+  }
+
+  return {
+    position: body.data?.waitlist?.position ?? 1,
+    joinedAt: body.data?.waitlist?.joinedAt ?? new Date().toISOString(),
+  };
+}
+
+export interface WaitlistEntry {
+  _id: string;
+  tryoutId: string;
+  swimmerFirstName: string;
+  swimmerLastName: string;
+  ageOnTryoutDay: number;
+  segmentId?: string;
+  guardianName: string;
+  guardianEmail: string;
+  waitlistPosition: number;
+}
+
+export async function fetchWaitlistEntry(id: string): Promise<WaitlistEntry | null> {
+  const res = await fetch(`${API_BASE}/waitlist/entry/${id}`);
+  if (!res.ok) return null;
+  const body = await res.json();
+  return body.data?.entry ?? null;
+}
+
+export async function deleteWaitlistEntry(id: string): Promise<void> {
+  const token = localStorage.getItem("auth_token");
+  await fetch(`${API_BASE}/waitlist/entry/${id}`, {
+    method: "DELETE",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+}
+
 export async function fetchMyTryouts(): Promise<MyTryoutItem[]> {
   const token = localStorage.getItem("auth_token");
   const res = await fetch(`${API_BASE}/registrations/my-tryouts`, {

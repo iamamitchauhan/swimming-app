@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,7 +27,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { qk, registrationQuestionsQuery } from "@/lib/queries";
-import { createRegistration, type RegistrationQuestion } from "@/lib/api/registrations";
+import {
+  createRegistration,
+  deleteWaitlistEntry,
+  type RegistrationQuestion,
+  type WaitlistEntry,
+} from "@/lib/api/registrations";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,6 +49,8 @@ interface Props {
   sessionId: string | null;
   selectedSlotInfo?: SlotInfo | null;
   segments: any[];
+  waitlistId?: string;
+  prefillData?: WaitlistEntry;
   onAddAnotherSwimmer?: () => void;
 }
 
@@ -127,6 +134,8 @@ export function RegistrationForm({
   sessionId,
   selectedSlotInfo,
   segments = [],
+  waitlistId,
+  prefillData,
   onAddAnotherSwimmer,
 }: Props) {
   const navigate = useNavigate();
@@ -158,20 +167,36 @@ export function RegistrationForm({
   } = useForm<FixedFields>({
     resolver: zodResolver(fixedSchema),
     defaultValues: {
-      swimmerFirstName: "",
-      swimmerLastName: "",
-      ageOnTryoutDay: undefined,
-      segment: "",
+      swimmerFirstName: prefillData?.swimmerFirstName ?? "",
+      swimmerLastName: prefillData?.swimmerLastName ?? "",
+      ageOnTryoutDay: prefillData?.ageOnTryoutDay ?? undefined,
+      segment: prefillData?.segmentId ?? "",
       hasUsaMembership: false,
       usaMembershipId: "",
       clubName: "",
-      guardianName: guardianName,
-      guardianEmail: guardianEmail,
+      guardianName: prefillData?.guardianName ?? guardianName,
+      guardianEmail: prefillData?.guardianEmail ?? guardianEmail,
     },
   });
 
   const hasUsaMembership = watch("hasUsaMembership");
   const ageValue = watch("ageOnTryoutDay");
+
+  useEffect(() => {
+    if (!prefillData) return;
+    reset({
+      swimmerFirstName: prefillData.swimmerFirstName ?? "",
+      swimmerLastName: prefillData.swimmerLastName ?? "",
+      ageOnTryoutDay: prefillData.ageOnTryoutDay ?? undefined,
+      segment: prefillData.segmentId ?? "",
+      hasUsaMembership: false,
+      usaMembershipId: "",
+      clubName: "",
+      guardianName: prefillData.guardianName ?? guardianName,
+      guardianEmail: prefillData.guardianEmail ?? guardianEmail,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillData]);
 
   // Valid segments based on age (minAge <= age <= maxAge)
   const validSegments = useMemo(() => {
@@ -240,6 +265,10 @@ export function RegistrationForm({
     onSuccess: async (_data, variables) => {
       await qc.invalidateQueries({ queryKey: qk.registrations });
       await qc.invalidateQueries({ queryKey: qk.notifications });
+      await qc.invalidateQueries({ queryKey: qk.tryout(tryoutId) });
+      if (waitlistId) {
+        deleteWaitlistEntry(waitlistId).catch(() => {});
+      }
       setLastSubmission({
         swimmerName: `${variables.swimmerFirstName} ${variables.swimmerLastName}`,
         guardianEmail: variables.guardianEmail,
