@@ -29,3 +29,10 @@ export const statusLabel = (s: string) => {
   if (s === "open") return "Published";
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
+
+export const tryoutCoverPhotos = () => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+  const origin = baseUrl ? new URL(baseUrl).origin : window.location.origin;
+
+  return [1, 2, 3, 4, 5, 6].map((num) => `${origin}/assets/cover/${num}.jpg`);
+};

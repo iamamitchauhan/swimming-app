@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import path from "path";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -79,6 +80,17 @@ export function createApp(): express.Application {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
   });
+
+  // Static assets — served before API routes
+  // CORP header required because client/landing are on different subdomains
+  app.use(
+    "/assets",
+    (_req, res, next) => {
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      next();
+    },
+    express.static(path.join(__dirname, "assets")),
+  );
 
   // Health check — intentionally before module routes
   app.get(`${API_PREFIX}/health`, (_req: Request, res: Response) => {

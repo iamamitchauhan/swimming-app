@@ -106,14 +106,11 @@ export default function TryoutViewPage() {
   }
 
   return (
-    <PageShell
-      title={""}
-      crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: tryout.name }]}
-      actions={<> </>}
-    >
+    <PageShell title={""} crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: tryout.name }]}>
       <div className="flex justify-between gap-2 pb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex gap-2 flex-col">
           <h2 className="text-2xl font-semibold">{tryout.name}</h2>
+          <p className="text-sm text-muted-foreground">{tryout.description}</p>
         </div>
       </div>
 
@@ -137,7 +134,7 @@ export default function TryoutViewPage() {
         />
       </div>
 
-      <div className="flex items-center gap-1.5 mb-4">
+      <div className="flex items-center gap-1.5">
         <SegmentedTabs
           tabs={TABS.map((t) => ({ value: t.key, label: t.label }))}
           active={tab}

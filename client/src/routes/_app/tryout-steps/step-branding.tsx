@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Link as LinkIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, tryoutCoverPhotos } from "@/lib/utils";
 import { THEMES, TryoutFormValues } from "./shared";
 import { FieldGroup } from "./field-group";
 
@@ -43,6 +43,14 @@ export function StepBranding({ watch, setValue, bannerFile, bannerPreview, onFil
   function clearBanner() {
     onFileChange(null, "");
     setValue("bannerUrl", "");
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  const coverPhotos = tryoutCoverPhotos();
+
+  function handleSelectCover(url: string) {
+    setValue("bannerUrl", url);
+    onFileChange(null, "");
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -102,7 +110,7 @@ export function StepBranding({ watch, setValue, bannerFile, bannerPreview, onFil
           </div>
         </FieldGroup> */}
 
-        <FieldGroup label="Image URL" hint="Paste a direct image URL. Clears uploaded file.">
+        {/* <FieldGroup label="Image URL" hint="Paste a direct image URL. Clears uploaded file.">
           <div className="relative">
             <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -112,13 +120,13 @@ export function StepBranding({ watch, setValue, bannerFile, bannerPreview, onFil
               onChange={handleUrlChange}
             />
           </div>
-        </FieldGroup>
+        </FieldGroup> */}
       </div>
 
       {/* Preview */}
       <div className="space-y-2">
         <p className="text-sm font-medium">Preview</p>
-        <div className="rounded-xl overflow-hidden border border-border h-44 relative">
+        <div className="rounded-xl overflow-hidden border border-border h-80 relative">
           {activeBannerPreview ? (
             <>
               <img
@@ -152,6 +160,42 @@ export function StepBranding({ watch, setValue, bannerFile, bannerPreview, onFil
           )}
         </div>
       </div>
+
+      {/* Cover Photos */}
+      <FieldGroup label="Cover Photos" hint="Pick a preset cover image.">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-1">
+          {coverPhotos.map((url, idx) => {
+            const isSelected = watchedUrl === url;
+            return (
+              <button
+                key={url}
+                type="button"
+                onClick={() => handleSelectCover(url)}
+                className={cn(
+                  "relative rounded-xl overflow-hidden border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring aspect-video",
+                  isSelected
+                    ? "border-primary shadow-md scale-[1.02]"
+                    : "border-transparent hover:border-border",
+                )}
+              >
+                <img
+                  src={url}
+                  alt={`Cover ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                {isSelected && (
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <Badge variant="default" className="text-xs">
+                      Selected
+                    </Badge>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </FieldGroup>
     </div>
   );
 }
