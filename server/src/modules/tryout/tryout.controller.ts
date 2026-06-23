@@ -12,9 +12,10 @@ import { RegistrationModel } from "../../models/registration.model";
 import { SwimmerModel } from "../../models/swimmer.model";
 import { UserModel } from "../../models/user.model";
 import { TryoutRegistrationQuestionModel } from "../../models/tryout-registration-question.model";
-import { sendRegistrationOffer, sendRegistrationReject } from "../../shared/utils/mailer";
+import { sendRegistrationOffer, sendRegistrationReject, sendBulkTemplateEmail } from "../../shared/utils/mailer";
 import { UserService } from "../user/user.service";
 import { TryoutSlotModel } from "../../models/tryout-slot.model";
+import logger from "../../shared/utils/logger";
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
@@ -843,6 +844,98 @@ export class TryoutController {
       );
 
       sendSuccess(res, { sentCount: registrations.length, audience, subject }, "Communication sent successfully", HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * POST /tryouts/:id/bulk-email
+   * Accepts { registrationIds, subject, body }.
+   * Resolves swimmer/parent/club/tryout data for each registration,
+   * interpolates template variables, and sends emails non-blocking (responds 202 immediately).
+   */
+  bulkEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const clubId = req.user?.clubId;
+      if (!clubId) return next(new ForbiddenError("No club associated with user"));
+
+      const { registrationIds, subject, body, action } = req.body as {
+        registrationIds: string[];
+        subject: string;
+        body: string;
+        action: "offered" | "rejected";
+      };
+
+      if (action !== "offered" && action !== "rejected") {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "action must be 'offered' or 'rejected'" });
+        return;
+      }
+
+      if (!Array.isArray(registrationIds) || registrationIds.length === 0) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "registrationIds must be a non-empty array" });
+        return;
+      }
+      if (!subject?.trim() || !body?.trim()) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "subject and body are required" });
+        return;
+      }
+
+      const tryout = await this.service.getById(id, clubId);
+
+      const registrations = await RegistrationModel.find({
+        _id: { $in: registrationIds },
+        tryoutId: id,
+      })
+        .populate<{ swimmerId: { firstName: string; lastName: string } }>("swimmerId", "firstName lastName")
+        .populate<{ parentId: { firstName: string; lastName: string; email: string } }>("parentId", "firstName lastName email")
+        .lean()
+        .exec();
+
+      const recipients = registrations
+        .map((reg: any) => {
+          const swimmerDoc = reg.swimmerId as any;
+          const parentDoc = reg.parentId as any;
+          const swimmerName = swimmerDoc
+            ? `${swimmerDoc.firstName ?? ""} ${swimmerDoc.lastName ?? ""}`.trim()
+            : reg.swimmerDetails?.firstName
+              ? `${reg.swimmerDetails.firstName} ${reg.swimmerDetails.lastName}`.trim()
+              : "";
+          const parentName = parentDoc ? `${parentDoc.firstName ?? ""} ${parentDoc.lastName ?? ""}`.trim() : (reg.swimmerDetails?.guardianName ?? "");
+          const parentEmail = parentDoc?.email ?? reg.swimmerDetails?.guardianEmail ?? "";
+          const clubName = (tryout as any).club?.name ?? (tryout as any).clubName ?? "";
+          const tryoutName = (tryout as any).name ?? "";
+
+          return {
+            to: parentEmail,
+            swimmer_name: swimmerName,
+            parent_name: parentName,
+            parent_email: parentEmail,
+            club_name: clubName,
+            tryout_name: tryoutName,
+          };
+        })
+        .filter((r) => !!r.to);
+
+      sendSuccess(res, { queued: recipients.length }, "Bulk email queued", 202);
+
+      setImmediate(async () => {
+        try {
+          const result = await sendBulkTemplateEmail({
+            recipients,
+            subjectTemplate: subject,
+            bodyTemplate: body,
+          });
+          await RegistrationModel.updateMany(
+            { _id: { $in: registrationIds } },
+            { $set: { status: action, emailSent: true, lastCommunicationAt: new Date() } },
+          );
+          logger.info({ tryoutId: id, ...result }, "bulk-email.completed");
+        } catch (err) {
+          logger.error({ err, tryoutId: id }, "bulk-email.background.failed");
+        }
+      });
     } catch (err) {
       next(err);
     }

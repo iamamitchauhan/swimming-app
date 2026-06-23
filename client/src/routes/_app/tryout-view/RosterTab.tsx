@@ -8,16 +8,9 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { BulkEmailDialog } from "./BulkEmailDialog";
+import { tryoutsApi } from "@/lib/api/tryouts.api";
 import type {
   Registration,
   RegistrationListParams,
@@ -123,105 +116,6 @@ interface Props {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-// ─── Bulk Email Dialog ────────────────────────────────────────────────────────
-
-interface BulkEmailDialogProps {
-  open: boolean;
-  action: "offered" | "rejected" | null;
-  count: number;
-  onClose: () => void;
-  onSend: (subject: string, body: string) => Promise<void>;
-}
-
-function BulkEmailDialog({ open, action, count, onClose, onSend }: BulkEmailDialogProps) {
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [sending, setSending] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setSubject(
-        action === "offered" ? "Congratulations – You've been offered a spot!" : "Tryout Decision",
-      );
-      setBody(
-        action === "offered"
-          ? "Dear swimmer,\n\nCongratulations! We are pleased to offer you a spot in the tryout. Please reply to confirm your acceptance.\n\nBest regards,\nThe Team"
-          : "Dear swimmer,\n\nThank you for participating. After careful review, we are unable to offer you a spot at this time.\n\nBest regards,\nThe Team",
-      );
-    }
-  }, [open, action]);
-
-  async function handleSend() {
-    setSending(true);
-    try {
-      await onSend(subject, body);
-    } finally {
-      setSending(false);
-    }
-  }
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        if (!v) onClose();
-      }}
-    >
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {action === "offered" ? "Send Offer Email" : "Send Rejection Email"}
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({count} swimmer{count !== 1 ? "s" : ""})
-            </span>
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="bulk-subject">Subject</Label>
-            <Input
-              id="bulk-subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Email subject…"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="bulk-body">Email Body</Label>
-            <Textarea
-              id="bulk-body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={8}
-              placeholder="Write your email…"
-              className="resize-none"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose} disabled={sending}>
-            Cancel
-          </Button>
-          <Button
-            disabled={!subject.trim() || !body.trim() || sending}
-            onClick={handleSend}
-            className={
-              action === "offered"
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-red-600 hover:bg-red-700"
-            }
-          >
-            {sending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-            Send Email
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export function RosterTab({
   tryout,
   rosterResult,
@@ -291,10 +185,12 @@ export function RosterTab({
   async function handleBulkSend(subject: string, emailBody: string) {
     if (!bulkAction) return;
     const ids = Array.from(selectedIds);
-    await Promise.all(ids.map((id) => onDecision(id, bulkAction)));
-    // TODO: wire up actual email sending via API here if needed
-    void subject;
-    void emailBody;
+    await tryoutsApi.bulkEmail(tryout._id, {
+      registrationIds: ids,
+      subject,
+      body: emailBody,
+      action: bulkAction,
+    });
     setSelectedIds(new Set());
     setBulkEmailOpen(false);
     setBulkAction(null);

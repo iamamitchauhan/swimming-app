@@ -274,6 +274,22 @@ export const tryoutsApi = {
     api<{ registration: RegistrationDetail }>(
       apiClient.get(`/tryouts/${tryoutId}/registrations/${regId}`),
     ).then((res) => res.registration),
+
+  /**
+   * POST /tryouts/:id/bulk-email
+   * Sends a templated bulk email to the specified registration IDs.
+   * Returns 202 immediately; emails are sent in the background on the server.
+   */
+  bulkEmail: (
+    tryoutId: string,
+    payload: {
+      registrationIds: string[];
+      subject: string;
+      body: string;
+      action: "offered" | "rejected";
+    },
+  ): Promise<{ queued: number }> =>
+    api<{ queued: number }>(apiClient.post(`/tryouts/${tryoutId}/bulk-email`, payload)),
 };
 
 // ─── Admin View Types ─────────────────────────────────────────────────────────

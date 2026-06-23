@@ -1101,3 +1101,50 @@ export async function sendRegistrationReceivedEmail(opts: {
     html,
   });
 }
+
+// ─── Bulk template email ──────────────────────────────────────────────────────
+
+export interface BulkEmailRecipient {
+  to: string;
+  swimmer_name: string;
+  parent_name: string;
+  parent_email: string;
+  club_name: string;
+  tryout_name: string;
+}
+
+function interpolateTemplate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
+}
+
+export async function sendBulkTemplateEmail(opts: {
+  recipients: BulkEmailRecipient[];
+  subjectTemplate: string;
+  bodyTemplate: string;
+}): Promise<{ sent: number; failed: number }> {
+  let sent = 0;
+  let failed = 0;
+
+  await Promise.all(
+    opts.recipients.map(async (r) => {
+      const vars: Record<string, string> = {
+        swimmer_name: r.swimmer_name,
+        parent_name: r.parent_name,
+        parent_email: r.parent_email,
+        club_name: r.club_name,
+        tryout_name: r.tryout_name,
+      };
+      const subject = interpolateTemplate(opts.subjectTemplate, vars);
+      const bodyText = interpolateTemplate(opts.bodyTemplate, vars);
+      const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;max-width:600px;margin:0 auto;">${bodyText.replace(/\n/g, "<br/>")}</div>`;
+      try {
+        await sendMail({ to: r.to, subject, html, text: bodyText });
+        sent++;
+      } catch {
+        failed++;
+      }
+    }),
+  );
+
+  return { sent, failed };
+}

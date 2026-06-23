@@ -1,5 +1,13 @@
 import { useState } from "react";
 import type { Registration } from "@/lib/api/tryouts.api";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -120,30 +128,30 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
         <div className="text-xs text-gray-400">Scores 1–10 · Safety = Entry/Exit/Float</div>
       </div>
-      <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm min-w-max">
-          <thead className="bg-gray-900 text-white text-xs uppercase tracking-wide">
-            <tr>
-              <th className="px-3 py-3 text-left sticky left-0 bg-gray-900">#</th>
-              <th className="px-3 py-3 text-left sticky left-8 bg-gray-900">Swimmer</th>
-              <th className="px-3 py-3 text-center">Age</th>
-              <th className="px-3 py-3 text-center">Entry/Exit</th>
-              <th className="px-3 py-3 text-center">Float</th>
-              <th className="px-3 py-3 text-center">Freestyle</th>
-              <th className="px-3 py-3 text-center">Backstroke</th>
-              <th className="px-3 py-3 text-center">Breaststroke</th>
-              <th className="px-3 py-3 text-center">Butterfly</th>
-              <th className="px-3 py-3 text-center">Avg Score</th>
-              <th className="px-3 py-3 text-center">Save</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
+      <div className="rounded-xl border border-gray-200 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10 px-4">#</TableHead>
+              <TableHead>Swimmer</TableHead>
+              <TableHead className="text-center">Age</TableHead>
+              <TableHead className="text-center">Entry/Exit</TableHead>
+              <TableHead className="text-center">Float</TableHead>
+              <TableHead className="text-center">Freestyle</TableHead>
+              <TableHead className="text-center">Backstroke</TableHead>
+              <TableHead className="text-center">Breaststroke</TableHead>
+              <TableHead className="text-center">Butterfly</TableHead>
+              <TableHead className="text-center">Avg Score</TableHead>
+              <TableHead className="text-center">Save</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-50">
             {registered.length === 0 && (
-              <tr>
-                <td colSpan={11} className="px-4 py-8 text-center text-gray-400">
+              <TableRow>
+                <TableCell colSpan={11} className="py-8 text-center text-gray-400">
                   No registered swimmers yet
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
             {registered.map((r, i) => {
               const hasEdits = !!scoreEdits[r.id];
@@ -151,11 +159,11 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
               const avgScore = avg(merged);
               const isBlocked = r.status === "cancelled" || r.status === "rejected";
               return (
-                <tr key={r.id} className="hover:bg-blue-50/30 transition text-xs">
-                  <td className="px-3 py-3 text-gray-400 text-xs sticky left-0 bg-white">
+                <TableRow key={r.id} className="hover:bg-gray-50 transition">
+                  <TableCell className="text-gray-400 text-xs px-4 py-3">
                     {i + 1}
-                  </td>
-                  <td className="px-3 py-3 sticky left-8 bg-white">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <div className="font-medium text-gray-900 whitespace-nowrap">
                       {r.swimmer_name}
                     </div>
@@ -165,56 +173,56 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
                         {r.status}
                       </div>
                     )}
-                  </td>
-                  <td className="px-3 py-3 text-center text-gray-500">{r.swimmer_age}</td>
-                  <td className="px-3 py-3 text-center">
+                  </TableCell>
+                  <TableCell className="text-center text-gray-500 px-4 py-3">{r.swimmer_age}</TableCell>
+                  <TableCell className="text-center px-4 py-3">
                     <ScoreCell
                       bool
                       disabled={isBlocked}
                       value={getScore(r.id, "safety_entry_exit", false) as boolean}
                       onChange={(v) => editScore(r.id, "safety_entry_exit", v, r.status)}
                     />
-                  </td>
-                  <td className="px-3 py-3 text-center">
+                  </TableCell>
+                  <TableCell className="text-center px-4 py-3">
                     <ScoreCell
                       bool
                       disabled={isBlocked}
                       value={getScore(r.id, "safety_float", false) as boolean}
                       onChange={(v) => editScore(r.id, "safety_float", v, r.status)}
                     />
-                  </td>
-                  <td className="px-3 py-3 text-center">
+                  </TableCell>
+                  <TableCell className="text-center px-4 py-3">
                     <ScoreCell
                       disabled={isBlocked}
                       value={getScore(r.id, "freestyle", "") as string}
                       onChange={(v) => editScore(r.id, "freestyle", v, r.status)}
                     />
-                  </td>
-                  <td className="px-3 py-3 text-center">
+                  </TableCell>
+                  <TableCell className="text-center px-4 py-3">
                     <ScoreCell
                       disabled={isBlocked}
                       value={getScore(r.id, "backstroke", "") as string}
                       onChange={(v) => editScore(r.id, "backstroke", v, r.status)}
                     />
-                  </td>
-                  <td className="px-3 py-3 text-center">
+                  </TableCell>
+                  <TableCell className="text-center px-4 py-3">
                     <ScoreCell
                       disabled={isBlocked}
                       value={getScore(r.id, "breaststroke", "") as string}
                       onChange={(v) => editScore(r.id, "breaststroke", v, r.status)}
                     />
-                  </td>
-                  <td className="px-3 py-3 text-center">
+                  </TableCell>
+                  <TableCell className="text-center px-4 py-3">
                     <ScoreCell
                       disabled={isBlocked}
                       value={getScore(r.id, "butterfly", "") as string}
                       onChange={(v) => editScore(r.id, "butterfly", v, r.status)}
                     />
-                  </td>
-                  <td className="px-3 py-3 text-center font-bold text-blue-600">
+                  </TableCell>
+                  <TableCell className="text-center font-semibold text-blue-700 px-4 py-3">
                     {avgScore || "—"}
-                  </td>
-                  <td className="px-3 py-3 text-center">
+                  </TableCell>
+                  <TableCell className="text-center px-4 py-3">
                     <button
                       onClick={() => saveScore(r.id)}
                       disabled={!hasEdits || savingScores[r.id] || isBlocked}
@@ -226,12 +234,12 @@ export function ScoringTab({ registered, onSaveScore }: Props) {
                     >
                       {savingScores[r.id] ? "…" : "✓"}
                     </button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

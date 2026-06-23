@@ -1,11 +1,11 @@
-import { Router } from 'express';
-import { authenticate } from '../../middleware/auth.middleware';
-import { authorize } from '../../middleware/authorize.middleware';
-import { clubIsolation } from '../../middleware/clubIsolation.middleware';
-import { USER_ROLES } from '../../shared/constants/roles';
-import { TryoutRepository } from './tryout.repository';
-import { TryoutService } from './tryout.service';
-import { TryoutController, upload } from './tryout.controller';
+import { Router } from "express";
+import { authenticate } from "../../middleware/auth.middleware";
+import { authorize } from "../../middleware/authorize.middleware";
+import { clubIsolation } from "../../middleware/clubIsolation.middleware";
+import { USER_ROLES } from "../../shared/constants/roles";
+import { TryoutRepository } from "./tryout.repository";
+import { TryoutService } from "./tryout.service";
+import { TryoutController, upload } from "./tryout.controller";
 
 const repo = new TryoutRepository();
 const service = new TryoutService(repo);
@@ -36,91 +36,41 @@ const controller = new TryoutController(service);
  */
 const tryoutRouter = Router();
 
-tryoutRouter.get('/public', controller.listPublic);
-tryoutRouter.get('/public/:id/sessions', controller.getSessions);
-tryoutRouter.get('/public/:id/slots', controller.getSlots);
-tryoutRouter.get('/public/:id/registration-questions', controller.getPublicRegistrationQuestions);
-tryoutRouter.get('/public/:id', controller.getPublicById);
-tryoutRouter.get('/', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.list);
-tryoutRouter.get('/:id/sessions', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getSessions);
-tryoutRouter.get('/:id/slots', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getSlots);
-tryoutRouter.get('/:id/registrations', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getRegistrations);
-tryoutRouter.get('/:id/leaderboard', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getLeaderboard);
-tryoutRouter.get('/:id/registrations/:regId', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getRegistrationDetail);
-tryoutRouter.get('/:id', authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getById);
+tryoutRouter.get("/public", controller.listPublic);
+tryoutRouter.get("/public/:id/sessions", controller.getSessions);
+tryoutRouter.get("/public/:id/slots", controller.getSlots);
+tryoutRouter.get("/public/:id/registration-questions", controller.getPublicRegistrationQuestions);
+tryoutRouter.get("/public/:id", controller.getPublicById);
+tryoutRouter.get("/", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.list);
+tryoutRouter.get("/:id/sessions", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getSessions);
+tryoutRouter.get("/:id/slots", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getSlots);
+tryoutRouter.get("/:id/registrations", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getRegistrations);
+tryoutRouter.get("/:id/leaderboard", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getLeaderboard);
+tryoutRouter.get("/:id/registrations/:regId", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getRegistrationDetail);
+tryoutRouter.get("/:id", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getById);
 
-tryoutRouter.post(
-  '/',
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  upload.single('banner'),
-  controller.create,
-);
+tryoutRouter.post("/", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), upload.single("banner"), controller.create);
 
-tryoutRouter.put(
-  '/:id',
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  upload.single('banner'),
-  controller.update,
-);
+tryoutRouter.put("/:id", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), upload.single("banner"), controller.update);
 
-tryoutRouter.patch(
-  '/:id/publish',
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.publish,
-);
+tryoutRouter.patch("/:id/publish", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.publish);
 
-tryoutRouter.delete(
-  '/:id',
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.delete,
-);
+tryoutRouter.delete("/:id", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.delete);
 
 // ─── Admin registration actions ───────────────────────────────────────────────
 
-tryoutRouter.put(
-  '/:id/registrations/:regId/decision',
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.decision,
-);
+tryoutRouter.put("/:id/registrations/:regId/decision", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.decision);
 
-tryoutRouter.put(
-  '/:id/registrations/:regId/promote',
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.promoteWaitlist,
-);
+tryoutRouter.put("/:id/registrations/:regId/promote", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.promoteWaitlist);
 
-tryoutRouter.put(
-  '/:id/registrations/:regId/verify',
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.verifyUsa,
-);
+tryoutRouter.put("/:id/registrations/:regId/verify", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.verifyUsa);
 
-tryoutRouter.put(
-  '/:id/registrations/:regId/score',
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.updateScore,
-);
+tryoutRouter.put("/:id/registrations/:regId/score", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.updateScore);
 
-tryoutRouter.put(
-  '/:id/registration-questions',
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.upsertRegistrationQuestions,
-);
+tryoutRouter.put("/:id/registration-questions", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.upsertRegistrationQuestions);
 
-tryoutRouter.post(
-  '/:id/comms',
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.sendComms,
-);
+tryoutRouter.post("/:id/comms", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.sendComms);
+
+tryoutRouter.post("/:id/bulk-email", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.bulkEmail);
 
 export { tryoutRouter };

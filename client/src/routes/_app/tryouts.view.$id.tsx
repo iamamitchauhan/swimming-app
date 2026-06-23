@@ -99,13 +99,6 @@ export default function TryoutViewPage() {
   // ── Derived ──────────────────────────────────────────────────────────────────
   const registered = allRegistrations.filter((r) => r.status !== "waitlisted");
   const waitlisted = allRegistrations.filter((r) => r.status === "waitlisted");
-  const needsReviewCount = allRegistrations.filter(
-    (r) =>
-      r.usa_membership_id &&
-      (r.usa_verification_status === "needs_review" ||
-        r.usa_verification_status === "pending" ||
-        !r.usa_verification_status),
-  ).length;
 
   // ── Load roster (server-side, paginated) ─────────────────────────────────
   const loadRoster = useCallback(
@@ -148,12 +141,7 @@ export default function TryoutViewPage() {
     }
   }, [id]);
 
-  useEffect(() => {
-    loadData();
-    loadRoster(rosterParams);
-    loadAllRegistrations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadData, loadRoster, loadAllRegistrations]);
+
 
   // ── Leaderboard (loaded on tab switch) ───────────────────────────────────
   async function loadLeaderboard() {
@@ -190,51 +178,26 @@ export default function TryoutViewPage() {
     }
   }
 
-  async function setVerifyStatus(regId: string, status: string) {
-    try {
-      await api(apiClient.put(`/tryouts/${id}/registrations/${regId}/verify`, { status }));
-      await Promise.all([loadRoster(rosterParams), loadAllRegistrations()]);
-      toast.success("Verification status updated.");
-    } catch {
-      toast.error("Failed to update verification.");
-    }
-  }
-
   async function saveScore(regId: string, edits: Partial<Registration>) {
     await api(apiClient.put(`/tryouts/${id}/registrations/${regId}/score`, edits));
     await Promise.all([loadRoster(rosterParams), loadAllRegistrations()]);
     toast.success("Score saved.");
   }
 
-  async function sendComm(params: {
-    audience: string;
-    subject: string;
-    body: string;
-    recipients: Registration[];
-  }) {
-    await api(
-      apiClient.post(`/tryouts/${id}/comms`, {
-        audience: params.audience,
-        subject: params.subject,
-        body: params.body,
-      }),
-    );
-    toast.success(`Email sent to ${params.recipients.length} recipients.`);
-  }
+    useEffect(() => {
+    loadData();
+    loadRoster(rosterParams);
+    loadAllRegistrations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadData, loadRoster, loadAllRegistrations]);
 
   // ── Tabs definition ───────────────────────────────────────────────────────
   const TABS = [
     { key: "roster", label: `Roster (${rosterResult.total})` },
     { key: "slots", label: "Slots" },
     { key: "waitlist", label: `Waitlist (${waitlisted.length})` },
-    // {
-    //   key: "usa-verify",
-    //   label: "USA-S Verify",
-    //   badge: needsReviewCount > 0 ? needsReviewCount : null,
-    // },
     { key: "scoring", label: "Scoring" },
     { key: "leaderboard", label: "Leaderboard" },
-    // { key: "comms",       label: "Comms" },
   ];
 
   // ── Loading / error states ────────────────────────────────────────────────
@@ -325,19 +288,13 @@ export default function TryoutViewPage() {
 
         {tab === "waitlist" && <WaitlistTab waitlisted={waitlisted} onPromote={promoteWaitlist} />}
 
-        {/* {tab === "usa-verify" && (
-          <UsaVerifyTab roster={allRegistrations} onSetVerifyStatus={setVerifyStatus} />
-        )} */}
-
         {tab === "scoring" && <ScoringTab registered={registered} onSaveScore={saveScore} />}
 
         {tab === "leaderboard" && (
           <LeaderboardTab leaderboard={leaderboard} onDecision={sendDecision} />
         )}
 
-        {tab === "comms" && (
-          <CommsTab roster={allRegistrations} waitlisted={waitlisted} onSend={sendComm} />
-        )}
+        
       </div>
     </PageShell>
   );
