@@ -376,10 +376,10 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-310px)] overflow-hidden">
+    <div className="flex gap-6 h-[calc(100vh-430px)] overflow-hidden">
       {/* ── Left: Question Library ─────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 space-y-4">
-        <div>
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div className="shrink-0 pb-4">
           <h3 className="text-sm font-semibold text-foreground">Question Library</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Click <Plus className="h-3 w-3 inline-block" /> to add a question to the registration
@@ -388,21 +388,21 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
         </div>
 
         {isLoading && (
-          <div className="flex items-center gap-2 py-12 justify-center text-muted-foreground">
+          <div className="flex-1 flex items-center gap-2 justify-center text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span className="text-sm">Loading question library…</span>
           </div>
         )}
 
         {isError && (
-          <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <div className="shrink-0 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>Failed to load question library. Please refresh and try again.</span>
           </div>
         )}
 
         {!isLoading && !isError && categories && (
-          <div className="space-y-3 max-h-[calc(100vh-360px)] overflow-y-auto pr-1">
+          <div className="flex-1 overflow-auto min-h-0 space-y-3 pr-1">
             {categories.length === 0 ? (
               <div className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
                 <BookOpen className="h-7 w-7 opacity-40" />
@@ -427,8 +427,8 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
       <div className="w-px bg-border shrink-0" />
 
       {/* ── Right: Form Preview ────────────────────────────────────────────── */}
-      <div className="w-[550px] shrink-0 space-y-4">
-        <div className="flex items-center gap-2">
+      <div className="w-[550px] shrink-0 flex flex-col overflow-hidden">
+        <div className="shrink-0 flex items-center gap-2 pb-4">
           <Eye className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold text-foreground">Form Preview</h3>
           {selectedQuestions.length > 0 && (
@@ -438,103 +438,104 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
           )}
         </div>
 
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            Registration Form
-          </p>
-
-          <DefaultFormUI />
-        </div>
-
-        {selectedQuestions.length === 0 ? (
-          <div className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
-            <Eye className="h-7 w-7 opacity-40" />
-            <p className="text-sm text-center px-4">
-              Add questions from the library to see a preview here.
+        <div className="flex-1 overflow-auto min-h-0 space-y-4">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+              Registration Form
             </p>
+            <DefaultFormUI />
           </div>
-        ) : (
-          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-1 max-h-[calc(100vh-360px)] overflow-y-auto">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-1">
-              Additional information
-            </p>
-            <div className="space-y-2">
-              {selectedQuestions.map((q, idx) => (
-                <div
-                  key={buildKey(q.categoryId, q.questionIndex)}
-                  draggable
-                  onDragStart={() => handleDragStart(idx)}
-                  onDragOver={(e) => handleDragOver(e, idx)}
-                  onDrop={() => handleDrop(idx)}
-                  onDragEnd={handleDragEnd}
-                  className={cn(
-                    "relative group flex items-start gap-2 rounded-lg border p-3 bg-card transition-all",
-                    draggingIdx === idx
-                      ? "opacity-40 border-dashed border-primary/40"
-                      : overIdx === idx
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border hover:border-border/80",
-                  )}
-                >
+
+          {selectedQuestions.length === 0 ? (
+            <div className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+              <Eye className="h-7 w-7 opacity-40" />
+              <p className="text-sm text-center px-4">
+                Add questions from the library to see a preview here.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-1">
+                Additional information
+              </p>
+              <div className="space-y-2">
+                {selectedQuestions.map((q, idx) => (
                   <div
-                    className="shrink-0 mt-1 cursor-grab active:cursor-grabbing text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors"
-                    title="Drag to reorder"
-                  >
-                    <GripVertical className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <PreviewField q={q} />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSelected(idx)}
-                    className="shrink-0 mt-0.5 h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Remove question"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="pt-4 border-t border-border mt-4 space-y-2">
-              <button
-                disabled
-                className="w-full h-10 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground opacity-50 cursor-not-allowed"
-              >
-                Submit Registration
-              </button>
-            </div>
-          </div>
-        )}
-
-        {selectedQuestions.length > 0 && (
-          <div className="rounded-lg border border-border bg-card p-3 space-y-1">
-            <p className="text-xs font-medium text-foreground">Selected questions</p>
-            <div className="space-y-1.5">
-              {selectedQuestions.map((q, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span
+                    key={buildKey(q.categoryId, q.questionIndex)}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDrop={() => handleDrop(idx)}
+                    onDragEnd={handleDragEnd}
                     className={cn(
-                      "inline-flex items-center gap-0.5 shrink-0 px-1 py-0.5 rounded border text-[9px] font-semibold uppercase",
-                      questionTypeBadgeColor(q.type),
+                      "relative group flex items-start gap-2 rounded-lg border p-3 bg-card transition-all",
+                      draggingIdx === idx
+                        ? "opacity-40 border-dashed border-primary/40"
+                        : overIdx === idx
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-border hover:border-border/80",
                     )}
                   >
-                    {questionTypeIcon(q.type)}
-                  </span>
-                  <span className="truncate flex-1">{q.label}</span>
-                  {q.required && <span className="text-destructive shrink-0 text-[10px]">*</span>}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSelected(idx)}
-                    className="shrink-0 text-muted-foreground/50 hover:text-destructive transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
+                    <div
+                      className="shrink-0 mt-1 cursor-grab active:cursor-grabbing text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors"
+                      title="Drag to reorder"
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <PreviewField q={q} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSelected(idx)}
+                      className="shrink-0 mt-0.5 h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Remove question"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-4 border-t border-border mt-4 space-y-2">
+                <button
+                  disabled
+                  className="w-full h-10 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground opacity-50 cursor-not-allowed"
+                >
+                  Submit Registration
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {selectedQuestions.length > 0 && (
+            <div className="rounded-lg border border-border bg-card p-3 space-y-1">
+              <p className="text-xs font-medium text-foreground">Selected questions</p>
+              <div className="space-y-1.5">
+                {selectedQuestions.map((q, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-0.5 shrink-0 px-1 py-0.5 rounded border text-[9px] font-semibold uppercase",
+                        questionTypeBadgeColor(q.type),
+                      )}
+                    >
+                      {questionTypeIcon(q.type)}
+                    </span>
+                    <span className="truncate flex-1">{q.label}</span>
+                    {q.required && <span className="text-destructive shrink-0 text-[10px]">*</span>}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSelected(idx)}
+                      className="shrink-0 text-muted-foreground/50 hover:text-destructive transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

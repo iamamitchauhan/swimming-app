@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { UseFormWatch, UseFormSetValue } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Link as LinkIcon, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, tryoutCoverPhotos } from "@/lib/utils";
 import { THEMES, TryoutFormValues } from "./shared";
@@ -55,145 +55,106 @@ export function StepBranding({ watch, setValue, bannerFile, bannerPreview, onFil
   }
 
   return (
-    <div className="space-y-8">
-      {/* Theme */}
-      <FieldGroup label="Color Theme">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-1">
+    <div className="space-y-6">
+      {/* Cover Photos — primary action first */}
+      <FieldGroup label="Cover Photos" hint="Pick a preset cover image.">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 mt-1">
+          {coverPhotos.map((url, idx) => {
+            const active = watchedUrl === url;
+            return (
+              <button
+                key={url}
+                type="button"
+                aria-pressed={active}
+                onClick={() => handleSelectCover(url)}
+                className={cn(
+                  "group relative overflow-hidden rounded-lg border transition-all aspect-video",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                  active
+                    ? "border-primary shadow-sm ring-1 ring-primary"
+                    : "border-border hover:border-foreground/20",
+                )}
+              >
+                <img
+                  src={url}
+                  alt={`Cover option ${idx + 1}`}
+                  loading="lazy"
+                  className={cn(
+                    "h-full w-full object-cover transition-transform duration-200",
+                    !active && "group-hover:scale-[1.05]",
+                  )}
+                />
+                {active && (
+                  <>
+                    <div className="absolute inset-0 bg-primary/10" />
+                    <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                      <Check className="h-3 w-3" strokeWidth={3} />
+                    </span>
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </FieldGroup>
+
+      {/* Preview — compact, right below selection */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium">Preview</p>
+          {activeBannerPreview && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground hover:text-destructive"
+              onClick={clearBanner}
+            >
+              <X className="h-3 w-3 mr-1" /> Remove banner
+            </Button>
+          )}
+        </div>
+        <div className="rounded-xl overflow-hidden border border-border h-48 relative bg-muted">
+          {activeBannerPreview ? (
+            <img
+              src={activeBannerPreview}
+              alt="Banner preview"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div
+              className={cn(
+                "w-full h-full bg-linear-to-br flex flex-col items-center justify-center gap-1.5",
+                selectedTheme.from,
+                selectedTheme.to,
+              )}
+            >
+              <span className="text-white/90 text-sm font-medium">{selectedTheme.label}</span>
+              <span className="text-white/60 text-xs">Select a cover photo above</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Color Theme — compact bottom row */}
+      <FieldGroup label="Color Theme" hint="Used when no banner is set.">
+        <div className="flex flex-wrap gap-2 mt-1">
           {THEMES.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setValue("theme", t.id as TryoutFormValues["theme"])}
               className={cn(
-                "rounded-xl overflow-hidden border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 watchedTheme === t.id
-                  ? "border-primary shadow-md scale-[1.04]"
-                  : "border-transparent hover:border-border",
+                  ? "border-primary bg-primary/5 text-primary shadow-sm"
+                  : "border-border bg-card hover:bg-muted",
               )}
             >
-              <div className={cn("h-16 w-full bg-linear-to-br", t.from, t.to)} />
-              <div className="py-1.5 text-center text-xs font-medium bg-card text-foreground">
-                {t.label}
-              </div>
+              <span className={cn("h-3.5 w-3.5 rounded-full bg-linear-to-br", t.from, t.to)} />
+              {t.label}
             </button>
           ))}
-        </div>
-      </FieldGroup>
-
-      {/* Banner source */}
-      <div className="grid gap-4 sm:grid-cols-1">
-        {/* <FieldGroup label="Upload Banner Image" hint="PNG, JPG, or WEBP. Clears the URL below.">
-          <div
-            className={cn(
-              "border-2 border-dashed rounded-xl p-5 flex flex-col items-center gap-2 cursor-pointer transition-colors",
-              bannerFile
-                ? "border-primary/50 bg-primary/5"
-                : "border-border hover:border-primary/40 hover:bg-muted/30",
-            )}
-            onClick={() => fileRef.current?.click()}
-          >
-            <Upload className="h-5 w-5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground text-center leading-relaxed">
-              {bannerFile ? (
-                <span className="text-foreground font-medium">{bannerFile.name}</span>
-              ) : (
-                "Click to upload"
-              )}
-            </span>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </div>
-        </FieldGroup> */}
-
-        {/* <FieldGroup label="Image URL" hint="Paste a direct image URL. Clears uploaded file.">
-          <div className="relative">
-            <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="https://example.com/banner.jpg"
-              className="pl-9"
-              value={watchedUrl}
-              onChange={handleUrlChange}
-            />
-          </div>
-        </FieldGroup> */}
-      </div>
-
-      {/* Preview */}
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Preview</p>
-        <div className="rounded-xl overflow-hidden border border-border h-80 relative">
-          {activeBannerPreview ? (
-            <>
-              <img
-                src={activeBannerPreview}
-                alt="Banner preview"
-                className="w-full h-full object-cover"
-              />
-              <Badge variant="secondary" className="absolute top-2 left-2 text-xs">
-                Banner
-              </Badge>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                className="absolute top-2 right-2 h-7 w-7"
-                onClick={clearBanner}
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </>
-          ) : (
-            <div
-              className={cn(
-                "w-full h-full bg-linear-to-br flex items-center justify-center",
-                selectedTheme.from,
-                selectedTheme.to,
-              )}
-            >
-              <span className="text-white/80 text-sm font-medium">{selectedTheme.label} theme</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Cover Photos */}
-      <FieldGroup label="Cover Photos" hint="Pick a preset cover image.">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-1">
-          {coverPhotos.map((url, idx) => {
-            const isSelected = watchedUrl === url;
-            return (
-              <button
-                key={url}
-                type="button"
-                onClick={() => handleSelectCover(url)}
-                className={cn(
-                  "relative rounded-xl overflow-hidden border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring aspect-video",
-                  isSelected
-                    ? "border-primary shadow-md scale-[1.02]"
-                    : "border-transparent hover:border-border",
-                )}
-              >
-                <img
-                  src={url}
-                  alt={`Cover ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-                {isSelected && (
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                    <Badge variant="default" className="text-xs">
-                      Selected
-                    </Badge>
-                  </div>
-                )}
-              </button>
-            );
-          })}
         </div>
       </FieldGroup>
     </div>

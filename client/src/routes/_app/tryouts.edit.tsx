@@ -261,7 +261,7 @@ export default function TryoutEditPage() {
       title={`Edit: ${tryout?.name ?? "Tryout"}`}
       crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: "Edit" }]}
     >
-      <div className="flex gap-0 min-h-[calc(100vh-200px)]">
+      <div className="flex gap-0 h-[calc(100vh-130px)]">
         {/* ── Vertical tab sidebar ────────────────────────────────────────────── */}
         <nav className="w-44 shrink-0 sticky top-[60px] self-start pt-2">
           {WIZARD_STEPS.map((step) => {
@@ -288,9 +288,9 @@ export default function TryoutEditPage() {
         </nav>
 
         {/* ── Right panel ─────────────────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0 border-l border-border pl-8">
+        <div className="flex-1 flex flex-col min-w-0 border-l border-border pl-8 overflow-hidden">
           {/* Step heading */}
-          <div className="pt-2 pb-6">
+          <div className="shrink-0 pt-2 pb-6">
             <h2 className="text-xl font-bold text-foreground">
               {WIZARD_STEPS[currentStep - 1].label}
             </h2>
@@ -301,14 +301,14 @@ export default function TryoutEditPage() {
 
           {/* ── API Error ────────────────────────────────────────────────────── */}
           {apiError && (
-            <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-6">
+            <div className="shrink-0 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-6">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <span>{apiError}</span>
             </div>
           )}
 
           {/* ── Step content ─────────────────────────────────────────────────── */}
-          <div className="flex-1 pb-5">
+          <div className="flex-1 overflow-auto min-h-0 pb-5">
             <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
               <form onSubmit={(e) => e.preventDefault()}>
                 {currentStep === 1 && (
@@ -386,7 +386,7 @@ export default function TryoutEditPage() {
 
           {/* ── Footer nav ───────────────────────────────────────────────────── */}
           {currentStep !== 8 && (
-            <div className="sticky bottom-0 z-10 bg-background border-t border-border py-4 flex items-center justify-between gap-3 -mx-4 px-4 sm:-mx-6 sm:px-6">
+            <div className="shrink-0 py-4 flex items-center justify-between gap-3 border-t border-border">
               <Button
                 type="button"
                 variant="ghost"
