@@ -256,13 +256,13 @@ export class RegistrationService {
 
     // 9 Send successfully registered email
 
-    // fetch tryout detail
+    // fetch parent detail for email (strictly from users collection)
     const parentDetail = await UserModel.findById(parentId).lean();
-    console.info("parentDetail => ", parentDetail);
-
-    if (parentDetail) {
+    if (!parentDetail) {
+      logger.warn({ parentId, registrationId: created._id, tryoutId }, "registration.parent.not_found — email not sent; user record missing in DB");
+    } else {
       sendRegistrationReceivedEmail({
-        to: parentDetail?.email || "",
+        to: parentDetail.email,
         parentName: `${parentDetail.firstName} ${parentDetail.lastName}`.trim(),
         swimmerName: `${swimmerFirstName} ${swimmerLastName}`.trim(),
         tryoutName: tryout?.name || "",
