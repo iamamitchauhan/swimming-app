@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -309,6 +310,7 @@ export function ScoringTab({ tryoutId, registerId }: Props) {
               <TableHead className="text-center">Breaststroke</TableHead>
               <TableHead className="text-center">Butterfly</TableHead>
               <TableHead className="text-center">Avg Score</TableHead>
+              <TableHead className="text-center">Notes</TableHead>
               <TableHead className="text-center">Save</TableHead>
             </TableRow>
           </TableHeader>
@@ -398,6 +400,15 @@ export function ScoringTab({ tryoutId, registerId }: Props) {
                   </TableCell>
                   <TableCell className="text-center font-semibold text-blue-700 px-4 py-3">
                     {avgScore || "—"}
+                  </TableCell>
+                  <TableCell className="text-center font-semibold text-blue-700 px-4 py-3">
+                    <Textarea
+                      readOnly={isBlocked}
+                      value={getScore(r.id, "notes", "") as string}
+                      onChange={(e) => editScore(r.id, "notes", e.target.value, r.status)}
+                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm"
+                      placeholder="Add notes..."
+                    />
                   </TableCell>
                   <TableCell className="text-center px-4 py-3">
                     <button

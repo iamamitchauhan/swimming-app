@@ -1,10 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { tryoutsApi, type RegistrationDetail } from "@/lib/api/tryouts.api";
 import { Loader2 } from "lucide-react";
 
@@ -15,12 +10,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-export function RegistrationDetailModal({
-  tryoutId,
-  registrationId,
-  open,
-  onOpenChange,
-}: Props) {
+export function RegistrationDetailModal({ tryoutId, registrationId, open, onOpenChange }: Props) {
   const { data, isLoading, isError } = useQuery<RegistrationDetail>({
     queryKey: ["tryout", tryoutId, "registration", registrationId],
     queryFn: () => tryoutsApi.getRegistrationDetail(tryoutId, registrationId!),
@@ -59,9 +49,12 @@ function DetailContent({ detail }: { detail: RegistrationDetail }) {
     <div className="space-y-6 py-2">
       {/* Swimmer */}
       <Section title="Swimmer">
-        <Row label="Name" value={`${swimmer?.firstName ?? s.firstName} ${swimmer?.lastName ?? s.lastName}`} />
-        <Row label="Age on tryout day" value={String(s.ageOnTryoutDay)} />
+        <Row
+          label="Name"
+          value={`${swimmer?.firstName ?? s.firstName} ${swimmer?.lastName ?? s.lastName}`}
+        />
         {s.dob && <Row label="Date of birth" value={s.dob} />}
+        <Row label="Age on tryout day" value={String(s.ageOnTryoutDay)} />
         <Row label="Segment" value={detail.segmentId || "—"} />
       </Section>
 
@@ -156,19 +149,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Row({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-}) {
+function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-4 py-1.5 border-b border-border/50 last:border-0">
       <span className="text-sm text-muted-foreground shrink-0">{label}</span>
-      <span className={`text-sm text-right ${highlight ? "font-bold text-foreground" : "text-foreground"}`}>
+      <span
+        className={`text-sm text-right ${highlight ? "font-bold text-foreground" : "text-foreground"}`}
+      >
         {value}
       </span>
     </div>

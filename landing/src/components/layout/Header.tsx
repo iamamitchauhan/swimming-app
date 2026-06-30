@@ -99,7 +99,7 @@ export function Header() {
                 <Link to="/login">Login</Link>
               </Button>
               <Button asChild className="btn-cta hidden sm:inline-flex">
-                <Link to="/register">Get Started</Link>
+                <Link to="/register">Signup</Link>
               </Button>
             </>
           )}

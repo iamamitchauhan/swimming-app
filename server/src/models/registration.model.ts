@@ -44,6 +44,8 @@ export interface IRegistration extends Document {
     totalScore?: number;
   };
 
+  notes?: string;
+
   // Dynamic registration question answers
   dynamicAnswers?: Array<{
     label: string;
@@ -130,6 +132,9 @@ const registrationSchema = new Schema<IRegistration>(
       breaststroke: { type: Number },
       butterfly: { type: Number },
       totalScore: { type: Number },
+    },
+    notes: {
+      type: String,
     },
     swimmerDetails: {
       firstName: { type: String, required: true },

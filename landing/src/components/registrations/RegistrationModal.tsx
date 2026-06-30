@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { DobPicker } from "@/components/ui/dob-picker";
 import {
   Dialog,
   DialogContent,
@@ -52,25 +53,19 @@ const TURNS = [
   "Cannot perform turns",
 ] as const;
 
-const SEGMENTS_BY_AGE: Record<string, string[]> = {
-  "6": ["6 & Under"],
-  "7": ["7-8"],
-  "8": ["7-8"],
-  "9": ["9-10"],
-  "10": ["9-10"],
-  "11": ["11-12"],
-  "12": ["11-12"],
-  "13": ["13-14"],
-  "14": ["13-14"],
-  "15": ["15-18"],
-  "16": ["15-18"],
-  "17": ["15-18"],
-  "18": ["15-18"],
-};
+function calcAgeOnDate(dob: string, refDate: string): number {
+  if (!dob) return 0;
+  const birth = new Date(dob + "T00:00:00");
+  const ref = refDate ? new Date(refDate + "T00:00:00") : new Date();
+  let age = ref.getFullYear() - birth.getFullYear();
+  const m = ref.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) age--;
+  return age;
+}
 
 const blank = {
   fullName: "",
-  ageOnTryoutDay: "",
+  dob: "",
   segment: "",
   hasUsaMembership: false,
   usaMembershipId: "",
@@ -97,8 +92,13 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
 
-  const ageNum = parseInt(form.ageOnTryoutDay);
-  const segmentOptions = !isNaN(ageNum) ? (SEGMENTS_BY_AGE[String(ageNum)] ?? []) : [];
+  const ageOnTryoutDay = calcAgeOnDate(form.dob, "");
+  const segmentOptions =
+    form.dob && ageOnTryoutDay > 0
+      ? (tryout.segments ?? []).filter(
+          (s: any) => ageOnTryoutDay >= s.minAge && ageOnTryoutDay <= s.maxAge,
+        )
+      : [];
 
   const submitMut = useMutation({
     mutationFn: async () => {
@@ -115,16 +115,20 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
         emergencyContactPhone: "",
       });
       await qc.invalidateQueries({ queryKey: qk.children });
+      const computedAge = calcAgeOnDate(form.dob, "");
       return createRegistration({
         tryoutId: tryout.id,
         sessionId: slot.sessionId,
         slotId: slot.id,
         swimmerFirstName: firstName,
         swimmerLastName: lastName,
-        ageOnTryoutDay: 0,
-        hasUsaMembership: false,
-        guardianName: "",
-        guardianEmail: "",
+        swimmerDob: form.dob,
+        ageOnTryoutDay: computedAge,
+        segmentId: form.segment,
+        hasUsaMembership: form.hasUsaMembership,
+        usaMembershipId: form.usaMembershipId,
+        guardianName: form.guardianName,
+        guardianEmail: form.guardianEmail,
       });
     },
     onSuccess: async () => {
@@ -140,7 +144,7 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
   const canSubmit =
     !submitMut.isPending &&
     !!form.fullName.trim() &&
-    !!form.ageOnTryoutDay &&
+    !!form.dob &&
     !!form.guardianName &&
     !!form.guardianEmail;
 
@@ -164,28 +168,32 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
             />
           </Field>
 
-          {/* Age + Segment */}
+          {/* DOB + Segment */}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Age on tryout day" required>
-              <Input
-                type="number"
-                min={4}
-                max={18}
-                placeholder="6 – 18"
-                value={form.ageOnTryoutDay}
-                onChange={(e) => {
-                  const age = e.target.value;
-                  const options = SEGMENTS_BY_AGE[age] ?? [];
-                  setForm((prev) => ({ ...prev, ageOnTryoutDay: age, segment: options[0] ?? "" }));
+            <Field label="Date of birth" required>
+              <DobPicker
+                value={form.dob}
+                onChange={(dob) => {
+                  const age = calcAgeOnDate(dob, "");
+                  const options = (tryout.segments ?? []).filter(
+                    (s: any) => age >= s.minAge && age <= s.maxAge,
+                  );
+                  setForm((prev) => ({ ...prev, dob, segment: options[0]?.name ?? "" }));
                 }}
               />
+              {/* {form.dob && ageOnTryoutDay > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Age on tryout day:{" "}
+                  <span className="font-semibold text-foreground">{ageOnTryoutDay}</span>
+                </p>
+              )} */}
             </Field>
             <Field label="Registration segment">
               <Input
                 readOnly
                 value={
                   form.segment ||
-                  (form.ageOnTryoutDay ? "No segment for this age" : "Enter age first")
+                  (form.dob ? "No segment for this age" : "Enter date of birth first")
                 }
                 className="bg-muted text-muted-foreground cursor-default"
               />

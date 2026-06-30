@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Loader2, PartyPopper, Check, Plus, CrossIcon, Crosshair, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DobPicker } from "@/components/ui/dob-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -56,14 +57,29 @@ interface Props {
 
 // ─── Fixed-field Zod schema ───────────────────────────────────────────────────
 
+function calcAgeOnDate(dob: string, refDate: string): number {
+  if (!dob) return 0;
+  const birth = new Date(dob + "T00:00:00");
+  const ref = refDate ? new Date(refDate + "T00:00:00") : new Date();
+  let age = ref.getFullYear() - birth.getFullYear();
+  const m = ref.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 const fixedSchema = z.object({
   swimmerFirstName: z.string().min(1, "First name is required"),
   swimmerLastName: z.string().min(1, "Last name is required"),
-  ageOnTryoutDay: z.coerce
-    .number({ invalid_type_error: "Age is required" })
-    .int()
-    .min(1, "Age must be at least 1")
-    .max(30, "Age must be 30 or under"),
+  dob: z
+    .string()
+    .min(1, "Date of birth is required")
+    .refine(
+      (v) => {
+        const d = new Date(v + "T00:00:00");
+        return !isNaN(d.getTime()) && d < new Date();
+      },
+      { message: "Please enter a valid date of birth" },
+    ),
   segment: z.string().min(1, "Please select a segment"),
   hasUsaMembership: z.boolean(),
   usaMembershipId: z.string().optional(),
@@ -160,6 +176,7 @@ export function RegistrationForm({
   const {
     register,
     handleSubmit,
+    control,
     watch,
     setValue,
     reset,
@@ -169,7 +186,7 @@ export function RegistrationForm({
     defaultValues: {
       swimmerFirstName: prefillData?.swimmerFirstName ?? "",
       swimmerLastName: prefillData?.swimmerLastName ?? "",
-      ageOnTryoutDay: prefillData?.ageOnTryoutDay ?? undefined,
+      dob: prefillData?.swimmerDob ?? "",
       segment: prefillData?.segmentId ?? "",
       hasUsaMembership: false,
       usaMembershipId: "",
@@ -180,14 +197,14 @@ export function RegistrationForm({
   });
 
   const hasUsaMembership = watch("hasUsaMembership");
-  const ageValue = watch("ageOnTryoutDay");
+  const dobValue = watch("dob");
 
   useEffect(() => {
     if (!prefillData) return;
     reset({
       swimmerFirstName: prefillData.swimmerFirstName ?? "",
       swimmerLastName: prefillData.swimmerLastName ?? "",
-      ageOnTryoutDay: prefillData.ageOnTryoutDay ?? undefined,
+      dob: prefillData.swimmerDob ?? "",
       segment: prefillData.segmentId ?? "",
       hasUsaMembership: false,
       usaMembershipId: "",
@@ -198,12 +215,18 @@ export function RegistrationForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefillData]);
 
-  // Valid segments based on age (minAge <= age <= maxAge)
+  // Age on tryout day = DOB vs first session date (or today if unknown)
+  const sessionDate = selectedSlotInfo?.date ?? "";
+  const ageOnTryoutDay = useMemo(
+    () => calcAgeOnDate(dobValue, sessionDate),
+    [dobValue, sessionDate],
+  );
+
+  // Valid segments based on computed age
   const validSegments = useMemo(() => {
-    const age = Number(ageValue);
-    if (isNaN(age) || age <= 0) return [];
-    return segments.filter((s) => age >= s.minAge && age <= s.maxAge);
-  }, [ageValue, segments]);
+    if (!dobValue || ageOnTryoutDay <= 0) return [];
+    return segments.filter((s) => ageOnTryoutDay >= s.minAge && ageOnTryoutDay <= s.maxAge);
+  }, [ageOnTryoutDay, dobValue, segments]);
 
   // Dynamic question state
   const [dynamicState, setDynamicState] = useState<DynamicState>(() => initialDynamic(questions));
@@ -246,6 +269,7 @@ export function RegistrationForm({
       );
       const usaMembershipId = usaMembershipIdLabel?.value;
 
+      const computedAge = calcAgeOnDate(fixed.dob, selectedSlotInfo?.date ?? "");
       return createRegistration({
         tryoutId,
         sessionId,
@@ -253,7 +277,8 @@ export function RegistrationForm({
         segmentId: fixed.segment,
         swimmerFirstName: fixed.swimmerFirstName,
         swimmerLastName: fixed.swimmerLastName,
-        ageOnTryoutDay: Number(fixed.ageOnTryoutDay),
+        swimmerDob: fixed.dob,
+        ageOnTryoutDay: computedAge,
         hasUsaMembership: !!usaMembershipId,
         usaMembershipId: usaMembershipId ? String(usaMembershipId) : "",
         clubName: fixed.clubName,
@@ -322,16 +347,26 @@ export function RegistrationForm({
           </Field>
         </div>
 
-        {/* ── Fixed: Age + Segment ───────────────────────────────────────────── */}
+        {/* ── Fixed: DOB + Segment ───────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Age on tryout day" required error={errors.ageOnTryoutDay?.message}>
-            <Input
-              type="number"
-              min={1}
-              max={30}
-              placeholder="e.g. 10"
-              {...register("ageOnTryoutDay")}
+          <Field label="Date of birth" required error={errors.dob?.message}>
+            <Controller
+              name="dob"
+              control={control}
+              render={({ field }) => (
+                <DobPicker
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  hasError={!!errors.dob}
+                />
+              )}
             />
+            {/* {dobValue && ageOnTryoutDay > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Age on tryout day:{" "}
+                <span className="font-semibold text-foreground">{ageOnTryoutDay}</span>
+              </p>
+            )} */}
           </Field>
           <Field label="Registration segment" required error={errors.segment?.message}>
             <Select
@@ -340,7 +375,9 @@ export function RegistrationForm({
               disabled={validSegments.length === 0}
             >
               <SelectTrigger className={validSegments.length === 0 ? "text-muted-foreground" : ""}>
-                <SelectValue placeholder={ageValue ? "Select Segment" : "Enter age first"} />
+                <SelectValue
+                  placeholder={dobValue ? "Select Segment" : "Enter date of birth first"}
+                />
               </SelectTrigger>
               <SelectContent>
                 {validSegments.map((s) => (

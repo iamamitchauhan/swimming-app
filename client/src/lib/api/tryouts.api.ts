@@ -366,6 +366,7 @@ export interface Registration {
   total_score?: number | string;
   registration_id?: string;
   age_segment?: string;
+  notes?: string;
 }
 
 export interface LeaderboardEntry {

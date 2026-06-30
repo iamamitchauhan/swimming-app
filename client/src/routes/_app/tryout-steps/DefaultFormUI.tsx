@@ -1,5 +1,6 @@
 import Field from "@/components/ui/Field";
 import { Input } from "@/components/ui/input";
+import { DobPicker } from "@/components/ui/dob-picker";
 import {
   Select,
   SelectContent,
@@ -43,10 +44,10 @@ const DefaultFormUI = () => {
                   <Input placeholder="Last name" readOnly />
                 </Field>
               </div>
-              {/* ── Fixed: Age + Segment ───────────────────────────────────────────── */}
+              {/* ── Fixed: DOB + Segment ───────────────────────────────────────────── */}
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Age on tryout day" required>
-                  <Input type="number" min={1} max={30} placeholder="e.g. 10" readOnly />
+                <Field label="Date of birth" required>
+                  <DobPicker value="" onChange={() => {}} disabled />
                 </Field>
                 <Field label="Registration segment" required>
                   <Select disabled={true}>

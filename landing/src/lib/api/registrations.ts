@@ -38,6 +38,7 @@ export interface CreateRegistrationInput {
   segmentId?: string;
   swimmerFirstName: string;
   swimmerLastName: string;
+  swimmerDob: string;
   ageOnTryoutDay: number;
   hasUsaMembership: boolean;
   usaMembershipId?: string;
@@ -105,6 +106,7 @@ export async function markAllNotificationsRead() {
 export interface JoinWaitlistInput {
   swimmerFirstName: string;
   swimmerLastName: string;
+  swimmerDob: string;
   ageOnTryoutDay: number;
   segmentId?: string;
   guardianName: string;
@@ -141,6 +143,7 @@ export interface WaitlistEntry {
   tryoutId: string;
   swimmerFirstName: string;
   swimmerLastName: string;
+  swimmerDob?: string;
   ageOnTryoutDay: number;
   segmentId?: string;
   guardianName: string;

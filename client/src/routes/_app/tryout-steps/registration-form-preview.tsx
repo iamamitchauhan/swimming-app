@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import { DobPicker } from "@/components/ui/dob-picker";
 import {
   Select,
   SelectContent,
@@ -97,15 +98,15 @@ export function RegistrationFormPreview({ selectedQuestions }: Props) {
           </Field>
         </div>
 
-        {/* ── Fixed: Age + Segment ───────────────────────────────────────────── */}
+        {/* ── Fixed: DOB + Segment ───────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Age on tryout day" required>
-            <Input type="number" min={1} max={30} placeholder="e.g. 10" />
+          <Field label="Date of birth" required>
+            <DobPicker value="" onChange={() => {}} disabled />
           </Field>
           <Field label="Registration segment" required>
             <Select disabled={true}>
               <SelectTrigger className={"text-muted-foreground"}>
-                <SelectValue placeholder={"Enter age first"} />
+                <SelectValue placeholder={"Enter date of birth first"} />
               </SelectTrigger>
               <SelectContent>
                 {[{ name: "Segment A" }, { name: "Segment B" }].map((s) => (

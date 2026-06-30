@@ -195,7 +195,7 @@ export default function LoginPage() {
                   <InputOTP maxLength={6} value={otp} onChange={setOtp}>
                     <InputOTPGroup>
                       {Array.from({ length: 6 }).map((_, i) => (
-                        <InputOTPSlot key={i} index={i} />
+                        <InputOTPSlot key={i} index={i} className="w-15 h-15 text-2xl" />
                       ))}
                     </InputOTPGroup>
                   </InputOTP>

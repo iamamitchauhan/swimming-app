@@ -48,13 +48,14 @@ export default function LoginPage() {
         <Card className="w-full p-8 text-center">
           <h1 className="font-display text-2xl font-bold">Enter your OTP</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            We sent a 6-digit code to <span className="font-semibold text-foreground">{email}</span>.
+            We sent a 6-digit code to <span className="font-semibold text-foreground">{email}</span>
+            .
           </p>
           <div className="mt-6 flex justify-center">
             <InputOTP maxLength={6} value={otp} onChange={setOtp}>
               <InputOTPGroup>
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <InputOTPSlot key={i} index={i} />
+                  <InputOTPSlot key={i} index={i} className="w-15 h-15 text-2xl" />
                 ))}
               </InputOTPGroup>
             </InputOTP>
@@ -71,14 +72,20 @@ export default function LoginPage() {
             <button
               className="font-semibold text-primary hover:underline"
               disabled={sendOtpMut.isPending}
-              onClick={() => { setOtp(""); sendOtpMut.mutate(); }}
+              onClick={() => {
+                setOtp("");
+                sendOtpMut.mutate();
+              }}
             >
               Resend OTP
             </button>
             {" · "}
             <button
               className="font-semibold text-primary hover:underline"
-              onClick={() => { setOtpSent(false); setOtp(""); }}
+              onClick={() => {
+                setOtpSent(false);
+                setOtp("");
+              }}
             >
               Change email
             </button>
@@ -95,18 +102,36 @@ export default function LoginPage() {
       </div>
       <Card className="w-full p-8">
         <h1 className="font-display text-2xl font-bold">Welcome back</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Enter your email to receive a one-time login code.</p>
-        <form className="mt-6 space-y-4" onSubmit={(e) => { e.preventDefault(); sendOtpMut.mutate(); }}>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Enter your email to receive a one-time login code.
+        </p>
+        <form
+          className="mt-6 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendOtpMut.mutate();
+          }}
+        >
           <div className="space-y-1.5">
             <Label htmlFor="email">Email address</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            <Input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
           </div>
           <Button type="submit" className="btn-cta w-full" disabled={sendOtpMut.isPending}>
             {sendOtpMut.isPending ? "Sending OTP…" : "Send OTP"}
           </Button>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          New here? <Link to="/register" className="font-semibold text-primary hover:underline">Create an account</Link>
+          New here?{" "}
+          <Link to="/register" className="font-semibold text-primary hover:underline">
+            Create an account
+          </Link>
         </p>
       </Card>
     </div>
