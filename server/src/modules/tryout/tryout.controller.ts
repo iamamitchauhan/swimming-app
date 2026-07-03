@@ -582,6 +582,7 @@ export class TryoutController {
           parent_name: parent ? `${parent.firstName} ${parent.lastName}` : null,
           parent_email: parent?.email || null,
           status: r.status,
+          notes: r.notes || null,
           waitlist_position: r.waitlistPosition,
           safety_entry_exit: scores.safetyEntryExit ?? null,
           safety_float: scores.safetyFloat ?? null,
@@ -775,6 +776,10 @@ export class TryoutController {
       if (scores.length > 0) {
         const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
         scoreUpdate["scores.totalScore"] = parseFloat(avg.toFixed(1));
+      }
+
+      if (body.notes !== undefined) {
+        scoreUpdate["notes"] = body.notes;
       }
 
       const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: scoreUpdate }, { new: true }).lean().exec();

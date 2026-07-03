@@ -1,21 +1,12 @@
-import jwt from 'jsonwebtoken';
-import { config } from '../../config/env';
-import { AuthRepository, PlainUser } from './auth.repository';
-import {
-  BadRequestError,
-  ConflictError,
-  ForbiddenError,
-  NotFoundError,
-  TooManyRequestsError,
-} from '../../shared/errors/domain.errors';
-import { USER_ROLES } from '../../shared/constants/roles';
-import logger from '../../shared/utils/logger';
-import { generateOtp, hashOtp, verifyOtp } from '../../shared/utils/otp';
-import { generateSecureToken, hashToken } from '../../shared/utils/token';
-import {
-  sendEmailVerification,
-  sendOtp as sendOtpEmail,
-} from '../../shared/utils/mailer';
+import jwt from "jsonwebtoken";
+import { config } from "../../config/env";
+import { AuthRepository, PlainUser } from "./auth.repository";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, TooManyRequestsError } from "../../shared/errors/domain.errors";
+import { USER_ROLES } from "../../shared/constants/roles";
+import logger from "../../shared/utils/logger";
+import { generateOtp, hashOtp, verifyOtp } from "../../shared/utils/otp";
+import { generateSecureToken, hashToken } from "../../shared/utils/token";
+import { sendEmailVerification, sendOtp as sendOtpEmail } from "../../shared/utils/mailer";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -37,14 +28,9 @@ export type PublicUser = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function signToken(payload: {
-  id: string;
-  email: string;
-  role: string;
-  clubId: string | null;
-}): string {
+function signToken(payload: { id: string; email: string; role: string; clubId: string | null }): string {
   return jwt.sign(payload, config.JWT_SECRET, {
-    expiresIn: config.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+    expiresIn: config.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
   });
 }
 
@@ -81,10 +67,10 @@ export class AuthService {
    * Throws ConflictError if the email is already verified.
    */
   async register(email: string, firstName: string, lastName: string): Promise<void> {
-    const existing = await this.repository.findUserByEmail(email);
+    const existing = await this.repository.findUserByEmailAndRoles(email, [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.COACH]);
 
     if (existing?.emailVerified) {
-      throw new ConflictError('An account with this email already exists.');
+      throw new ConflictError("An account with this email already exists.");
     }
 
     if (!existing) {
@@ -96,16 +82,14 @@ export class AuthService {
 
     const plainToken = generateSecureToken();
     const tokenHash = hashToken(plainToken);
-    const expiresAt = new Date(
-      Date.now() + config.EMAIL_VERIFY_EXPIRES_HOURS * 60 * 60 * 1000,
-    );
+    const expiresAt = new Date(Date.now() + config.EMAIL_VERIFY_EXPIRES_HOURS * 60 * 60 * 1000);
 
-    await this.repository.createEmailVerification({ email, tokenHash, expiresAt });
+    await this.repository.createEmailVerification({ email, role: USER_ROLES.ADMIN, tokenHash, expiresAt });
 
     const verifyUrl = `${config.CLIENT_BASE_URL}/verify-email?token=${plainToken}`;
     await sendEmailVerification({ to: email, verifyUrl });
 
-    logger.info({ email }, 'auth.register.verification_sent');
+    logger.info({ email }, "auth.register.verification_sent");
   }
 
   /**
@@ -117,17 +101,16 @@ export class AuthService {
     const record = await this.repository.findValidEmailVerification(tokenHash);
 
     if (!record) {
-      throw new BadRequestError(
-        'Invalid or expired verification link.',
-        'EMAIL_VERIFY_TOKEN_INVALID',
-      );
+      throw new BadRequestError("Invalid or expired verification link.", "EMAIL_VERIFY_TOKEN_INVALID");
     }
 
-    await this.repository.markEmailVerificationUsed(record._id.toString());
-    await this.repository.markEmailVerified(record.email);
+    const role = (record.role as (typeof USER_ROLES)[keyof typeof USER_ROLES]) || USER_ROLES.ADMIN;
 
-    const user = await this.repository.findUserByEmail(record.email);
-    if (!user) throw new NotFoundError('User not found');
+    await this.repository.markEmailVerificationUsed(record._id.toString());
+    await this.repository.markEmailVerifiedByRole(record.email, role);
+
+    const user = await this.repository.findUserByEmailAndRole(record.email, role);
+    if (!user) throw new NotFoundError("User not found");
 
     const publicUser = toPublicUser(user);
     const authToken = signToken({
@@ -137,7 +120,7 @@ export class AuthService {
       clubId: publicUser.clubId,
     });
 
-    logger.info({ email: record.email }, 'auth.email.verified');
+    logger.info({ email: record.email }, "auth.email.verified");
 
     return { token: authToken, user: publicUser };
   }
@@ -146,33 +129,30 @@ export class AuthService {
    * Accepts email, looks up an active user, and sends a 6-digit OTP.
    */
   async login(email: string): Promise<void> {
-    const user = await this.repository.findUserByEmail(email);
+    const user = await this.repository.findUserByEmailAndRoles(email, [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.COACH]);
 
     if (!user) {
-      logger.warn({ email }, 'auth.login.email_not_found');
-      throw new NotFoundError('No account found with this email. Please register first.');
+      logger.warn({ email }, "auth.login.email_not_found");
+      throw new NotFoundError("No account found with this email. Please register first.");
     }
 
     if (!user.emailVerified) {
-      logger.warn({ email }, 'auth.login.unverified');
-      throw new BadRequestError(
-        'Your email is not verified. Please check your inbox for the verification link.',
-        'EMAIL_NOT_VERIFIED',
-      );
+      logger.warn({ email }, "auth.login.unverified");
+      throw new BadRequestError("Your email is not verified. Please check your inbox for the verification link.", "EMAIL_NOT_VERIFIED");
     }
 
-    if (user.status === 'suspended') {
-      throw new ForbiddenError('This account has been suspended.');
+    if (user.status === "suspended") {
+      throw new ForbiddenError("This account has been suspended.");
     }
 
     const otp = generateOtp();
     const codeHash = hashOtp(otp);
     const expiresAt = new Date(Date.now() + config.OTP_EXPIRES_MINUTES * 60 * 1000);
 
-    await this.repository.createOtp({ email, codeHash, purpose: 'login', expiresAt });
+    await this.repository.createOtp({ email, codeHash, purpose: "login", expiresAt });
     await sendOtpEmail({ to: email, otp });
 
-    logger.info({ email }, 'auth.otp.sent');
+    logger.info({ email }, "auth.otp.sent");
   }
 
   /**
@@ -181,30 +161,28 @@ export class AuthService {
    * Enforces max-attempt lockout and single-use semantics.
    */
   async verifyOtp(email: string, otp: string): Promise<{ token: string; user: PublicUser }> {
-    const record = await this.repository.findValidOtp(email, 'login');
+    const record = await this.repository.findValidOtp(email, "login");
 
     if (!record) {
-      throw new BadRequestError('Invalid or expired OTP.', 'OTP_INVALID');
+      throw new BadRequestError("Invalid or expired OTP.", "OTP_INVALID");
     }
 
     if (record.attempts >= MAX_OTP_ATTEMPTS) {
-      throw new TooManyRequestsError(
-        'Too many failed attempts. Please request a new OTP.',
-      );
+      throw new TooManyRequestsError("Too many failed attempts. Please request a new OTP.");
     }
 
-    const isValid = process.env.NODE_ENV === 'development' ? true : verifyOtp(otp, record.codeHash);
+    const isValid = process.env.NODE_ENV === "development" ? true : verifyOtp(otp, record.codeHash);
 
     if (!isValid) {
       await this.repository.incrementOtpAttempts(record._id.toString());
-      logger.warn({ email }, 'auth.otp.invalid_attempt');
-      throw new BadRequestError('Invalid or expired OTP.', 'OTP_INVALID');
+      logger.warn({ email }, "auth.otp.invalid_attempt");
+      throw new BadRequestError("Invalid or expired OTP.", "OTP_INVALID");
     }
 
     await this.repository.markOtpUsed(record._id.toString());
 
-    const user = await this.repository.findUserByEmail(email);
-    if (!user) throw new NotFoundError('User not found');
+    const user = await this.repository.findUserByEmailAndRoles(email, [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.COACH]);
+    if (!user) throw new NotFoundError("User not found");
 
     const publicUser = toPublicUser(user);
     const token = signToken({
@@ -214,7 +192,7 @@ export class AuthService {
       clubId: publicUser.clubId,
     });
 
-    logger.info({ email, userId: publicUser.id }, 'auth.login.success');
+    logger.info({ email, userId: publicUser.id }, "auth.login.success");
 
     return { token, user: publicUser };
   }
@@ -224,8 +202,8 @@ export class AuthService {
    */
   async getMe(userId: string): Promise<PublicUser> {
     const user = await this.repository.findUserById(userId);
-    if (!user) throw new NotFoundError('User not found');
-    if (user.status === 'suspended') throw new ForbiddenError('Account suspended');
+    if (!user) throw new NotFoundError("User not found");
+    if (user.status === "suspended") throw new ForbiddenError("Account suspended");
     return toPublicUser(user);
   }
 }

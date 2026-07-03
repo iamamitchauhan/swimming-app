@@ -7,6 +7,7 @@ export interface IWaitlist extends Document {
   parentId?: mongoose.Types.ObjectId;
   swimmerFirstName: string;
   swimmerLastName: string;
+  swimmerDob?: string;
   ageOnTryoutDay: number;
   segmentId?: string;
   guardianName: string;
@@ -40,6 +41,9 @@ const waitlistSchema = new Schema<IWaitlist>(
     swimmerLastName: {
       type: String,
       required: true,
+    },
+    swimmerDob: {
+      type: String,
     },
     ageOnTryoutDay: {
       type: Number,

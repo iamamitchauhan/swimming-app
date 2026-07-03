@@ -418,7 +418,7 @@ export function RosterTab({ tryoutId }: Props) {
                         className="hover:underline cursor-pointer"
                         title="Open in Scoring tab"
                       >
-                        {avg(r) || "—"}
+                        {avg(r) || <span className="text-gray-400">Add Score</span>}
                       </button>
                     </TableCell>
                     <TableCell className="px-4 py-3">

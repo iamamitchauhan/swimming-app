@@ -44,6 +44,8 @@ export interface IRegistration extends Document {
     totalScore?: number;
   };
 
+  notes?: string;
+
   // Dynamic registration question answers
   dynamicAnswers?: Array<{
     label: string;
@@ -131,6 +133,9 @@ const registrationSchema = new Schema<IRegistration>(
       butterfly: { type: Number },
       totalScore: { type: Number },
     },
+    notes: {
+      type: String,
+    },
     swimmerDetails: {
       firstName: { type: String, required: true },
       lastName: { type: String, required: true },
@@ -158,12 +163,13 @@ const registrationSchema = new Schema<IRegistration>(
 // ─── Indexes ────────────────────────────────────────────────────────────────────
 
 // Unique constraint: one active registration per swimmer per tryout
+// MongoDB partial indexes don't support $nin, so we use $in with active statuses.
 registrationSchema.index(
   { tryoutId: 1, swimmerId: 1 },
   {
     unique: true,
     partialFilterExpression: {
-      status: { $nin: ["cancelled"] },
+      status: { $in: ["registered", "waitlisted", "offered", "rejected"] },
     },
   },
 );

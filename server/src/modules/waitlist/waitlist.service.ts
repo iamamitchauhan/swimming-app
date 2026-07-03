@@ -16,7 +16,7 @@ export class WaitlistService {
    * Adds a parent/swimmer to the waitlist for a given tryout.
    */
   async join(tryoutId: string, input: JoinWaitlistInput, parentId?: string): Promise<PlainWaitlistEntry> {
-    const { swimmerFirstName, swimmerLastName, ageOnTryoutDay, segmentId, guardianName, guardianEmail } = input;
+    const { swimmerFirstName, swimmerLastName, swimmerDob, ageOnTryoutDay, segmentId, guardianName, guardianEmail } = input;
 
     // 1. Verify tryout exists and is open
     const tryout = await this.tryoutRepo.findById(tryoutId);
@@ -37,6 +37,7 @@ export class WaitlistService {
       parentId: parentId ?? undefined,
       swimmerFirstName,
       swimmerLastName,
+      swimmerDob: swimmerDob || undefined,
       ageOnTryoutDay,
       segmentId: segmentId || undefined,
       guardianName,

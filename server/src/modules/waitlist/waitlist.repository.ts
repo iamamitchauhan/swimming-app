@@ -8,6 +8,7 @@ export type PlainWaitlistEntry = {
   parentId?: string;
   swimmerFirstName: string;
   swimmerLastName: string;
+  swimmerDob?: string;
   ageOnTryoutDay: number;
   segmentId?: string;
   guardianName: string;

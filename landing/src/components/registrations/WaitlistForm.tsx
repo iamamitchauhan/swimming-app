@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DobPicker } from "@/components/ui/dob-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -34,14 +35,30 @@ interface Props {
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
+function calcAgeOnDate(dob: string, refDate: string): number {
+  if (!dob) return 0;
+  const birth = new Date(dob + "T00:00:00");
+  const ref = refDate ? new Date(refDate + "T00:00:00") : new Date();
+  let age = ref.getFullYear() - birth.getFullYear();
+  const m = ref.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 const waitlistSchema = z.object({
   swimmerFirstName: z.string().min(1, "First name is required"),
   swimmerLastName: z.string().min(1, "Last name is required"),
-  ageOnTryoutDay: z.coerce
-    .number({ invalid_type_error: "Age is required" })
-    .int()
-    .min(1, "Age must be at least 1")
-    .max(30, "Age must be 30 or under"),
+  ageOnTryoutDay: z.number().min(0, "Age on tryout day is required"),
+  dob: z
+    .string()
+    .min(1, "Date of birth is required")
+    .refine(
+      (v) => {
+        const d = new Date(v + "T00:00:00");
+        return !isNaN(d.getTime()) && d < new Date();
+      },
+      { message: "Please enter a valid date of birth" },
+    ),
   segment: z.string().min(1, "Please select a segment"),
   guardianName: z.string().min(1, "Guardian name is required"),
   guardianEmail: z.string().email("Valid email is required"),
@@ -65,6 +82,7 @@ export function WaitlistForm({ tryoutId, tryoutName, segments = [] }: Props) {
   const {
     register,
     handleSubmit,
+    control,
     watch,
     setValue,
     reset,
@@ -74,27 +92,33 @@ export function WaitlistForm({ tryoutId, tryoutName, segments = [] }: Props) {
     defaultValues: {
       swimmerFirstName: "",
       swimmerLastName: "",
-      ageOnTryoutDay: undefined,
+      dob: "",
+      ageOnTryoutDay: 0,
       segment: "",
       guardianName,
       guardianEmail,
     },
   });
 
-  const ageValue = watch("ageOnTryoutDay");
+  const dobValue = watch("dob");
+  const ageOnTryoutDay = useMemo(() => calcAgeOnDate(dobValue, ""), [dobValue]);
+
+  useEffect(() => {
+    setValue("ageOnTryoutDay", ageOnTryoutDay);
+  }, [ageOnTryoutDay, setValue]);
 
   const validSegments = useMemo(() => {
-    const age = Number(ageValue);
-    if (isNaN(age) || age <= 0) return [];
-    return segments.filter((s) => age >= s.minAge && age <= s.maxAge);
-  }, [ageValue, segments]);
+    if (!dobValue || ageOnTryoutDay <= 0) return [];
+    return segments.filter((s) => ageOnTryoutDay >= s.minAge && ageOnTryoutDay <= s.maxAge);
+  }, [ageOnTryoutDay, dobValue, segments]);
 
   const submitMut = useMutation({
     mutationFn: async (fields: WaitlistFields) => {
       return joinWaitlist(tryoutId, {
         swimmerFirstName: fields.swimmerFirstName,
         swimmerLastName: fields.swimmerLastName,
-        ageOnTryoutDay: Number(fields.ageOnTryoutDay),
+        swimmerDob: fields.dob,
+        ageOnTryoutDay: fields.ageOnTryoutDay,
         segmentId: fields.segment,
         guardianName: fields.guardianName,
         guardianEmail: fields.guardianEmail,
@@ -138,16 +162,26 @@ export function WaitlistForm({ tryoutId, tryoutName, segments = [] }: Props) {
           </Field>
         </div>
 
-        {/* ── Age + Segment ──────────────────────────────────────────────────── */}
+        {/* ── DOB + Segment ──────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Age on tryout day" required error={errors.ageOnTryoutDay?.message}>
-            <Input
-              type="number"
-              min={1}
-              max={30}
-              placeholder="e.g. 10"
-              {...register("ageOnTryoutDay")}
+          <Field label="Date of birth" required error={errors.dob?.message}>
+            <Controller
+              name="dob"
+              control={control}
+              render={({ field }) => (
+                <DobPicker
+                  value={field.value ?? "1992-09-15"}
+                  onChange={field.onChange}
+                  hasError={!!errors.dob}
+                />
+              )}
             />
+            {dobValue && ageOnTryoutDay > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Age on tryout day:{" "}
+                <span className="font-semibold text-foreground">{ageOnTryoutDay} years</span>
+              </p>
+            )}
           </Field>
           <Field label="Registration segment" required error={errors.segment?.message}>
             <Select
@@ -156,7 +190,9 @@ export function WaitlistForm({ tryoutId, tryoutName, segments = [] }: Props) {
               disabled={validSegments.length === 0}
             >
               <SelectTrigger className={validSegments.length === 0 ? "text-muted-foreground" : ""}>
-                <SelectValue placeholder={ageValue ? "Select Segment" : "Enter age first"} />
+                <SelectValue
+                  placeholder={dobValue ? "Select Segment" : "Enter date of birth first"}
+                />
               </SelectTrigger>
               <SelectContent>
                 {validSegments.map((s) => (
