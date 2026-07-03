@@ -323,9 +323,9 @@ export function ScoringTab({ tryoutId, registerId }: Props) {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          MOBILE LAYOUT — card per swimmer (hidden on md+)
+          MOBILE LAYOUT — card per swimmer (hidden on lg+)
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="md:hidden space-y-3 py-3">
+      <div className="lg:hidden space-y-3 py-3">
         {!loading && registrations.length === 0 && (
           <div className="py-12 text-center text-sm text-gray-400">No swimmers found</div>
         )}
@@ -449,9 +449,9 @@ export function ScoringTab({ tryoutId, registerId }: Props) {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          DESKTOP LAYOUT — table (hidden below md)
+          DESKTOP LAYOUT — table (hidden below lg)
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <div className="rounded-xl border border-gray-200 overflow-hidden">
           <Table>
             <TableHeader>

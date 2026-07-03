@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -48,6 +48,7 @@ function calcAgeOnDate(dob: string, refDate: string): number {
 const waitlistSchema = z.object({
   swimmerFirstName: z.string().min(1, "First name is required"),
   swimmerLastName: z.string().min(1, "Last name is required"),
+  ageOnTryoutDay: z.number().min(0, "Age on tryout day is required"),
   dob: z
     .string()
     .min(1, "Date of birth is required")
@@ -92,6 +93,7 @@ export function WaitlistForm({ tryoutId, tryoutName, segments = [] }: Props) {
       swimmerFirstName: "",
       swimmerLastName: "",
       dob: "",
+      ageOnTryoutDay: 0,
       segment: "",
       guardianName,
       guardianEmail,
@@ -101,6 +103,10 @@ export function WaitlistForm({ tryoutId, tryoutName, segments = [] }: Props) {
   const dobValue = watch("dob");
   const ageOnTryoutDay = useMemo(() => calcAgeOnDate(dobValue, ""), [dobValue]);
 
+  useEffect(() => {
+    setValue("ageOnTryoutDay", ageOnTryoutDay);
+  }, [ageOnTryoutDay, setValue]);
+
   const validSegments = useMemo(() => {
     if (!dobValue || ageOnTryoutDay <= 0) return [];
     return segments.filter((s) => ageOnTryoutDay >= s.minAge && ageOnTryoutDay <= s.maxAge);
@@ -108,12 +114,11 @@ export function WaitlistForm({ tryoutId, tryoutName, segments = [] }: Props) {
 
   const submitMut = useMutation({
     mutationFn: async (fields: WaitlistFields) => {
-      const computedAge = calcAgeOnDate(fields.dob, "");
       return joinWaitlist(tryoutId, {
         swimmerFirstName: fields.swimmerFirstName,
         swimmerLastName: fields.swimmerLastName,
         swimmerDob: fields.dob,
-        ageOnTryoutDay: computedAge,
+        ageOnTryoutDay: fields.ageOnTryoutDay,
         segmentId: fields.segment,
         guardianName: fields.guardianName,
         guardianEmail: fields.guardianEmail,
@@ -165,18 +170,18 @@ export function WaitlistForm({ tryoutId, tryoutName, segments = [] }: Props) {
               control={control}
               render={({ field }) => (
                 <DobPicker
-                  value={field.value ?? ""}
+                  value={field.value ?? "1992-09-15"}
                   onChange={field.onChange}
                   hasError={!!errors.dob}
                 />
               )}
             />
-            {/* {dobValue && ageOnTryoutDay > 0 && (
+            {dobValue && ageOnTryoutDay > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
                 Age on tryout day:{" "}
-                <span className="font-semibold text-foreground">{ageOnTryoutDay}</span>
+                <span className="font-semibold text-foreground">{ageOnTryoutDay} years</span>
               </p>
-            )} */}
+            )}
           </Field>
           <Field label="Registration segment" required error={errors.segment?.message}>
             <Select

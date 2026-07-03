@@ -172,7 +172,7 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date of birth" required>
               <DobPicker
-                value={form.dob}
+                value={form.dob ?? "1992-09-15"}
                 onChange={(dob) => {
                   const age = calcAgeOnDate(dob, "");
                   const options = (tryout.segments ?? []).filter(
@@ -181,12 +181,12 @@ export function RegistrationModal({ tryout, slot, open, onOpenChange }: Props) {
                   setForm((prev) => ({ ...prev, dob, segment: options[0]?.name ?? "" }));
                 }}
               />
-              {/* {form.dob && ageOnTryoutDay > 0 && (
+              {form.dob && ageOnTryoutDay > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
                   Age on tryout day:{" "}
-                  <span className="font-semibold text-foreground">{ageOnTryoutDay}</span>
+                  <span className="font-semibold text-foreground">{ageOnTryoutDay} years</span>
                 </p>
-              )} */}
+              )}
             </Field>
             <Field label="Registration segment">
               <Input

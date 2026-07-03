@@ -60,7 +60,21 @@ interface Props {
 function calcAgeOnDate(dob: string, refDate: string): number {
   if (!dob) return 0;
   const birth = new Date(dob + "T00:00:00");
-  const ref = refDate ? new Date(refDate + "T00:00:00") : new Date();
+  if (isNaN(birth.getTime())) return 0;
+
+  let ref: Date;
+  if (refDate) {
+    ref = new Date(refDate + "T00:00:00");
+    if (isNaN(ref.getTime())) {
+      ref = new Date(refDate);
+    }
+    if (isNaN(ref.getTime())) {
+      ref = new Date();
+    }
+  } else {
+    ref = new Date();
+  }
+
   let age = ref.getFullYear() - birth.getFullYear();
   const m = ref.getMonth() - birth.getMonth();
   if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) age--;
@@ -80,6 +94,7 @@ const fixedSchema = z.object({
       },
       { message: "Please enter a valid date of birth" },
     ),
+  ageOnTryoutDay: z.number().min(0, "Age on tryout day is required"),
   segment: z.string().min(1, "Please select a segment"),
   hasUsaMembership: z.boolean(),
   usaMembershipId: z.string().optional(),
@@ -191,6 +206,7 @@ export function RegistrationForm({
       hasUsaMembership: false,
       usaMembershipId: "",
       clubName: "",
+      ageOnTryoutDay: 0,
       guardianName: prefillData?.guardianName ?? guardianName,
       guardianEmail: prefillData?.guardianEmail ?? guardianEmail,
     },
@@ -221,6 +237,10 @@ export function RegistrationForm({
     () => calcAgeOnDate(dobValue, sessionDate),
     [dobValue, sessionDate],
   );
+
+  useEffect(() => {
+    setValue("ageOnTryoutDay", ageOnTryoutDay);
+  }, [ageOnTryoutDay, setValue]);
 
   // Valid segments based on computed age
   const validSegments = useMemo(() => {
@@ -278,7 +298,7 @@ export function RegistrationForm({
         swimmerFirstName: fixed.swimmerFirstName,
         swimmerLastName: fixed.swimmerLastName,
         swimmerDob: fixed.dob,
-        ageOnTryoutDay: computedAge,
+        ageOnTryoutDay: ageOnTryoutDay,
         hasUsaMembership: !!usaMembershipId,
         usaMembershipId: usaMembershipId ? String(usaMembershipId) : "",
         clubName: fixed.clubName,
@@ -313,6 +333,7 @@ export function RegistrationForm({
     const dErrs = validateDynamicAnswers(questions, dynamicState);
     setDynamicErrors(dErrs);
     if (Object.keys(dErrs).length > 0) return;
+
     submitMut.mutate(fixed);
   }
 
@@ -361,12 +382,12 @@ export function RegistrationForm({
                 />
               )}
             />
-            {/* {dobValue && ageOnTryoutDay > 0 && (
+            {dobValue && ageOnTryoutDay > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
                 Age on tryout day:{" "}
-                <span className="font-semibold text-foreground">{ageOnTryoutDay}</span>
+                <span className="font-semibold text-foreground">{ageOnTryoutDay} years</span>
               </p>
-            )} */}
+            )}
           </Field>
           <Field label="Registration segment" required error={errors.segment?.message}>
             <Select
