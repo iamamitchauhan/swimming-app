@@ -78,7 +78,8 @@ export default function TryoutEditPage() {
       bannerUrl: "",
       sessions: [{ date: "", startTime: "", endTime: "", label: "" }],
       slotDuration: 30,
-      swimmersPerSlot: 4,
+      lanesAvailable: 6,
+      swimmersPerLane: 4,
       segments: [
         {
           name: "",
@@ -118,7 +119,8 @@ export default function TryoutEditPage() {
         ? tryout.sessions
         : [{ date: "", startTime: "", endTime: "", label: "" }],
       slotDuration: tryout.slotDuration,
-      swimmersPerSlot: tryout.swimmersPerSlot,
+      lanesAvailable: tryout.lanesAvailable ?? 6,
+      swimmersPerLane: tryout.swimmersPerLane ?? 4,
       segments: tryout.segments ?? [],
       steps: tryout.steps ?? [],
       additionalInstructions: tryout.additionalInstructions ?? "",
@@ -164,8 +166,10 @@ export default function TryoutEditPage() {
   async function onSaveAndAdvance(data: TryoutFormValues) {
     setApiError("");
     try {
+      const swimmersPerSlot = data.lanesAvailable * data.swimmersPerLane;
       await updateMutation.mutateAsync({
         ...data,
+        swimmersPerSlot,
         status: "draft",
         banner: bannerFile ?? undefined,
       });
@@ -179,8 +183,9 @@ export default function TryoutEditPage() {
   // ── Submit (update) ──────────────────────────────────────────────────────────
   async function onSubmit(data: TryoutFormValues, status: "draft" | "open") {
     setApiError("");
+    const swimmersPerSlot = data.lanesAvailable * data.swimmersPerLane;
     updateMutation.mutate(
-      { ...data, status, banner: bannerFile ?? undefined },
+      { ...data, swimmersPerSlot, status, banner: bannerFile ?? undefined },
       {
         onSuccess: () => navigate("/tryouts"),
         onError: (err: unknown) =>
@@ -204,8 +209,10 @@ export default function TryoutEditPage() {
   async function onSaveAsDraft() {
     setApiError("");
     try {
+      const swimmersPerSlot = formValues.lanesAvailable * formValues.swimmersPerLane;
       await updateMutation.mutateAsync({
         ...formValues,
+        swimmersPerSlot,
         status: "draft",
         banner: bannerFile ?? undefined,
       });

@@ -104,19 +104,27 @@ interface Props {
 export function StepSessions({ register, control, watch, setValue, errors, sessionsField }: Props) {
   const watchedSessions = watch("sessions");
   const slotDuration = watch("slotDuration");
-  const swimmersPerSlot = watch("swimmersPerSlot");
+  const lanesAvailable = watch("lanesAvailable");
+  const swimmersPerLane = watch("swimmersPerLane");
+  const swimmersPerSlot = lanesAvailable * swimmersPerLane;
 
-  const totalCapacity = (watchedSessions ?? []).reduce((acc, s) => {
-    const { slots } = calcSlots(s.startTime, s.endTime, slotDuration);
-    return acc + slots * swimmersPerSlot;
-  }, 0);
+  const { totalSlots, totalCapacity } = (watchedSessions ?? []).reduce(
+    (acc, s) => {
+      const { slots } = calcSlots(s.startTime, s.endTime, slotDuration);
+      return {
+        totalSlots: acc.totalSlots + slots,
+        totalCapacity: acc.totalCapacity + slots * swimmersPerSlot,
+      };
+    },
+    { totalSlots: 0, totalCapacity: 0 },
+  );
 
   return (
     <div className="space-y-8">
       {/* Slot settings */}
       <div className="rounded-xl border border-border p-5 space-y-4">
         <p className="text-sm font-medium text-foreground">Slot Settings</p>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <FieldGroup label="Minutes per slot">
             <Controller
               control={control}
@@ -141,10 +149,10 @@ export function StepSessions({ register, control, watch, setValue, errors, sessi
             />
           </FieldGroup>
 
-          <FieldGroup label="Swimmers per slot">
+          <FieldGroup label="Lanes available">
             <Controller
               control={control}
-              name="swimmersPerSlot"
+              name="lanesAvailable"
               render={({ field }) => (
                 <Select
                   value={String(field.value)}
@@ -154,9 +162,33 @@ export function StepSessions({ register, control, watch, setValue, errors, sessi
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 9 }, (_, i) => i + 2).map((n) => (
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                       <SelectItem key={n} value={String(n)}>
-                        {n} swimmers
+                        {n} {n === 1 ? "lane" : "lanes"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </FieldGroup>
+
+          <FieldGroup label="Swimmers per lane">
+            <Controller
+              control={control}
+              name="swimmersPerLane"
+              render={({ field }) => (
+                <Select
+                  value={String(field.value)}
+                  onValueChange={(v) => field.onChange(Number(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n} {n === 1 ? "swimmer" : "swimmers"}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -168,8 +200,11 @@ export function StepSessions({ register, control, watch, setValue, errors, sessi
 
         {totalCapacity > 0 && (
           <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm">
-            <span className="text-muted-foreground">Total capacity across all sessions: </span>
-            <span className="font-semibold text-foreground">{totalCapacity} swimmers</span>
+            <span className="text-muted-foreground">
+              Generates {totalSlots} slot{totalSlots !== 1 ? "s" : ""} • {lanesAvailable} lanes ×{" "}
+              {swimmersPerLane}/lane = {swimmersPerSlot} swimmers per slot • total capacity{" "}
+              {totalCapacity}
+            </span>
           </div>
         )}
       </div>

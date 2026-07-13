@@ -71,7 +71,7 @@ function ScoreCell({
     <input
       type="number"
       min={1}
-      max={10}
+      max={5}
       disabled={disabled}
       value={(value as string | number) ?? ""}
       onChange={(e) => {
@@ -82,7 +82,7 @@ function ScoreCell({
         }
         const num = Number(raw);
         if (isNaN(num)) return;
-        const clamped = Math.min(10, Math.max(0, num));
+        const clamped = Math.min(5, Math.max(0, num));
         onChange(String(clamped));
       }}
       className={`w-14 text-center border border-gray-200 rounded-lg px-1 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
@@ -151,9 +151,10 @@ export function ScoringTab({ tryoutId, registerId }: Props) {
   const [scoreEdits, setScoreEdits] = useState<ScoreEdits>({});
   const [savingScores, setSavingScores] = useState<Record<string, boolean>>({});
 
+  const regIds = registrations.map((r) => r.id).join(",");
   useEffect(() => {
     setScoreEdits({});
-  }, [result]);
+  }, [regIds]);
 
   const sortBy = params.sortBy ?? "swimmer_name";
   const sortOrder = params.sortOrder ?? "asc";
@@ -318,7 +319,7 @@ export function ScoringTab({ tryoutId, registerId }: Props) {
 
       {/* ── Hint bar ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
-        <div className="text-xs text-gray-400">Scores 1–10 · Safety = Entry/Exit & Float</div>
+        <div className="text-xs text-gray-400">Scores 1–5 · Safety = Entry/Exit & Float</div>
         {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />}
       </div>
 

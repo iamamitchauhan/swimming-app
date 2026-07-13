@@ -32,6 +32,7 @@ export const clubsApi = {
       coaches: {
         _id: string;
         email: string;
+        role: "admin" | "coach";
         status: string;
         firstName: string;
         lastName: string;

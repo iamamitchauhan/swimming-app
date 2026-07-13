@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   CheckCircle2,
   ChevronDown,
   ChevronsUpDown,
   ChevronUp,
+  ClipboardList,
   Loader2,
+  UserCog,
   X,
   XCircle,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkEmailDialog } from "./BulkEmailDialog";
+import { ManageCoachesDialog } from "./ManageCoachesDialog";
 import { tryoutsApi } from "@/lib/api/tryouts.api";
 import type {
   Registration,
@@ -19,7 +22,7 @@ import type {
   SortOrder,
 } from "@/lib/api/tryouts.api";
 import { useTryout } from "@/hooks/use-tryouts";
-import { useTryoutRegistration, useSendDecision } from "@/hooks/use-tryout-dashboard";
+import { useTryoutRegistration, useSendDecision, useSaveScore } from "@/hooks/use-tryout-dashboard";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -85,12 +88,32 @@ function fmtTime(t?: string) {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
+const DETAILED_SCORE_TOTAL = 23;
+
 function avg(r: Registration) {
   const scores = [r.freestyle, r.backstroke, r.breaststroke, r.butterfly]
     .map(Number)
     .filter((v) => !isNaN(v) && v > 0);
   if (!scores.length) return null;
   return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+}
+
+function countYesNo(r: Registration) {
+  const values = Object.values(r.detailed_scores ?? {});
+  const yes = values.filter((v) => v === "yes" || v === true).length;
+  const no = values.filter((v) => v === "no" || v === false).length;
+  return { yes, no };
+}
+
+function detailedScoreCompletion(r: Registration) {
+  const done = Object.values(r.detailed_scores ?? {}).filter(
+    (value) => value !== null && value !== undefined && value !== "" && value !== 0,
+  ).length;
+  return {
+    done,
+    total: DETAILED_SCORE_TOTAL,
+    pct: Math.round((done / DETAILED_SCORE_TOTAL) * 100),
+  };
 }
 
 // ─── SortIcon ─────────────────────────────────────────────────────────────────
@@ -115,7 +138,6 @@ interface Props {
 export function RosterTab({ tryoutId }: Props) {
   const { data: tryout } = useTryout(tryoutId);
   const navigate = useNavigate();
-  const location = useLocation();
   const [rosterParams, setRosterParams] = useState<RegistrationListParams>({
     page: 1,
     limit: 10,
@@ -138,6 +160,7 @@ export function RosterTab({ tryoutId }: Props) {
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
   const [pendingRegId, setPendingRegId] = useState<string | null>(null);
+  const [manageCoachesOpen, setManageCoachesOpen] = useState(false);
 
   function openDecisionDialog(regId: string, status: "offered" | "rejected") {
     setPendingRegId(regId);
@@ -281,6 +304,15 @@ export function RosterTab({ tryoutId }: Props) {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          onClick={() => setManageCoachesOpen(true)}
+        >
+          <UserCog className="mr-1.5 h-4 w-4" /> Manage coaches
+        </Button>
       </div>
 
       {/* ── Table ─────────────────────────────────────────────────────────── */}
@@ -321,14 +353,16 @@ export function RosterTab({ tryoutId }: Props) {
                 Status
                 <SortIcon field="status" active={sortBy} order={sortOrder} />
               </TableHead>
-              <TableHead>Avg Score</TableHead>
+              <TableHead>Evaluation</TableHead>
+              <TableHead>Coach Recommendation</TableHead>
+              <TableHead>Yes/No</TableHead>
               <TableHead>Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-50">
             {loading && (
               <TableRow>
-                <TableCell colSpan={10} className="py-10 text-center text-gray-400">
+                <TableCell colSpan={11} className="py-10 text-center text-gray-400">
                   <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
                   Loading…
                 </TableCell>
@@ -336,7 +370,7 @@ export function RosterTab({ tryoutId }: Props) {
             )}
             {!loading && registrations.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="py-10 text-center text-gray-400">
+                <TableCell colSpan={11} className="py-10 text-center text-gray-400">
                   No registrations found
                 </TableCell>
               </TableRow>
@@ -413,23 +447,57 @@ export function RosterTab({ tryoutId }: Props) {
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
                       <button
                         onClick={() =>
-                          navigate(`${location.pathname}?tab=scoring&registerId=${r.id}`)
+                          navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)
                         }
                         className="hover:underline cursor-pointer"
                         title="Open in Scoring tab"
                       >
-                        {avg(r) || <span className="text-gray-400">Add Score</span>}
+                        <div>{avg(r) || <span className="text-gray-400">Score</span>}</div>
+                        <div className="text-xs font-normal text-gray-400">
+                          {(() => {
+                            const completion = detailedScoreCompletion(r);
+                            return `${completion.pct}% (${completion.done}/${completion.total})`;
+                          })()}
+                        </div>
+                        <div className="mt-1 h-1 w-20 rounded-full bg-gray-100 overflow-hidden">
+                          <div
+                            className="h-full bg-blue-600 transition-all"
+                            style={{ width: `${detailedScoreCompletion(r).pct}%` }}
+                          />
+                        </div>
                       </button>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-semibold text-blue-700">
+                      <CoachRecommendationSelect
+                        tryoutId={tryoutId}
+                        regId={r.id}
+                        value={r.coach_recommendation ?? null}
+                      />
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-semibold text-blue-700">
+                      {(() => {
+                        const { yes, no } = countYesNo(r);
+                        if (yes === 0 && no === 0) return <span className="text-gray-400">—</span>;
+                        return (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-green-600">{yes}</span>
+                            <span className="text-gray-400 font-normal">/</span>
+                            <span className="text-red-500">{no}</span>
+                          </div>
+                        );
+                      })()}
+
+                      {/* show yes/no chip like this [(10)Yes/(5)No] */}
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       {r.status !== "registered" ? (
                         <span className="text-gray-400">—</span>
                       ) : (
                         (() => {
-                          const hasAvg = !!avg(r);
+                          const isComplete = detailedScoreCompletion(r).pct === 100;
                           const offerBtn = (
                             <button
-                              disabled={!hasAvg}
+                              disabled={!isComplete}
                               onClick={() => openDecisionDialog(r.id, "offered")}
                               className="text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
@@ -438,7 +506,7 @@ export function RosterTab({ tryoutId }: Props) {
                           );
                           const rejectBtn = (
                             <button
-                              disabled={!hasAvg}
+                              disabled={!isComplete}
                               onClick={() => openDecisionDialog(r.id, "rejected")}
                               className="text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
@@ -447,7 +515,7 @@ export function RosterTab({ tryoutId }: Props) {
                           );
                           return (
                             <div className="flex items-center gap-2">
-                              {hasAvg ? (
+                              {isComplete ? (
                                 offerBtn
                               ) : (
                                 <TooltipProvider delayDuration={0}>
@@ -456,12 +524,12 @@ export function RosterTab({ tryoutId }: Props) {
                                       <span className="block">{offerBtn}</span>
                                     </TooltipTrigger>
                                     <TooltipContent side="left">
-                                      Cannot offer without an average score.
+                                      Cannot offer until scoring is 100% complete.
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               )}
-                              {hasAvg ? (
+                              {isComplete ? (
                                 rejectBtn
                               ) : (
                                 <TooltipProvider delayDuration={0}>
@@ -470,7 +538,7 @@ export function RosterTab({ tryoutId }: Props) {
                                       <span className="block">{rejectBtn}</span>
                                     </TooltipTrigger>
                                     <TooltipContent side="left">
-                                      Cannot reject without an average score.
+                                      Cannot reject until scoring is 100% complete.
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
@@ -522,6 +590,20 @@ export function RosterTab({ tryoutId }: Props) {
           >
             <XCircle className="h-4 w-4" /> Reject
           </button>
+          {selectedIds.size <= 4 && (
+            <>
+              <div className="h-4 w-px bg-gray-600" />
+              <button
+                onClick={() => {
+                  const ids = Array.from(selectedIds);
+                  navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${ids.join(",")}`);
+                }}
+                className="flex items-center gap-1.5 text-blue-300 hover:text-blue-200 transition cursor-pointer font-medium"
+              >
+                <ClipboardList className="h-4 w-4" /> Score {selectedIds.size} together
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -578,6 +660,80 @@ export function RosterTab({ tryoutId }: Props) {
         open={modalOpen}
         onOpenChange={setModalOpen}
       />
+
+      <ManageCoachesDialog
+        tryoutId={tryoutId}
+        open={manageCoachesOpen}
+        onOpenChange={setManageCoachesOpen}
+      />
     </div>
+  );
+}
+
+// ─── Coach Recommendation Dropdown ─────────────────────────────────────────────
+
+const COACH_RECOMMENDATION_OPTIONS = ["Platinum", "Gold", "Silver"] as const;
+
+const RECOMMENDATION_COLORS: Record<string, string> = {
+  Platinum: "bg-violet-100 text-violet-700 border-violet-200",
+  Gold: "bg-amber-100 text-amber-700 border-amber-200",
+  Silver: "bg-slate-100 text-slate-600 border-slate-200",
+};
+
+function CoachRecommendationSelect({
+  tryoutId,
+  regId,
+  value,
+}: {
+  tryoutId: string;
+  regId: string;
+  value: string | null;
+}) {
+  const saveScore = useSaveScore(tryoutId);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={`text-xs px-2.5 py-1 rounded-full border font-medium transition cursor-pointer hover:opacity-80 ${
+            value
+              ? (RECOMMENDATION_COLORS[value] ?? "bg-gray-100 text-gray-600 border-gray-200")
+              : "bg-gray-50 text-gray-400 border-gray-200"
+          }`}
+        >
+          {value ?? "Select"}
+          <ChevronDown className="inline h-3 w-3 ml-1 -mr-0.5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {COACH_RECOMMENDATION_OPTIONS.map((opt) => (
+          <DropdownMenuItem
+            key={opt}
+            onClick={() => {
+              saveScore.mutate({
+                regId,
+                edits: { coach_recommendation: opt } as Partial<Registration>,
+              });
+            }}
+            className={`cursor-pointer ${value === opt ? "font-bold" : ""}`}
+          >
+            {opt}
+          </DropdownMenuItem>
+        ))}
+        {value && (
+          <DropdownMenuItem
+            onClick={() => {
+              saveScore.mutate({
+                regId,
+                edits: { coach_recommendation: null } as Partial<Registration>,
+              });
+            }}
+            className="cursor-pointer text-gray-400"
+          >
+            Clear
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

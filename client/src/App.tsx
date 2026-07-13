@@ -16,6 +16,7 @@ const UsersPage = lazy(() => import("./pages/app/UsersPage"));
 const TryoutsPage = lazy(() => import("./pages/app/TryoutsPage"));
 const TryoutDetailPage = lazy(() => import("./pages/app/TryoutDetailPage"));
 const TryoutViewPage = lazy(() => import("./pages/app/TryoutViewPage"));
+const BulkScoringPage = lazy(() => import("./routes/_app/tryouts.view.bulk-scoring.$id"));
 const TryoutNewPage = lazy(() => import("./pages/app/TryoutNewPage"));
 const TryoutEditPage = lazy(() => import("./pages/app/TryoutEditPage"));
 const TryoutPreviewPage = lazy(() => import("./pages/app/TryoutPreviewPage"));
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/tryouts/edit/:id" element={<TryoutEditPage />} />
           <Route path="/tryouts/preview/:id" element={<TryoutPreviewPage />} />
           <Route path="/tryouts/register/:id" element={<TryoutRegistration />} />
+          <Route path="/tryouts/view/:id/bulk-scoring" element={<BulkScoringPage />} />
           <Route path="/tryouts/view/:id" element={<TryoutViewPage />} />
           <Route path="/tryouts/:id" element={<TryoutDetailPage />} />
           <Route path="/children" element={<ChildrenPage />} />

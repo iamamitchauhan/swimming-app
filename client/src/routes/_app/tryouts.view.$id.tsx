@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Loader2, CalendarDays, MapPin, Users2, Waves } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,7 @@ function InfoTile({
 
 export default function TryoutViewPage() {
   const { id = "" } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   const { data: tryout, isLoading: tryoutLoading, error: tryoutError } = useTryout(id);
   const { data: rosterResult } = useTryoutRegistration(id, { page: 1, limit: 1 });
@@ -69,8 +70,13 @@ export default function TryoutViewPage() {
 
   useEffect(() => {
     const urlTab = searchParams.get("tab");
+    if (urlTab === "bulk-scoring") {
+      const ids = searchParams.get("ids");
+      navigate(`/tryouts/view/${id}/bulk-scoring${ids ? `?ids=${ids}` : ""}`, { replace: true });
+      return;
+    }
     if (urlTab && urlTab !== tab) setTab(urlTab);
-  }, [searchParams]);
+  }, [id, navigate, searchParams, tab]);
 
   function handleTabChange(next: string) {
     setTab(next);

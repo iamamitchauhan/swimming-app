@@ -101,7 +101,7 @@ export class ClubService {
   async getCoaches(clubId: string): Promise<any[]> {
     return UserModel.find({
       clubId,
-      role: USER_ROLES.COACH,
+      role: { $in: [USER_ROLES.ADMIN, USER_ROLES.COACH] },
       status: { $ne: "suspended" },
     })
       .select("_id email firstName lastName status createdAt")

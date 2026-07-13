@@ -20,6 +20,13 @@ const RANK_COLORS = [
   "bg-amber-600 text-white",
 ];
 
+function countYesNo(detailedScores?: Record<string, string | number | boolean | null>) {
+  const values = Object.values(detailedScores ?? {});
+  const yes = values.filter((v) => v === "yes" || v === true).length;
+  const no = values.filter((v) => v === "no" || v === false).length;
+  return { yes, no };
+}
+
 export function LeaderboardTab({ tryoutId }: Props) {
   const [enabled, setEnabled] = useState(false);
   useEffect(() => {
@@ -101,6 +108,18 @@ export function LeaderboardTab({ tryoutId }: Props) {
                       <span className="font-medium text-gray-900">{l.swimmer_name}</span>
                       <span className="text-gray-400 text-sm ml-2">age {l.swimmer_age}</span>
                     </div>
+
+                    {(() => {
+                      const { yes, no } = countYesNo(l.detailed_scores);
+                      if (yes === 0 && no === 0) return null;
+                      return (
+                        <div className="flex items-center gap-1.5 text-sm ml-3">
+                          <span className="text-green-600 font-medium">{yes}</span>
+                          <span className="text-gray-400 font-normal">/</span>
+                          <span className="text-red-500 font-medium">{no}</span>
+                        </div>
+                      );
+                    })()}
 
                     {l.status === "registered" && (
                       <div className="flex gap-1.5 ml-3">

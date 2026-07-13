@@ -5,6 +5,7 @@ import { useMe } from "@/hooks/use-auth";
 import { useAuthStore } from "@/lib/auth.store";
 import { useOnboardingStatus } from "@/hooks/use-onboarding";
 import { ClubUnderReview } from "@/components/club-under-review";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function AppLayout() {
   const { user } = useAuthStore();
@@ -12,13 +13,14 @@ export default function AppLayout() {
 
   const isAdmin = user?.role === "admin";
   const { data: onboarding } = useOnboardingStatus({ enabled: isAdmin });
+  const isMobile = useIsMobile();
 
   if (isAdmin && onboarding?.club?.status === "pending_review") {
     return <ClubUnderReview clubName={onboarding.club.name} />;
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={!isMobile}>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <SidebarInset className="flex-1 min-w-0">

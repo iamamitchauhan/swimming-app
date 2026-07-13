@@ -49,17 +49,17 @@ paths:
             enum: [asc, desc]
             default: desc
       responses:
-        '200':
+        "200":
           description: List of active tryouts retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - { $ref: "#/components/schemas/SuccessResponse" }
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/TryoutListResult'
+                        $ref: "#/components/schemas/TryoutListResult"
               example:
                 success: true
                 message: Success
@@ -73,7 +73,16 @@ paths:
                       theme: "ocean"
                       bannerUrl: "https://cdn.example.com/tryout-banner.jpg"
                       slotDuration: 30
-                      swimmersPerSlot: 4
+                      swimmersPerSlot: 24
+                      lanesAvailable: 6
+                      laneDetails:
+                        - _id: "665f1a2b3c4d5e6f7a8b9c12"
+                          name: "Lane 1"
+                          order: 1
+                        - _id: "665f1a2b3c4d5e6f7a8b9c13"
+                          name: "Lane 2"
+                          order: 2
+                      swimmersPerLane: 4
                       ctaLabel: "Sign up today"
                       highlights: "Professional coaching staff"
                       sessions:
@@ -94,10 +103,10 @@ paths:
                   limit: 10
                   totalPages: 3
                 error: null
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /tryouts:
     get:
@@ -172,25 +181,25 @@ paths:
             enum: [asc, desc]
             default: desc
       responses:
-        '200':
+        "200":
           description: List of tryouts retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - { $ref: "#/components/schemas/SuccessResponse" }
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/TryoutListResult'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+                        $ref: "#/components/schemas/TryoutListResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
     post:
       tags: [Tryouts]
@@ -244,9 +253,21 @@ paths:
                 swimmersPerSlot:
                   type: integer
                   minimum: 1
-                  maximum: 20
+                  maximum: 100
+                  default: 24
+                  description: Maximum swimmers per time slot (derived from lanesAvailable * swimmersPerLane)
+                lanesAvailable:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  default: 6
+                  description: Number of pool lanes available; laneDetails are generated from this value and persisted on the tryout
+                swimmersPerLane:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
                   default: 4
-                  description: Maximum swimmers per time slot
+                  description: Maximum swimmers per lane
                 ctaLabel:
                   type: string
                   default: "Sign up today"
@@ -320,20 +341,20 @@ paths:
                         type: string
                   description: Frequently asked questions
       responses:
-        '201':
+        "201":
           description: Tryout created successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - { $ref: "#/components/schemas/SuccessResponse" }
                   - type: object
                     properties:
                       data:
                         type: object
                         properties:
                           tryout:
-                            $ref: '#/components/schemas/Tryout'
+                            $ref: "#/components/schemas/Tryout"
               example:
                 success: true
                 message: Tryout created successfully
@@ -344,14 +365,14 @@ paths:
                     status: "draft"
                     # ... other tryout fields
                 error: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /tryouts/{id}:
     get:
@@ -371,28 +392,28 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Tryout retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - { $ref: "#/components/schemas/SuccessResponse" }
                   - type: object
                     properties:
                       data:
                         type: object
                         properties:
                           tryout:
-                            $ref: '#/components/schemas/Tryout'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+                            $ref: "#/components/schemas/Tryout"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
     put:
       tags: [Tryouts]
@@ -447,8 +468,18 @@ paths:
                 swimmersPerSlot:
                   type: integer
                   minimum: 1
-                  maximum: 20
-                  description: Maximum swimmers per time slot
+                  maximum: 100
+                  description: Maximum swimmers per time slot (derived from lanesAvailable * swimmersPerLane)
+                lanesAvailable:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  description: Number of pool lanes available
+                swimmersPerLane:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  description: Maximum swimmers per lane
                 ctaLabel:
                   type: string
                   description: Call-to-action button text
@@ -520,30 +551,30 @@ paths:
                         type: string
                   description: Frequently asked questions
       responses:
-        '200':
+        "200":
           description: Tryout updated successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - { $ref: "#/components/schemas/SuccessResponse" }
                   - type: object
                     properties:
                       data:
                         type: object
                         properties:
                           tryout:
-                            $ref: '#/components/schemas/Tryout'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+                            $ref: "#/components/schemas/Tryout"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
     delete:
       tags: [Tryouts]
@@ -562,13 +593,13 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Tryout deleted successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/SuccessResponse' }
+                  - { $ref: "#/components/schemas/SuccessResponse" }
                   - type: object
                     properties:
                       data:
@@ -580,11 +611,178 @@ paths:
                 message: Tryout deleted successfully
                 data: null
                 error: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /tryouts/{id}/registrations:
+    get:
+      tags: [Tryouts]
+      summary: List tryout registrations
+      description: Returns paginated registrations. Use registerIds to fetch selected registrations for bulk scoring.
+      operationId: listTryoutRegistrations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: registerIds
+          in: query
+          required: false
+          description: Comma-separated registration IDs to fetch as a selected set.
+          schema:
+            type: string
+          example: 6a5499b323709ced7a116edc,6a5499e523709ced7a116ef9
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Registrations returned successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /tryouts/{id}/registrations/{regId}/score:
+    put:
+      tags: [Tryouts]
+      summary: Update swimmer scores
+      description: |
+        Updates the scores for a specific registration. Supports both the simple
+        stroke-level scores (freestyle, backstroke, etc.) and detailed per-criterion
+        scores via the `detailed_scores` field.
+
+        The `detailed_scores` object maps criterion IDs to their values:
+        - Yes/No criteria: "yes" | "no"
+        - Rate 1-5 criteria: integer 1-5
+        - Checkbox criteria: boolean
+
+        Requires admin or coach role.
+      operationId: updateScore
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tryout ID
+          schema:
+            type: string
+        - name: regId
+          in: path
+          required: true
+          description: Registration ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                safety_entry_exit:
+                  type: boolean
+                  description: Safety entry/exit check
+                safety_float:
+                  type: boolean
+                  description: Safety float check
+                freestyle:
+                  type: number
+                  minimum: 0
+                  maximum: 10
+                  description: Freestyle score (0-10)
+                backstroke:
+                  type: number
+                  minimum: 0
+                  maximum: 10
+                  description: Backstroke score (0-10)
+                breaststroke:
+                  type: number
+                  minimum: 0
+                  maximum: 10
+                  description: Breaststroke score (0-10)
+                butterfly:
+                  type: number
+                  minimum: 0
+                  maximum: 10
+                  description: Butterfly score (0-10)
+                notes:
+                  type: string
+                  description: Coach notes
+                detailed_scores:
+                  type: object
+                  description: |
+                    Map of criterion ID to score value.
+                    Yes/No criteria use "yes" or "no".
+                    Rate 1-5 criteria use integers 1-5.
+                    Checkbox criteria use booleans.
+                  additionalProperties:
+                    oneOf:
+                      - type: string
+                        enum: [yes, no]
+                      - type: integer
+                        minimum: 1
+                        maximum: 5
+                      - type: boolean
+                  example:
+                    circle_swim: "yes"
+                    hand_entry: "no"
+                    legs_straight: 3
+                    uw_to_flags: true
+                coach_recommendation:
+                  type: string
+                  enum: [Platinum, Gold, Silver]
+                  nullable: true
+                  description: Coach's group recommendation for the swimmer
+                  example: Gold
+            example:
+              freestyle: 7
+              backstroke: 6
+              detailed_scores:
+                circle_swim: "yes"
+                hand_entry: "no"
+                legs_straight: 3
+                uw_to_flags: true
+      responses:
+        "200":
+          description: Scores updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          registration:
+                            type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"

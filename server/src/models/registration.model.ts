@@ -44,7 +44,13 @@ export interface IRegistration extends Document {
     totalScore?: number;
   };
 
+  // Detailed per-criterion scores (bulk scoring)
+  detailedScores?: Record<string, string | number | boolean | null>;
+
   notes?: string;
+
+  // Coach recommendation group
+  coachRecommendation?: string;
 
   // Dynamic registration question answers
   dynamicAnswers?: Array<{
@@ -133,8 +139,16 @@ const registrationSchema = new Schema<IRegistration>(
       butterfly: { type: Number },
       totalScore: { type: Number },
     },
+    detailedScores: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
     notes: {
       type: String,
+    },
+    coachRecommendation: {
+      type: String,
+      default: null,
     },
     swimmerDetails: {
       firstName: { type: String, required: true },

@@ -10,11 +10,28 @@ export interface Session {
   label: string;
 }
 
+export interface LaneDetail {
+  _id: string;
+  name: string;
+  order: number;
+}
+
 export interface Segment {
+  id?: string;
   name: string;
   minAge: number;
   maxAge: number;
   level: string;
+}
+
+export type CoachRole = "Lead Coach" | "Assistant Coach" | "Evaluator";
+
+export interface CoachAssignment {
+  _id: string;
+  coachId: string;
+  role: CoachRole;
+  segmentIds: string[];
+  laneIds: string[];
 }
 
 export interface Step {
@@ -34,6 +51,8 @@ export interface CreateTryoutInput {
   theme: "ocean" | "sunset" | "forest" | "midnight" | "coral";
   bannerUrl?: string;
   slotDuration: number;
+  lanesAvailable: number;
+  swimmersPerLane: number;
   swimmersPerSlot: number;
   ctaLabel: string;
   highlights?: string;
@@ -43,6 +62,8 @@ export interface CreateTryoutInput {
   segments: Segment[];
   steps: Step[];
   faqs: Faq[];
+  laneDetails?: LaneDetail[];
+  coachAssignments?: Omit<CoachAssignment, "_id">[];
   banner?: File;
 }
 
@@ -54,6 +75,10 @@ export interface Tryout {
   theme: string;
   bannerUrl?: string;
   slotDuration: number;
+  lanesAvailable: number;
+  laneDetails: LaneDetail[];
+  coachAssignments: CoachAssignment[];
+  swimmersPerLane: number;
   swimmersPerSlot: number;
   ctaLabel: string;
   highlights?: string;
@@ -118,6 +143,8 @@ export const tryoutsApi = {
     fd.append("bannerUrl", input.bannerUrl ?? "");
     fd.append("slotDuration", String(input.slotDuration));
     fd.append("swimmersPerSlot", String(input.swimmersPerSlot));
+    fd.append("lanesAvailable", String(input.lanesAvailable));
+    fd.append("swimmersPerLane", String(input.swimmersPerLane));
     fd.append("ctaLabel", input.ctaLabel);
     fd.append("highlights", input.highlights ?? "");
     fd.append("additionalInstructions", input.additionalInstructions ?? "");
@@ -174,6 +201,10 @@ export const tryoutsApi = {
     if (input.slotDuration !== undefined) fd.append("slotDuration", String(input.slotDuration));
     if (input.swimmersPerSlot !== undefined)
       fd.append("swimmersPerSlot", String(input.swimmersPerSlot));
+    if (input.lanesAvailable !== undefined)
+      fd.append("lanesAvailable", String(input.lanesAvailable));
+    if (input.swimmersPerLane !== undefined)
+      fd.append("swimmersPerLane", String(input.swimmersPerLane));
     if (input.ctaLabel !== undefined) fd.append("ctaLabel", input.ctaLabel);
     if (input.highlights !== undefined) fd.append("highlights", input.highlights ?? "");
     if (input.additionalInstructions !== undefined)
@@ -185,6 +216,10 @@ export const tryoutsApi = {
       fd.append("steps", JSON.stringify(input.steps.filter((s) => s.title.trim())));
     if (input.faqs !== undefined)
       fd.append("faqs", JSON.stringify(input.faqs.filter((f) => f.question.trim())));
+    if (input.laneDetails !== undefined)
+      fd.append("laneDetails", JSON.stringify(input.laneDetails));
+    if (input.coachAssignments !== undefined)
+      fd.append("coachAssignments", JSON.stringify(input.coachAssignments));
     if (input.banner !== undefined) fd.append("banner", input.banner);
 
     return api<{ tryout: Tryout }>(
@@ -259,6 +294,7 @@ export const tryoutsApi = {
     if (params.status) query.set("status", params.status);
     if (params.segmentId) query.set("segmentId", params.segmentId);
     if (params.registerId) query.set("registerId", params.registerId);
+    if (params.registerIds?.length) query.set("registerIds", params.registerIds.join(","));
     if (params.sortBy) query.set("sortBy", params.sortBy);
     if (params.sortOrder) query.set("sortOrder", params.sortOrder);
     const qs = query.toString();
@@ -335,6 +371,8 @@ export interface TryoutSession {
   endTime: string;
   label: string;
   slotDuration: number;
+  lanesAvailable: number;
+  swimmersPerLane: number;
   swimmersPerSlot: number;
   totalSlots: number;
 }
@@ -367,6 +405,8 @@ export interface Registration {
   registration_id?: string;
   age_segment?: string;
   notes?: string;
+  detailed_scores?: Record<string, string | number | boolean | null>;
+  coach_recommendation?: string | null;
 }
 
 export interface LeaderboardEntry {
@@ -377,6 +417,7 @@ export interface LeaderboardEntry {
   age_segment?: string;
   total_score: number | string;
   status: string;
+  detailed_scores?: Record<string, string | number | boolean | null>;
 }
 
 export interface RegistrationDetail {
@@ -468,6 +509,7 @@ export interface RegistrationListParams {
   status?: string;
   segmentId?: string;
   registerId?: string;
+  registerIds?: string[];
   sortBy?: RegistrationSortField;
   sortOrder?: SortOrder;
 }

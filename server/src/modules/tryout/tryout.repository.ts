@@ -11,6 +11,20 @@ export type PlainTryout = {
   bannerUrl: string;
   slotDuration: number;
   swimmersPerSlot: number;
+  lanesAvailable: number;
+  laneDetails: Array<{
+    _id: string;
+    name: string;
+    order: number;
+  }>;
+  coachAssignments: Array<{
+    _id: string;
+    coachId: string;
+    role: "Lead Coach" | "Assistant Coach" | "Evaluator";
+    segmentIds: string[];
+    laneIds: string[];
+  }>;
+  swimmersPerLane: number;
   ctaLabel: string;
   highlights: string;
   additionalInstructions: string;
@@ -199,6 +213,9 @@ export class TryoutRepository {
                 bannerUrl: 1,
                 slotDuration: 1,
                 swimmersPerSlot: 1,
+                lanesAvailable: 1,
+                laneDetails: 1,
+                swimmersPerLane: 1,
                 ctaLabel: 1,
                 highlights: 1,
                 additionalInstructions: 1,
@@ -345,6 +362,9 @@ export class TryoutRepository {
                 bannerUrl: 1,
                 slotDuration: 1,
                 swimmersPerSlot: 1,
+                lanesAvailable: 1,
+                laneDetails: 1,
+                swimmersPerLane: 1,
                 ctaLabel: 1,
                 highlights: 1,
                 additionalInstructions: 1,
