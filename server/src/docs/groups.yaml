@@ -1,0 +1,237 @@
+paths:
+  /groups:
+    get:
+      tags: [Groups]
+      summary: List groups for the user's club
+      description: |
+        Returns all non-deleted groups for the authenticated user's club.
+        Requires admin or coach role.
+      operationId: listGroups
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Groups retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/GroupListResponse"
+              example:
+                success: true
+                message: Success
+                data:
+                  groups:
+                    - _id: "665f1a2b3c4d5e6f7a8b9c20"
+                      name: "Platinum"
+                      color: "#7c3aed"
+                      description: "Top-tier competitive swimmers"
+                      clubId: "665f1a2b3c4d5e6f7a8b9c0e"
+                      createdBy: "665f1a2b3c4d5e6f7a8b9c0d"
+                      updatedBy: "665f1a2b3c4d5e6f7a8b9c0d"
+                      deletedBy: null
+                      createdAt: "2024-06-15T10:00:00Z"
+                      updatedAt: "2024-06-15T10:00:00Z"
+                      deletedAt: null
+                error: null
+        "400":
+          description: clubId is missing for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      tags: [Groups]
+      summary: Create a new group
+      description: |
+        Creates a new group for the authenticated user's club.
+        Requires admin or coach role.
+      operationId: createGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupRequest"
+      responses:
+        "201":
+          description: Group created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          group:
+                            $ref: "#/components/schemas/Group"
+              example:
+                success: true
+                message: Group created
+                data:
+                  group:
+                    _id: "665f1a2b3c4d5e6f7a8b9c20"
+                    name: "Platinum"
+                    color: "#7c3aed"
+                    description: "Top-tier competitive swimmers"
+                    clubId: "665f1a2b3c4d5e6f7a8b9c0e"
+                    createdBy: "665f1a2b3c4d5e6f7a8b9c0d"
+                    updatedBy: "665f1a2b3c4d5e6f7a8b9c0d"
+                    deletedBy: null
+                    createdAt: "2024-06-15T10:00:00Z"
+                    updatedAt: "2024-06-15T10:00:00Z"
+                    deletedAt: null
+                error: null
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: A group with the same name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /groups/{id}:
+    get:
+      tags: [Groups]
+      summary: Get a group by ID
+      description: |
+        Returns a single non-deleted group by ID.
+        Requires admin or coach role.
+      operationId: getGroupById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Group retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          group:
+                            $ref: "#/components/schemas/Group"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: [Groups]
+      summary: Update a group
+      description: |
+        Updates a group's name, color and description. `updatedBy` and `updatedAt` are set automatically.
+        Requires admin or coach role.
+      operationId: updateGroup
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGroupRequest"
+      responses:
+        "200":
+          description: Group updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          group:
+                            $ref: "#/components/schemas/Group"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Another group with the same name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags: [Groups]
+      summary: Soft-delete a group
+      description: |
+        Soft-deletes a group by setting `deletedAt` and `deletedBy`.
+        Requires admin or coach role.
+      operationId: deleteGroup
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Group deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"

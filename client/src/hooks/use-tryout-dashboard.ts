@@ -36,11 +36,15 @@ export const tryoutDashboardKeys = {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export function useTryoutRegistration(id: string, params: RegistrationListParams = {}) {
+export function useTryoutRegistration(
+  id: string,
+  params: RegistrationListParams = {},
+  enabled = true,
+) {
   return useQuery<RegistrationListResult>({
     queryKey: tryoutDashboardKeys.roster(id, params),
     queryFn: () => tryoutsApi.getRegistrations(id, params),
-    enabled: !!id,
+    enabled: !!id && enabled,
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
@@ -108,14 +112,56 @@ export function usePromoteWaitlist(tryoutId: string) {
 
 export function useSaveScore(tryoutId: string) {
   const qc = useQueryClient();
+
   return useMutation({
     mutationFn: ({ regId, edits }: { regId: string; edits: Partial<Registration> }) =>
       api(apiClient.put(`/tryouts/${tryoutId}/registrations/${regId}/score`, edits)),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["tryouts", tryoutId, "roster"] });
-      qc.invalidateQueries({ queryKey: tryoutDashboardKeys.allRegistrations(tryoutId) });
-      toast.success("Score saved.");
+
+    // Optimistically update all cached roster queries before the API call
+    onMutate: async ({ regId, edits }) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await qc.cancelQueries({ queryKey: ["tryouts", tryoutId, "roster"] });
+
+      // Snapshot for rollback
+      const queries = qc.getQueriesData<RegistrationListResult>({
+        queryKey: ["tryouts", tryoutId, "roster"],
+      });
+
+      // Patch every matching roster query (merge detailed_scores, don't replace)
+      qc.getQueriesData<RegistrationListResult>({
+        queryKey: ["tryouts", tryoutId, "roster"],
+      }).forEach(([key, data]) => {
+        if (data?.registrations) {
+          qc.setQueryData<RegistrationListResult>(key, {
+            ...data,
+            registrations: data.registrations.map((r) => {
+              if (r.id !== regId) return r;
+              const next = { ...r, ...edits } as Registration;
+              if (edits.detailed_scores) {
+                next.detailed_scores = { ...r.detailed_scores, ...edits.detailed_scores };
+              }
+              return next;
+            }),
+          });
+        }
+      });
+
+      return { queries };
     },
-    onError: () => toast.error("Failed to save score."),
+
+    // If the mutation fails, roll back to the snapshot
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.queries) {
+        ctx.queries.forEach(([key, data]) => {
+          qc.setQueryData(key, data);
+        });
+      }
+      toast.error("Failed to save score.");
+    },
+
+    // On success, silently invalidate in background (no loading flicker)
+    onSuccess: () => {
+      toast.success("Saved.", { id: "score-toast-success" });
+    },
   });
 }

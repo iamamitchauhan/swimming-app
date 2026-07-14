@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Loader2, CalendarDays, MapPin, Users2, Waves } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { ScoringTab } from "./tryout-view/ScoringTab";
 import { LeaderboardTab } from "./tryout-view/LeaderboardTab";
 import { CommsTab } from "./tryout-view/CommsTab";
 import { statusLabel } from "@/lib/utils";
+import { useAuthStore } from "@/lib/auth.store";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ function InfoTile({
 
 export default function TryoutViewPage() {
   const { id = "" } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   const { data: tryout, isLoading: tryoutLoading, error: tryoutError } = useTryout(id);
   const { data: rosterResult } = useTryoutRegistration(id, { page: 1, limit: 1 });
@@ -67,10 +69,18 @@ export default function TryoutViewPage() {
   const [tab, setTab] = useState(() => searchParams.get("tab") ?? "roster");
   const registerId = searchParams.get("registerId") ?? undefined;
 
+  const user = useAuthStore((state) => state.user);
+  const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
+
   useEffect(() => {
     const urlTab = searchParams.get("tab");
+    if (urlTab === "bulk-scoring") {
+      const ids = searchParams.get("ids");
+      navigate(`/tryouts/view/${id}/bulk-scoring${ids ? `?ids=${ids}` : ""}`, { replace: true });
+      return;
+    }
     if (urlTab && urlTab !== tab) setTab(urlTab);
-  }, [searchParams]);
+  }, [id, navigate, searchParams, tab]);
 
   function handleTabChange(next: string) {
     setTab(next);
@@ -82,9 +92,9 @@ export default function TryoutViewPage() {
     { key: "roster", label: `Roster (${rosterResult?.total ?? 0})` },
     { key: "slots", label: "Slots" },
     { key: "waitlist", label: "Waitlist" },
-    { key: "scoring", label: "Scoring" },
+    // { key: "scoring", label: "Scoring" },
     { key: "leaderboard", label: "Leaderboard" },
-    // { key: "comms", label: "Comms" },
+    ...(canManageCoaches ? [{ key: "comms", label: "Comms" }] : []),
   ];
 
   if (tryoutLoading) {
@@ -146,7 +156,7 @@ export default function TryoutViewPage() {
         {tab === "roster" && <RosterTab tryoutId={id} />}
         {tab === "slots" && <SlotsTab tryoutId={id} />}
         {tab === "waitlist" && <WaitlistTab tryoutId={id} />}
-        {tab === "scoring" && <ScoringTab tryoutId={id} registerId={registerId} />}
+        {/* {tab === "scoring" && <ScoringTab tryoutId={id} registerId={registerId} />} */}
         {tab === "leaderboard" && <LeaderboardTab tryoutId={id} />}
         {tab === "comms" && <CommsTab tryoutId={id} />}
       </div>

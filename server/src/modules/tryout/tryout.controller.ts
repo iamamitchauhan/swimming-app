@@ -7,12 +7,15 @@ import { RegistrationRepository } from "../registration/registration.repository"
 import { HTTP_STATUS } from "../../shared/constants/httpStatus";
 import { MESSAGES } from "../../shared/constants/messages";
 import { sendSuccess } from "../../shared/utils/response";
-import { NotFoundError, ForbiddenError } from "../../shared/errors/domain.errors";
+import { NotFoundError, ForbiddenError, BadRequestError } from "../../shared/errors/domain.errors";
 import multer from "multer";
 import { RegistrationModel } from "../../models/registration.model";
 import { SwimmerModel } from "../../models/swimmer.model";
 import { UserModel } from "../../models/user.model";
 import { TryoutRegistrationQuestionModel } from "../../models/tryout-registration-question.model";
+import { EmailTemplateModel } from "../../models/email-template.model";
+import { GroupModel } from "../../models/group.model";
+import { ClubModel } from "../../models/club.model";
 import { sendRegistrationOffer, sendRegistrationReject, sendBulkTemplateEmail } from "../../shared/utils/mailer";
 import { UserService } from "../user/user.service";
 import { TryoutSlotModel } from "../../models/tryout-slot.model";
@@ -69,6 +72,14 @@ function calcSlots(startTime: string, endTime: string, slotDuration: number): nu
 
 const slotRepo = new TryoutSlotRepository();
 const sessionRepo = new TryoutSessionRepository();
+
+function createLaneDetails(lanesAvailable: number): Array<{ _id: string; name: string; order: number }> {
+  return Array.from({ length: lanesAvailable }, (_, index) => ({
+    _id: new mongoose.Types.ObjectId().toString(),
+    name: `Lane ${index + 1}`,
+    order: index + 1,
+  }));
+}
 
 function computeTryoutBounds(rawSessions: Array<{ date: string; startTime: string; endTime: string }>): { startAt: Date | null; endAt: Date | null } {
   if (!rawSessions || rawSessions.length === 0) {
@@ -232,7 +243,9 @@ export class TryoutController {
 
       // Parse JSON fields from form data
       const slotDuration = parseInt(req.body.slotDuration) || 30;
-      const swimmersPerSlot = parseInt(req.body.swimmersPerSlot) || 4;
+      const lanesAvailable = parseInt(req.body.lanesAvailable) || 6;
+      const swimmersPerLane = parseInt(req.body.swimmersPerLane) || 4;
+      const swimmersPerSlot = parseInt(req.body.swimmersPerSlot) || lanesAvailable * swimmersPerLane;
       const rawSessions: Array<{ date: string; startTime: string; endTime: string; label: string }> = req.body.sessions
         ? JSON.parse(req.body.sessions)
         : [];
@@ -254,6 +267,10 @@ export class TryoutController {
         bannerUrl,
         slotDuration,
         swimmersPerSlot,
+        lanesAvailable,
+        laneDetails: createLaneDetails(lanesAvailable),
+        coachAssignments: [],
+        swimmersPerLane,
         ctaLabel: req.body.ctaLabel || "Sign up today",
         highlights: req.body.highlights || "",
         additionalInstructions: req.body.additionalInstructions || "",
@@ -287,6 +304,8 @@ export class TryoutController {
 
       // Parse JSON fields from form data if present
       const slotDuration = req.body.slotDuration !== undefined ? parseInt(req.body.slotDuration) : undefined;
+      const lanesAvailable = req.body.lanesAvailable !== undefined ? parseInt(req.body.lanesAvailable) : undefined;
+      const swimmersPerLane = req.body.swimmersPerLane !== undefined ? parseInt(req.body.swimmersPerLane) : undefined;
       const swimmersPerSlot = req.body.swimmersPerSlot !== undefined ? parseInt(req.body.swimmersPerSlot) : undefined;
       const rawSessions: Array<{ date: string; startTime: string; endTime: string; label: string }> | undefined = req.body.sessions
         ? JSON.parse(req.body.sessions)
@@ -294,6 +313,8 @@ export class TryoutController {
       const segments = req.body.segments ? JSON.parse(req.body.segments) : undefined;
       const steps = req.body.steps ? JSON.parse(req.body.steps) : undefined;
       const faqs = req.body.faqs ? JSON.parse(req.body.faqs) : undefined;
+      const laneDetails = req.body.laneDetails ? JSON.parse(req.body.laneDetails) : undefined;
+      const coachAssignments = req.body.coachAssignments ? JSON.parse(req.body.coachAssignments) : undefined;
 
       // TODO: Upload banner file to S3/cloud storage and get URL
       let bannerUrl = req.body.bannerUrl;
@@ -309,6 +330,10 @@ export class TryoutController {
         ...(bannerUrl !== undefined && { bannerUrl }),
         ...(slotDuration !== undefined && { slotDuration }),
         ...(swimmersPerSlot !== undefined && { swimmersPerSlot }),
+        ...(lanesAvailable !== undefined && { lanesAvailable }),
+        ...(laneDetails !== undefined ? { laneDetails } : lanesAvailable !== undefined ? { laneDetails: createLaneDetails(lanesAvailable) } : {}),
+        ...(coachAssignments !== undefined && { coachAssignments }),
+        ...(swimmersPerLane !== undefined && { swimmersPerLane }),
         ...(req.body.ctaLabel !== undefined && { ctaLabel: req.body.ctaLabel }),
         ...(req.body.highlights !== undefined && { highlights: req.body.highlights }),
         ...(req.body.additionalInstructions !== undefined && { additionalInstructions: req.body.additionalInstructions }),
@@ -322,7 +347,9 @@ export class TryoutController {
 
       if (tryout && rawSessions !== undefined) {
         const effectiveSlotDuration = slotDuration ?? tryout.slotDuration;
-        const effectiveSwimmersPerSlot = swimmersPerSlot ?? tryout.swimmersPerSlot;
+        const effectiveSwimmersPerSlot =
+          swimmersPerSlot ??
+          (lanesAvailable !== undefined && swimmersPerLane !== undefined ? lanesAvailable * swimmersPerLane : tryout.swimmersPerSlot);
         await syncSessionsAndSlots(id, rawSessions, effectiveSlotDuration, effectiveSwimmersPerSlot);
       }
 
@@ -489,6 +516,10 @@ export class TryoutController {
       const statusFilter = (req.query["status"] as string) || "";
       const segmentIdFilter = (req.query["segmentId"] as string) || "";
       const registerId = ((req.query["registerId"] as string) || "").trim();
+      const registerIds = ((req.query["registerIds"] as string) || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value) => mongoose.Types.ObjectId.isValid(value));
       const sortBy = (req.query["sortBy"] as string) || "swimmer_name";
       const sortOrder = req.query["sortOrder"] === "desc" ? -1 : 1;
 
@@ -498,6 +529,10 @@ export class TryoutController {
       if (segmentIdFilter) mongoFilter["segmentId"] = segmentIdFilter;
       if (registerId && mongoose.Types.ObjectId.isValid(registerId)) {
         mongoFilter["_id"] = new mongoose.Types.ObjectId(registerId);
+      } else if (registerIds.length > 0) {
+        mongoFilter["_id"] = {
+          $in: registerIds.map((value) => new mongoose.Types.ObjectId(value)),
+        };
       }
 
       // Search by swimmer name (first, last, or combined) or guardian email.
@@ -591,6 +626,8 @@ export class TryoutController {
           breaststroke: scores.breaststroke ?? null,
           butterfly: scores.butterfly ?? null,
           total_score: scores.totalScore ?? null,
+          detailed_scores: r.detailedScores || {},
+          coach_recommendation: r.coachRecommendation || null,
         };
       });
 
@@ -640,6 +677,7 @@ export class TryoutController {
           age_segment: r.segmentId,
           total_score: r.scores?.totalScore ?? 0,
           status: r.status,
+          detailed_scores: r.detailedScores || {},
         };
       });
 
@@ -659,6 +697,10 @@ export class TryoutController {
     try {
       const { regId } = req.params;
       const { status } = req.body;
+      if (!["offered", "rejected"].includes(status)) {
+        throw new BadRequestError("status must be offered or rejected");
+      }
+
       const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: { status } }, { new: true }).lean().exec();
       if (!updated) throw new NotFoundError("Registration not found");
 
@@ -666,45 +708,72 @@ export class TryoutController {
       const user = users[0];
 
       if (user) {
-        // send mail based on status
+        const emailType = status === "offered" ? "offer" : "rejection";
+        let groupId: string | null = null;
+        if (status === "offered" && updated.coachRecommendation && mongoose.Types.ObjectId.isValid(updated.coachRecommendation)) {
+          groupId = updated.coachRecommendation;
+        }
+
+        const clubId = req.user?.clubId;
+        if (!clubId) {
+          sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+          return;
+        }
+
+        const [tryout, group, template, club] = await Promise.all([
+          this.service.getPublicById(updated.tryoutId.toString()),
+          groupId ? GroupModel.findById(groupId).lean().exec() : Promise.resolve(null),
+          EmailTemplateModel.findOne({ clubId, groupId, type: emailType }).lean().exec(),
+          clubId ? ClubModel.findById(clubId).lean().exec() : Promise.resolve(null),
+        ]);
+
         const swimmerName = `${updated.swimmerDetails.firstName} ${updated.swimmerDetails.lastName}`.trim();
         const parentName = `${user.firstName} ${user.lastName}`.trim();
         const parentEmail = user.email;
-        const tryout = await this.service.getPublicById(updated.tryoutId.toString());
-        // fetch slot detail by slot Id
-        const slot = await TryoutSlotModel.findById({ _id: updated.slotId }).lean();
 
-        switch (status) {
-          case "offered": {
-            // fetch tryout detail by Id
-
-            sendRegistrationOffer({
-              to: parentEmail,
-              swimmerName,
-              parentName,
-              tryoutName: tryout.name,
-              location: tryout.location,
-              sessionDate: slot?.sessionDate || "",
-              startTime: slot?.startTime || "",
-              endTime: slot?.endTime || "",
+        try {
+          if (template) {
+            await sendBulkTemplateEmail({
+              recipients: [
+                {
+                  to: parentEmail,
+                  swimmer_name: swimmerName,
+                  parent_name: parentName,
+                  parent_email: parentEmail,
+                  club_name: club?.name ?? "",
+                  tryout_name: tryout.name,
+                  group_name: group?.name ?? "",
+                },
+              ],
+              subjectTemplate: template.subject,
+              bodyTemplate: template.body,
             });
-            break;
-          }
-
-          case "rejected":
-            {
-              sendRegistrationReject({
+          } else {
+            // Fallback to default emails when no saved template exists
+            if (status === "offered") {
+              const slot = await TryoutSlotModel.findById({ _id: updated.slotId }).lean();
+              await sendRegistrationOffer({
                 to: parentEmail,
                 swimmerName,
                 parentName,
                 tryoutName: tryout.name,
+                location: tryout.location ?? "",
                 sessionDate: slot?.sessionDate || "",
+                startTime: slot?.startTime || "",
+                endTime: slot?.endTime || "",
+              });
+            } else {
+              await sendRegistrationReject({
+                to: parentEmail,
+                swimmerName,
+                parentName,
+                tryoutName: tryout.name,
+                sessionDate: "",
               });
             }
-            break;
-
-          default:
-            break;
+          }
+        } catch (emailErr) {
+          logger.error({ err: emailErr, regId, status }, "decision.email.failed");
         }
       }
 
@@ -780,6 +849,17 @@ export class TryoutController {
 
       if (body.notes !== undefined) {
         scoreUpdate["notes"] = body.notes;
+      }
+
+      if (body.detailed_scores !== undefined) {
+        // Merge with existing detailed_scores instead of replacing the whole object
+        const existing = await RegistrationModel.findById(regId).lean().exec();
+        const merged = { ...(existing?.detailedScores ?? {}), ...body.detailed_scores };
+        scoreUpdate["detailedScores"] = merged;
+      }
+
+      if (body.coach_recommendation !== undefined) {
+        scoreUpdate["coachRecommendation"] = body.coach_recommendation;
       }
 
       const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: scoreUpdate }, { new: true }).lean().exec();
@@ -923,6 +1003,8 @@ export class TryoutController {
           const clubName = (tryout as any).club?.name ?? (tryout as any).clubName ?? "";
           const tryoutName = (tryout as any).name ?? "";
 
+          const groupName = reg.coachRecommendation ?? "";
+
           return {
             to: parentEmail,
             swimmer_name: swimmerName,
@@ -930,6 +1012,7 @@ export class TryoutController {
             parent_email: parentEmail,
             club_name: clubName,
             tryout_name: tryoutName,
+            group_name: groupName,
           };
         })
         .filter((r) => !!r.to);

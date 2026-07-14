@@ -60,6 +60,7 @@ export function StepReviewPublish({
   const steps = values.steps?.filter((s) => s.title.trim()) ?? [];
   const segments = values.segments ?? [];
   const faqs = values.faqs?.filter((f) => f.question.trim()) ?? [];
+  const swimmersPerSlot = values.lanesAvailable * values.swimmersPerLane;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
@@ -174,7 +175,7 @@ export function StepReviewPublish({
                 </p>
               </div>
               <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">
-                {values.swimmersPerSlot} per slot
+                {swimmersPerSlot} per slot
               </span>
             </div>
 
@@ -212,7 +213,7 @@ export function StepReviewPublish({
                           </div>
                         </div>
                         <span className="ml-auto rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold">
-                          {totalSlots} slots · {values.swimmersPerSlot} per slot
+                          {totalSlots} slots · {swimmersPerSlot} per slot
                         </span>
                       </div>
 
@@ -229,7 +230,7 @@ export function StepReviewPublish({
                             Open
                           </span>
                           <span className="ml-auto mr-4 text-xs text-muted-foreground tabular-nums">
-                            0 / {values.swimmersPerSlot}
+                            0 / {swimmersPerSlot}
                             <br />
                             <span className="text-[10px] uppercase tracking-wider">Reserved</span>
                           </span>

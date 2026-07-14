@@ -13,9 +13,11 @@ const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const DashboardPage = lazy(() => import("./pages/app/DashboardPage"));
 const ClubsPage = lazy(() => import("./pages/app/ClubsPage"));
 const UsersPage = lazy(() => import("./pages/app/UsersPage"));
+const GroupsPage = lazy(() => import("./pages/app/GroupsPage"));
 const TryoutsPage = lazy(() => import("./pages/app/TryoutsPage"));
 const TryoutDetailPage = lazy(() => import("./pages/app/TryoutDetailPage"));
 const TryoutViewPage = lazy(() => import("./pages/app/TryoutViewPage"));
+const BulkScoringPage = lazy(() => import("./routes/_app/tryouts.view.bulk-scoring.$id"));
 const TryoutNewPage = lazy(() => import("./pages/app/TryoutNewPage"));
 const TryoutEditPage = lazy(() => import("./pages/app/TryoutEditPage"));
 const TryoutPreviewPage = lazy(() => import("./pages/app/TryoutPreviewPage"));
@@ -68,11 +70,13 @@ export default function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/clubs" element={<ClubsPage />} />
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/groups" element={<GroupsPage />} />
           <Route path="/tryouts" element={<TryoutsPage />} />
           <Route path="/tryouts/new" element={<TryoutNewPage />} />
           <Route path="/tryouts/edit/:id" element={<TryoutEditPage />} />
           <Route path="/tryouts/preview/:id" element={<TryoutPreviewPage />} />
           <Route path="/tryouts/register/:id" element={<TryoutRegistration />} />
+          <Route path="/tryouts/view/:id/bulk-scoring" element={<BulkScoringPage />} />
           <Route path="/tryouts/view/:id" element={<TryoutViewPage />} />
           <Route path="/tryouts/:id" element={<TryoutDetailPage />} />
           <Route path="/children" element={<ChildrenPage />} />

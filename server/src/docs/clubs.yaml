@@ -8,13 +8,13 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: List of clubs
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -22,11 +22,11 @@ paths:
                         properties:
                           clubs:
                             type: array
-                            items: { $ref: '#/components/schemas/Club' }
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                            items: { $ref: "#/components/schemas/Club" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /clubs/pending:
     get:
@@ -37,13 +37,13 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Clubs awaiting approval
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -51,11 +51,11 @@ paths:
                         properties:
                           clubs:
                             type: array
-                            items: { $ref: '#/components/schemas/Club' }
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                            items: { $ref: "#/components/schemas/Club" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /clubs/my:
     get:
@@ -66,25 +66,25 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Authenticated admin's club
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: object
                         properties:
-                          club: { $ref: '#/components/schemas/Club' }
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                          club: { $ref: "#/components/schemas/Club" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /clubs/{clubId}:
     get:
@@ -102,25 +102,25 @@ paths:
           description: MongoDB ObjectId of the club
           example: 665f1a2b3c4d5e6f7a8b9c0e
       responses:
-        '200':
+        "200":
           description: Club found
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: object
                         properties:
-                          club: { $ref: '#/components/schemas/Club' }
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                          club: { $ref: "#/components/schemas/Club" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /clubs/{clubId}/approve:
     put:
@@ -141,35 +141,35 @@ paths:
           description: MongoDB ObjectId of the club
           example: 665f1a2b3c4d5e6f7a8b9c0e
       responses:
-        '200':
+        "200":
           description: Club approved
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: object
                         properties:
-                          club: { $ref: '#/components/schemas/Club' }
-        '400':
+                          club: { $ref: "#/components/schemas/Club" }
+        "400":
           description: Club is not in pending_review status
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
               example:
                 success: false
-                message: 'Club is not pending review (current status: approved).'
+                message: "Club is not pending review (current status: approved)."
                 data: null
                 error: CLUB_STATUS_INVALID
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /clubs/{clubId}/reject:
     put:
@@ -202,29 +202,68 @@ paths:
                   minLength: 10
                   example: Incomplete documentation — please resubmit with a valid phone number.
       responses:
-        '200':
+        "200":
           description: Club rejected
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: object
                         properties:
-                          club: { $ref: '#/components/schemas/Club' }
-        '400':
+                          club: { $ref: "#/components/schemas/Club" }
+        "400":
           description: Club is not in pending_review status
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /clubs/coaches:
+    get:
+      tags: [Clubs]
+      summary: List active club admins and coaches
+      description: Returns active administrators and coaches in the authenticated user's club for tryout assignments.
+      operationId: listClubCoaches
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Club members available for coach assignments
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          coaches:
+                            type: array
+                            items:
+                              type: object
+                              required: [_id, email, role, status, firstName, lastName]
+                              properties:
+                                _id: { type: string }
+                                email: { type: string, format: email }
+                                role: { type: string, enum: [admin, coach] }
+                                status: { type: string }
+                                firstName: { type: string }
+                                lastName: { type: string }
+                                createdAt: { type: string, format: date-time }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"

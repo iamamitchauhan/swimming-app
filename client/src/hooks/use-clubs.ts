@@ -125,3 +125,16 @@ export function useAdminState() {
     staleTime: 2 * 60 * 1000,
   });
 }
+
+export function useFetchGroup(params: any = {}) {
+  const queryString = new URLSearchParams(params).toString();
+  return useQuery<any>({
+    queryKey: ["fetchGroup", params],
+    queryFn: async () => {
+      const data = await clubsApi.fetchClubGroups(queryString);
+      return data.groups;
+    },
+    staleTime: 2 * 60 * 1000,
+    placeholderData: (prev: any) => prev,
+  });
+}

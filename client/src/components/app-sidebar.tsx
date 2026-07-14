@@ -10,6 +10,7 @@ import {
   CalendarRange,
   User as UserIcon,
   Trophy,
+  Folder,
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,6 +43,7 @@ const MENUS: Record<string, Item[]> = {
   admin: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Users", url: "/users", icon: UserCog },
+    { title: "Groups", url: "/groups", icon: Folder },
     { title: "Tryouts", url: "/tryouts", icon: Waves },
     // { title: "Profile", url: "/profile", icon: UserIcon },
   ],

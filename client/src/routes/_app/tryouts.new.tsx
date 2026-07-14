@@ -65,7 +65,8 @@ export default function TryoutNewPage() {
       bannerUrl: "",
       sessions: [{ date: "", startTime: "", endTime: "", label: "" }],
       slotDuration: 30,
-      swimmersPerSlot: 4,
+      lanesAvailable: 6,
+      swimmersPerLane: 4,
       segments: [
         {
           name: "",
@@ -112,8 +113,10 @@ export default function TryoutNewPage() {
   async function onSaveAsDraft(data: TryoutFormValues) {
     setApiError("");
     try {
+      const swimmersPerSlot = data.lanesAvailable * data.swimmersPerLane;
       const created = await createMutation.mutateAsync({
         ...data,
+        swimmersPerSlot,
         status: "draft",
         banner: bannerFile ?? undefined,
       });

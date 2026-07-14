@@ -86,7 +86,8 @@ export const tryoutSchema = z.object({
       }
     }),
   slotDuration: z.coerce.number(),
-  swimmersPerSlot: z.coerce.number(),
+  lanesAvailable: z.coerce.number(),
+  swimmersPerLane: z.coerce.number(),
   segments: z.array(segmentSchema).min(1, "At least one segment is required"),
   steps: z.array(stepSchema),
   additionalInstructions: z.string().optional(),
@@ -174,7 +175,7 @@ export type WizardStepId = (typeof WIZARD_STEPS)[number]["id"];
 export const STEP_FIELDS: Record<WizardStepId, (keyof TryoutFormValues)[]> = {
   1: ["name", "location", "description"],
   2: ["theme", "bannerUrl"],
-  3: ["sessions", "slotDuration", "swimmersPerSlot"],
+  3: ["sessions", "slotDuration", "lanesAvailable", "swimmersPerLane"],
   4: ["segments"],
   5: ["steps", "additionalInstructions"],
   6: ["ctaLabel", "highlights", "faqs"],

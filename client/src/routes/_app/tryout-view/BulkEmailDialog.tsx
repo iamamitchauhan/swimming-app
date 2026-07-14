@@ -20,6 +20,7 @@ export const TEMPLATE_TOKENS = [
   { token: "{{parent_email}}", label: "Parent Email" },
   { token: "{{tryout_name}}", label: "Tryout Name" },
   { token: "{{club_name}}", label: "Club Name" },
+  { token: "{{group_name}}", label: "Group Name" },
 ] as const;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
