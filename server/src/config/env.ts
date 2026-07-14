@@ -17,7 +17,7 @@ const envSchema = z.object({
     .regex(/^\d+[smhd]$/, "JWT_EXPIRES_IN must be a duration like 15m, 1h, 7d")
     .default("7d"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  CORS_ORIGIN: z.string().url("CORS_ORIGIN must be a valid URL").default("http://localhost:3000"),
+  CORS_ORIGIN: z.string().min(1, "CORS_ORIGIN is required").default("http://localhost:3000"),
   SMTP_HOST: z.string().default("smtp.mailtrap.io"),
   SMTP_PORT: z
     .string()
