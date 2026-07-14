@@ -276,7 +276,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
 
       {/* ── Scoring Table ──────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto overscroll-x-contain pb-20">
+        <div className="overflow-auto overscroll-contain max-h-[calc(100vh-280px)] pb-20">
           <table className="min-w-max w-full text-sm border-collapse">
             <thead>
               <tr className="bg-muted border-b">
@@ -288,7 +288,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
                   return (
                     <th
                       key={s.id}
-                      className="relative z-20 w-[200px] min-w-[200px] bg-muted text-left p-3 border-l md:w-[220px] md:min-w-[220px]"
+                      className="sticky top-0 z-30 w-[200px] min-w-[200px] bg-muted text-left p-3 border-l md:w-[220px] md:min-w-[220px]"
                     >
                       <div className="font-semibold wrap-break-word text-foreground">
                         {s.swimmer_name}
