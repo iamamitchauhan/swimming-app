@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ManageCoachesDialog } from "./ManageCoachesDialog";
+import { SCORING_CRITERIA } from "@/lib/scoring-criteria";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,7 +102,8 @@ function fmtTime(t?: string) {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
-const DETAILED_SCORE_TOTAL = 23;
+const DETAILED_SCORE_FIELDS = SCORING_CRITERIA.map((c) => c.id);
+const DETAILED_SCORE_TOTAL = DETAILED_SCORE_FIELDS.length;
 
 function avg(r: Registration) {
   return calculateDetailedScoreTotal(r.detailed_scores);
@@ -115,9 +117,11 @@ function countYesNo(r: Registration) {
 }
 
 function detailedScoreCompletion(r: Registration) {
-  const done = Object.values(r.detailed_scores ?? {}).filter(
-    (value) => value !== null && value !== undefined && value !== "" && value !== 0,
-  ).length;
+  const done = DETAILED_SCORE_FIELDS.filter((field) => {
+    const value = r.detailed_scores?.[field];
+    return value !== null && value !== undefined && value !== "" && value !== 0;
+  }).length;
+
   return {
     done,
     total: DETAILED_SCORE_TOTAL,
@@ -509,6 +513,7 @@ export function RosterTab({ tryoutId }: Props) {
                       ) : (
                         (() => {
                           const isComplete = detailedScoreCompletion(r).pct === 100;
+
                           const offerBtn = (
                             <button
                               disabled={!isComplete}

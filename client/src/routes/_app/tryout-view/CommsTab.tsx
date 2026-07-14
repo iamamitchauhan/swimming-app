@@ -72,49 +72,47 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const activeFieldRef = useRef<"subject" | "body">("body");
   const cursorPosRef = useRef<{ start: number; end: number } | null>(null);
-  const templatesLoadedRef = useRef(false);
 
   useEffect(() => {
     if (!selectedGroup && groupData?.length) {
-      const first = groupData[0]._id;
-      setSelectedGroup(first);
-      const saved = groupComms[first];
-      setCommSubject(saved?.subject ?? "");
-      setCommBody(saved?.body ?? "");
+      setSelectedGroup(groupData[0]._id);
     }
-  }, [groupData, selectedGroup, groupComms]);
+  }, [groupData, selectedGroup]);
 
   useEffect(() => {
-    if (templates && !templatesLoadedRef.current) {
-      const offerMap: Record<string, { subject: string; body: string }> = {};
+    if (!templates) return;
 
-      templates.forEach((t) => {
-        if (t.type === "offer" && t.groupId) {
-          offerMap[t.groupId] = { subject: t.subject, body: t.body };
-        }
-      });
-
-      const rejectionTemplateData =
-        templates.find((t) => t.type === "rejection" && t.groupId === null) ??
-        templates.find((t) => t.type === "rejection");
-
-      setGroupComms(offerMap);
-      setRejectionTemplate(
-        rejectionTemplateData
-          ? { subject: rejectionTemplateData.subject, body: rejectionTemplateData.body }
-          : null,
-      );
-      templatesLoadedRef.current = true;
-
-      if (commTemplate === "rejection") {
-        setCommSubject(rejectionTemplateData?.subject ?? COMM_TEMPLATES.rejection.subject);
-        setCommBody(rejectionTemplateData?.body ?? COMM_TEMPLATES.rejection.body);
-      } else if (selectedGroup) {
-        setCommSubject(offerMap[selectedGroup]?.subject ?? "");
-        setCommBody(offerMap[selectedGroup]?.body ?? "");
+    const offerMap: Record<string, { subject: string; body: string }> = {};
+    templates.forEach((t) => {
+      if (t.type === "offer" && t.groupId) {
+        offerMap[t.groupId] = { subject: t.subject, body: t.body };
       }
+    });
+
+    const rejectionTemplateData =
+      templates.find((t) => t.type === "rejection" && t.groupId === null) ??
+      templates.find((t) => t.type === "rejection");
+
+    setGroupComms(offerMap);
+    setRejectionTemplate(
+      rejectionTemplateData
+        ? { subject: rejectionTemplateData.subject, body: rejectionTemplateData.body }
+        : null,
+    );
+  }, [templates]);
+
+  useEffect(() => {
+    if (commTemplate === "rejection") {
+      setCommSubject(rejectionTemplate?.subject ?? COMM_TEMPLATES.rejection.subject);
+      setCommBody(rejectionTemplate?.body ?? COMM_TEMPLATES.rejection.body);
+      return;
     }
-  }, [templates, selectedGroup, commTemplate]);
+
+    if (!selectedGroup) return;
+    const saved = groupComms[selectedGroup];
+    setCommSubject(saved?.subject ?? "");
+    setCommBody(saved?.body ?? "");
+  }, [commTemplate, groupComms, rejectionTemplate, selectedGroup]);
 
   function handleSelectGroup(groupId: string) {
     if (selectedGroup && commTemplate === "offer") {
@@ -124,9 +122,6 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
       }));
     }
     setSelectedGroup(groupId);
-    const saved = groupComms[groupId];
-    setCommSubject(saved?.subject ?? "");
-    setCommBody(saved?.body ?? "");
   }
 
   function switchTemplate(key: EmailTemplateType) {
