@@ -16,44 +16,19 @@ const controller = new GroupController(service);
  * GET    /        — list groups for the user's club (admin, coach)
  * GET    /:id     — get a single group (admin, coach)
  * POST   /        — create a group (admin, coach)
- * PUT    /:id     — update a group name (admin, coach)
+ * PUT    /:id     — update a group's name, color and description (admin, coach)
  * DELETE /:id     — soft-delete a group (admin, coach)
  */
 const groupRouter = Router();
 
-groupRouter.get(
-  "/",
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.listByClub,
-);
+groupRouter.get("/", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.listByClub);
 
-groupRouter.get(
-  "/:id",
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.getById,
-);
+groupRouter.get("/:id", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getById);
 
-groupRouter.post(
-  "/",
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.create,
-);
+groupRouter.post("/", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.create);
 
-groupRouter.put(
-  "/:id",
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.update,
-);
+groupRouter.put("/:id", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.update);
 
-groupRouter.delete(
-  "/:id",
-  authenticate,
-  authorize(USER_ROLES.ADMIN, USER_ROLES.COACH),
-  controller.delete,
-);
+groupRouter.delete("/:id", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.delete);
 
 export { groupRouter };

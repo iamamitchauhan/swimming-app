@@ -21,6 +21,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, Loader2, XCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup } from "@/hooks/use-groups";
 import { useAuthStore } from "@/lib/auth.store";
 import type { Group } from "@/lib/api/groups.api";
@@ -40,10 +41,12 @@ export default function GroupsPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(DEFAULT_GROUP_COLOR);
+  const [newDescription, setNewDescription] = useState("");
 
   const [editGroup, setEditGroup] = useState<Group | null>(null);
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState(DEFAULT_GROUP_COLOR);
+  const [editDescription, setEditDescription] = useState("");
 
   const [deleteTarget, setDeleteTarget] = useState<Group | null>(null);
 
@@ -51,11 +54,12 @@ export default function GroupsPage() {
     e.preventDefault();
     if (!newName.trim()) return;
     createGroup.mutate(
-      { name: newName.trim(), color: newColor },
+      { name: newName.trim(), color: newColor, description: newDescription.trim() },
       {
         onSuccess: () => {
           setNewName("");
           setNewColor(DEFAULT_GROUP_COLOR);
+          setNewDescription("");
           setIsAddOpen(false);
         },
       },
@@ -66,12 +70,16 @@ export default function GroupsPage() {
     e.preventDefault();
     if (!editGroup || !editName.trim()) return;
     updateGroup.mutate(
-      { id: editGroup._id, input: { name: editName.trim(), color: editColor } },
+      {
+        id: editGroup._id,
+        input: { name: editName.trim(), color: editColor, description: editDescription.trim() },
+      },
       {
         onSuccess: () => {
           setEditGroup(null);
           setEditName("");
           setEditColor(DEFAULT_GROUP_COLOR);
+          setEditDescription("");
         },
       },
     );
@@ -131,6 +139,7 @@ export default function GroupsPage() {
               <TableHeader className="bg-gray-900 text-xs uppercase tracking-wide">
                 <TableRow>
                   <TableHead className="text-white">Name</TableHead>
+                  <TableHead className="text-white">Description</TableHead>
                   <TableHead className="text-white">Created by</TableHead>
                   <TableHead className="text-white">Updated at</TableHead>
                   {isAdmin && <TableHead className="w-32 text-white">Actions</TableHead>}
@@ -140,7 +149,7 @@ export default function GroupsPage() {
                 {groups?.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={isAdmin ? 4 : 3}
+                      colSpan={isAdmin ? 5 : 4}
                       className="text-center text-muted-foreground py-10 align-middle"
                     >
                       No groups found.
@@ -154,6 +163,9 @@ export default function GroupsPage() {
                         {colorSwatch(group.color)}
                         {group.name}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground align-middle">
+                      <p className="text-sm line-clamp-2 max-w-md">{group.description}</p>
                     </TableCell>
                     <TableCell className="text-muted-foreground align-middle">
                       {creatorName(group)}
@@ -172,6 +184,7 @@ export default function GroupsPage() {
                               setEditGroup(group);
                               setEditName(group.name);
                               setEditColor(group.color || DEFAULT_GROUP_COLOR);
+                              setEditDescription(group.description || "");
                             }}
                           >
                             <Pencil className="h-4 w-4" />
@@ -224,6 +237,16 @@ export default function GroupsPage() {
                 className="h-10 w-full p-1 cursor-pointer"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="group-description">Description</Label>
+              <Textarea
+                id="group-description"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                placeholder="Optional group description"
+                rows={3}
+              />
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
                 Cancel
@@ -269,6 +292,16 @@ export default function GroupsPage() {
                 value={editColor}
                 onChange={(e) => setEditColor(e.target.value)}
                 className="h-10 w-full p-1 cursor-pointer"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-group-description">Description</Label>
+              <Textarea
+                id="edit-group-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Optional group description"
+                rows={3}
               />
             </div>
             <DialogFooter>

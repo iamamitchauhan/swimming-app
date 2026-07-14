@@ -2,10 +2,13 @@ import { apiClient, api } from "./client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export type EmailTemplateType = "offer" | "rejection";
+
 export interface EmailTemplate {
   _id: string;
   clubId: string;
-  groupId: string;
+  groupId: string | null;
+  type: EmailTemplateType;
   subject: string;
   body: string;
   createdBy: string;
@@ -15,7 +18,8 @@ export interface EmailTemplate {
 }
 
 export interface EmailTemplateInput {
-  groupId: string;
+  groupId: string | null;
+  type: EmailTemplateType;
   subject: string;
   body: string;
 }

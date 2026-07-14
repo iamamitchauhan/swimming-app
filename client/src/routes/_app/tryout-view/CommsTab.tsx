@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useFetchGroup } from "@/hooks/use-clubs";
-import { useSaveEmailTemplates } from "@/hooks/use-email-templates";
+import { useEmailTemplates, useSaveEmailTemplates } from "@/hooks/use-email-templates";
+import type { EmailTemplateType } from "@/lib/api/email-templates.api";
 import { useAuthStore } from "@/lib/auth.store";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TEMPLATE_TOKENS } from "./BulkEmailDialog";
@@ -10,7 +11,7 @@ import { TEMPLATE_TOKENS } from "./BulkEmailDialog";
 // ─── Templates ────────────────────────────────────────────────────────────────
 
 const COMM_TEMPLATES: Record<
-  string,
+  EmailTemplateType,
   { label: string; sub: string; subject: string; body: string }
 > = {
   offer: {
@@ -49,23 +50,29 @@ interface Props {
 
 export function CommsTab({ tryoutId: _tryoutId }: Props) {
   const { data: groupData, isLoading: groupLoading } = useFetchGroup();
+  const { data: templates, isLoading: templatesLoading } = useEmailTemplates();
   const { mutate: saveTemplates, isPending: saving } = useSaveEmailTemplates();
   const clubId = useAuthStore((s) => s.user?.clubId);
 
   console.log("groupData", { groupData, groupLoading });
 
-  const [commTemplate, setCommTemplate] = useState("general");
+  const [commTemplate, setCommTemplate] = useState<EmailTemplateType | "">("offer");
   const [selectedGroup, setSelectedGroup] = useState("");
   const [commSubject, setCommSubject] = useState("");
   const [commBody, setCommBody] = useState("");
   const [groupComms, setGroupComms] = useState<Record<string, { subject: string; body: string }>>(
     {},
   );
+  const [rejectionTemplate, setRejectionTemplate] = useState<{
+    subject: string;
+    body: string;
+  } | null>(null);
 
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const activeFieldRef = useRef<"subject" | "body">("body");
   const cursorPosRef = useRef<{ start: number; end: number } | null>(null);
+  const templatesLoadedRef = useRef(false);
 
   useEffect(() => {
     if (!selectedGroup && groupData?.length) {
@@ -75,10 +82,42 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
       setCommSubject(saved?.subject ?? "");
       setCommBody(saved?.body ?? "");
     }
-  }, [groupData, groupComms, selectedGroup]);
+  }, [groupData, selectedGroup, groupComms]);
+
+  useEffect(() => {
+    if (templates && !templatesLoadedRef.current) {
+      const offerMap: Record<string, { subject: string; body: string }> = {};
+
+      templates.forEach((t) => {
+        if (t.type === "offer" && t.groupId) {
+          offerMap[t.groupId] = { subject: t.subject, body: t.body };
+        }
+      });
+
+      const rejectionTemplateData =
+        templates.find((t) => t.type === "rejection" && t.groupId === null) ??
+        templates.find((t) => t.type === "rejection");
+
+      setGroupComms(offerMap);
+      setRejectionTemplate(
+        rejectionTemplateData
+          ? { subject: rejectionTemplateData.subject, body: rejectionTemplateData.body }
+          : null,
+      );
+      templatesLoadedRef.current = true;
+
+      if (commTemplate === "rejection") {
+        setCommSubject(rejectionTemplateData?.subject ?? COMM_TEMPLATES.rejection.subject);
+        setCommBody(rejectionTemplateData?.body ?? COMM_TEMPLATES.rejection.body);
+      } else if (selectedGroup) {
+        setCommSubject(offerMap[selectedGroup]?.subject ?? "");
+        setCommBody(offerMap[selectedGroup]?.body ?? "");
+      }
+    }
+  }, [templates, selectedGroup, commTemplate]);
 
   function handleSelectGroup(groupId: string) {
-    if (selectedGroup) {
+    if (selectedGroup && commTemplate === "offer") {
       setGroupComms((prev) => ({
         ...prev,
         [selectedGroup]: { subject: commSubject, body: commBody },
@@ -90,11 +129,33 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
     setCommBody(saved?.body ?? "");
   }
 
-  function switchTemplate(key: string) {
+  function switchTemplate(key: EmailTemplateType) {
+    if (commTemplate === "offer" && selectedGroup) {
+      setGroupComms((prev) => ({
+        ...prev,
+        [selectedGroup]: { subject: commSubject, body: commBody },
+      }));
+    } else if (commTemplate === "rejection") {
+      setRejectionTemplate({ subject: commSubject, body: commBody });
+    }
+
     setCommTemplate(key);
-    const tmpl = COMM_TEMPLATES[key];
-    if (tmpl.subject) setCommSubject(tmpl.subject);
-    if (tmpl.body) setCommBody(tmpl.body);
+
+    if (key === "rejection") {
+      const saved = rejectionTemplate;
+      setCommSubject(saved?.subject ?? COMM_TEMPLATES.rejection.subject);
+      setCommBody(saved?.body ?? COMM_TEMPLATES.rejection.body);
+    } else {
+      const saved = selectedGroup ? groupComms[selectedGroup] : null;
+      if (saved) {
+        setCommSubject(saved.subject);
+        setCommBody(saved.body);
+      } else {
+        const tmpl = COMM_TEMPLATES[key];
+        if (tmpl.subject) setCommSubject(tmpl.subject);
+        if (tmpl.body) setCommBody(tmpl.body);
+      }
+    }
   }
 
   function saveSubjectCursor() {
@@ -144,15 +205,32 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
   }
 
   function buildTemplatesForSave() {
+    if (commTemplate === "rejection") {
+      return [
+        {
+          groupId: null,
+          type: "rejection" as const,
+          subject: commSubject,
+          body: commBody,
+        },
+      ];
+    }
+
     const templates = Object.entries(groupComms).map(([groupId, { subject, body }]) => ({
       groupId,
+      type: "offer" as const,
       subject,
       body,
     }));
 
     if (selectedGroup) {
       const existingIndex = templates.findIndex((t) => t.groupId === selectedGroup);
-      const entry = { groupId: selectedGroup, subject: commSubject, body: commBody };
+      const entry = {
+        groupId: selectedGroup,
+        type: "offer" as const,
+        subject: commSubject,
+        body: commBody,
+      };
       if (existingIndex >= 0) {
         templates[existingIndex] = entry;
       } else {
@@ -187,14 +265,11 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
   return (
     <div className="p-5">
       {/* Template picker */}
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-        Pick a template
-      </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         {Object.entries(COMM_TEMPLATES).map(([key, tmpl]) => (
           <button
             key={key}
-            onClick={() => switchTemplate(key)}
+            onClick={() => switchTemplate(key as EmailTemplateType)}
             className={`text-left p-3 rounded-xl border-2 transition ${
               commTemplate === key
                 ? "border-gray-900 bg-gray-900 text-white"
@@ -216,24 +291,30 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
       </div>
 
       {/* Group tabs */}
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Group</div>
-      {groupLoading ? (
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-5">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading groups…
-        </div>
-      ) : groupData?.length ? (
-        <Tabs value={selectedGroup} onValueChange={handleSelectGroup} className="mb-5">
-          <TabsList>
-            {groupData.map((group: any) => (
-              <TabsTrigger key={group._id} value={group._id}>
-                {group.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      ) : (
-        <div className="text-sm text-gray-500 mb-5">No groups available.</div>
+      {commTemplate !== "rejection" && (
+        <>
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Group
+          </div>
+          {groupLoading ? (
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-5">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading groups…
+            </div>
+          ) : groupData?.length ? (
+            <Tabs value={selectedGroup} onValueChange={handleSelectGroup} className="mb-5">
+              <TabsList>
+                {groupData.map((group: any) => (
+                  <TabsTrigger key={group._id} value={group._id}>
+                    {group.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          ) : (
+            <div className="text-sm text-gray-500 mb-5">No groups available.</div>
+          )}
+        </>
       )}
 
       {/* Subject */}

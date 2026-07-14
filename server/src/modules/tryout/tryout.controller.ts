@@ -7,12 +7,15 @@ import { RegistrationRepository } from "../registration/registration.repository"
 import { HTTP_STATUS } from "../../shared/constants/httpStatus";
 import { MESSAGES } from "../../shared/constants/messages";
 import { sendSuccess } from "../../shared/utils/response";
-import { NotFoundError, ForbiddenError } from "../../shared/errors/domain.errors";
+import { NotFoundError, ForbiddenError, BadRequestError } from "../../shared/errors/domain.errors";
 import multer from "multer";
 import { RegistrationModel } from "../../models/registration.model";
 import { SwimmerModel } from "../../models/swimmer.model";
 import { UserModel } from "../../models/user.model";
 import { TryoutRegistrationQuestionModel } from "../../models/tryout-registration-question.model";
+import { EmailTemplateModel } from "../../models/email-template.model";
+import { GroupModel } from "../../models/group.model";
+import { ClubModel } from "../../models/club.model";
 import { sendRegistrationOffer, sendRegistrationReject, sendBulkTemplateEmail } from "../../shared/utils/mailer";
 import { UserService } from "../user/user.service";
 import { TryoutSlotModel } from "../../models/tryout-slot.model";
@@ -694,6 +697,10 @@ export class TryoutController {
     try {
       const { regId } = req.params;
       const { status } = req.body;
+      if (!["offered", "rejected"].includes(status)) {
+        throw new BadRequestError("status must be offered or rejected");
+      }
+
       const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: { status } }, { new: true }).lean().exec();
       if (!updated) throw new NotFoundError("Registration not found");
 
@@ -701,45 +708,72 @@ export class TryoutController {
       const user = users[0];
 
       if (user) {
-        // send mail based on status
+        const emailType = status === "offered" ? "offer" : "rejection";
+        let groupId: string | null = null;
+        if (status === "offered" && updated.coachRecommendation && mongoose.Types.ObjectId.isValid(updated.coachRecommendation)) {
+          groupId = updated.coachRecommendation;
+        }
+
+        const clubId = req.user?.clubId;
+        if (!clubId) {
+          sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+          return;
+        }
+
+        const [tryout, group, template, club] = await Promise.all([
+          this.service.getPublicById(updated.tryoutId.toString()),
+          groupId ? GroupModel.findById(groupId).lean().exec() : Promise.resolve(null),
+          EmailTemplateModel.findOne({ clubId, groupId, type: emailType }).lean().exec(),
+          clubId ? ClubModel.findById(clubId).lean().exec() : Promise.resolve(null),
+        ]);
+
         const swimmerName = `${updated.swimmerDetails.firstName} ${updated.swimmerDetails.lastName}`.trim();
         const parentName = `${user.firstName} ${user.lastName}`.trim();
         const parentEmail = user.email;
-        const tryout = await this.service.getPublicById(updated.tryoutId.toString());
-        // fetch slot detail by slot Id
-        const slot = await TryoutSlotModel.findById({ _id: updated.slotId }).lean();
 
-        switch (status) {
-          case "offered": {
-            // fetch tryout detail by Id
-
-            // sendRegistrationOffer({
-            //   to: parentEmail,
-            //   swimmerName,
-            //   parentName,
-            //   tryoutName: tryout.name,
-            //   location: tryout.location,
-            //   sessionDate: slot?.sessionDate || "",
-            //   startTime: slot?.startTime || "",
-            //   endTime: slot?.endTime || "",
-            // });
-            break;
-          }
-
-          case "rejected":
-            {
-              sendRegistrationReject({
+        try {
+          if (template) {
+            await sendBulkTemplateEmail({
+              recipients: [
+                {
+                  to: parentEmail,
+                  swimmer_name: swimmerName,
+                  parent_name: parentName,
+                  parent_email: parentEmail,
+                  club_name: club?.name ?? "",
+                  tryout_name: tryout.name,
+                  group_name: group?.name ?? "",
+                },
+              ],
+              subjectTemplate: template.subject,
+              bodyTemplate: template.body,
+            });
+          } else {
+            // Fallback to default emails when no saved template exists
+            if (status === "offered") {
+              const slot = await TryoutSlotModel.findById({ _id: updated.slotId }).lean();
+              await sendRegistrationOffer({
                 to: parentEmail,
                 swimmerName,
                 parentName,
                 tryoutName: tryout.name,
+                location: tryout.location ?? "",
                 sessionDate: slot?.sessionDate || "",
+                startTime: slot?.startTime || "",
+                endTime: slot?.endTime || "",
+              });
+            } else {
+              await sendRegistrationReject({
+                to: parentEmail,
+                swimmerName,
+                parentName,
+                tryoutName: tryout.name,
+                sessionDate: "",
               });
             }
-            break;
-
-          default:
-            break;
+          }
+        } catch (emailErr) {
+          logger.error({ err: emailErr, regId, status }, "decision.email.failed");
         }
       }
 

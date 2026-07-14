@@ -341,7 +341,8 @@ const options: swaggerJsdoc.Options = {
           properties: {
             _id: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
             clubId: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
-            groupId: { type: "string", example: "platinum" },
+            groupId: { type: "string", nullable: true, example: "platinum" },
+            type: { type: "string", enum: ["offer", "rejection"], example: "offer" },
             subject: { type: "string", example: "🎉 You've been offered a spot!" },
             body: {
               type: "string",
@@ -361,9 +362,10 @@ const options: swaggerJsdoc.Options = {
               type: "array",
               items: {
                 type: "object",
-                required: ["groupId", "subject", "body"],
+                required: ["type", "subject", "body"],
                 properties: {
-                  groupId: { type: "string", example: "platinum" },
+                  groupId: { type: "string", nullable: true, example: "platinum" },
+                  type: { type: "string", enum: ["offer", "rejection"], example: "offer" },
                   subject: { type: "string", example: "🎉 You've been offered a spot!" },
                   body: {
                     type: "string",
@@ -389,6 +391,7 @@ const options: swaggerJsdoc.Options = {
             _id: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c20" },
             name: { type: "string", example: "Platinum" },
             color: { type: "string", example: "#7c3aed" },
+            description: { type: "string", nullable: true, example: "Top-tier competitive swimmers" },
             clubId: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
             createdBy: {
               type: "object",
@@ -420,6 +423,7 @@ const options: swaggerJsdoc.Options = {
           properties: {
             name: { type: "string", example: "Platinum" },
             color: { type: "string", example: "#7c3aed" },
+            description: { type: "string", nullable: true, example: "Top-tier competitive swimmers" },
           },
         },
         UpdateGroupRequest: {
@@ -428,6 +432,7 @@ const options: swaggerJsdoc.Options = {
           properties: {
             name: { type: "string", example: "Gold" },
             color: { type: "string", example: "#f59e0b" },
+            description: { type: "string", nullable: true, example: "Experienced competitive swimmers" },
           },
         },
         GroupListResponse: {

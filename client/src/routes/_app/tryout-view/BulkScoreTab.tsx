@@ -1,6 +1,7 @@
 import { Fragment, useState, useMemo, useCallback } from "react";
 import { ArrowLeft, Check, Loader2, Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -421,22 +422,38 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
 
       {/* ── Scoring Table ──────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="min-w-max w-full text-sm border-collapse">
             <thead>
-              <tr className="bg-muted/50 border-b">
-                <th className="sticky left-0 bg-muted/50 text-left p-3 min-w-[260px] z-10 border-r">
+              <tr className="bg-muted border-b">
+                <th className="sticky left-0 top-0 z-40 w-[220px] min-w-[220px] bg-muted text-left p-3 border-r shadow-[4px_0_8px_-6px_rgba(0,0,0,0.35)] md:w-[260px] md:min-w-[260px]">
                   Criterion
                 </th>
                 {swimmers.map((s) => {
                   const comp = getCompletion(s.id);
                   return (
-                    <th key={s.id} className="text-left p-3 min-w-[220px] border-l">
-                      <div className="font-semibold text-foreground">{s.swimmer_name}</div>
-                      <div className="text-xs text-muted-foreground font-normal">
-                        {s.swimmer_age} yrs
-                        {s.segment_name ? ` · ${s.segment_name}` : ""} · {comp.pct}% ({comp.done}/
-                        {comp.total})
+                    <th
+                      key={s.id}
+                      className="relative z-20 w-[200px] min-w-[200px] bg-muted text-left p-3 border-l md:w-[220px] md:min-w-[220px]"
+                    >
+                      <div className="font-semibold wrap-break-word text-foreground">
+                        {s.swimmer_name}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1 mt-1">
+                        <Badge variant="secondary" className="text-[10px] font-normal">
+                          {s.swimmer_age} yrs
+                        </Badge>
+                        {s.segment_name && (
+                          <Badge variant="outline" className="text-[10px] font-normal">
+                            {s.segment_name}
+                          </Badge>
+                        )}
+                        <Badge
+                          variant={comp.pct === 100 ? "default" : "secondary"}
+                          className="text-[10px] font-normal"
+                        >
+                          {comp.pct}% ({comp.done}/{comp.total})
+                        </Badge>
                       </div>
                       <div className="mt-1 h-1 w-full rounded-full bg-muted overflow-hidden">
                         <div
@@ -454,12 +471,13 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
                 <Fragment key={category}>
                   {/* Category group header */}
                   <tr className="bg-blue-50">
-                    <td
-                      colSpan={1 + swimmers.length}
-                      className="p-2 px-3 text-xs font-semibold uppercase tracking-wide text-blue-700"
-                    >
+                    <td className="sticky left-0 z-20 w-[220px] min-w-[220px] bg-blue-50 p-2 px-3 text-xs font-semibold uppercase tracking-wide text-blue-700 border-r md:w-[260px] md:min-w-[260px]">
                       {category}
                     </td>
+                    <td
+                      colSpan={swimmers.length}
+                      className="p-2 px-3 text-xs font-semibold uppercase tracking-wide text-blue-700"
+                    />
                   </tr>
                   {/* Criteria rows */}
                   {CRITERIA_BY_CATEGORY[category].map((criterion) => {
@@ -475,7 +493,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
                       : new Set<string>();
                     return (
                       <tr key={criterion.id} className="border-t hover:bg-muted/20">
-                        <td className="sticky left-0 bg-background p-3 border-r align-top">
+                        <td className="sticky left-0 z-20 w-[220px] min-w-[220px] bg-background p-3 border-r align-top md:w-[260px] md:min-w-[260px]">
                           <div className="font-medium">{criterion.label}</div>
                           <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">
                             {criterion.type === "yesno"
@@ -508,15 +526,16 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
               ))}
               {/* Coach notes section */}
               <tr className="bg-blue-50">
-                <td
-                  colSpan={1 + swimmers.length}
-                  className="p-2 px-3 text-xs font-semibold uppercase tracking-wide text-blue-700"
-                >
+                <td className="sticky left-0 z-20 w-[220px] min-w-[220px] bg-blue-50 p-2 px-3 text-xs font-semibold uppercase tracking-wide text-blue-700 border-r md:w-[260px] md:min-w-[260px]">
                   Coach notes
                 </td>
+                <td
+                  colSpan={swimmers.length}
+                  className="p-2 px-3 text-xs font-semibold uppercase tracking-wide text-blue-700"
+                />
               </tr>
               <tr className="border-t">
-                <td className="sticky left-0 bg-background p-3 border-r align-top">
+                <td className="sticky left-0 z-20 w-[220px] min-w-[220px] bg-background p-3 border-r align-top md:w-[260px] md:min-w-[260px]">
                   <div className="font-medium">Notes</div>
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">
                     Optional per swimmer

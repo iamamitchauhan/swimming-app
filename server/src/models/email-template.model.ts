@@ -2,9 +2,12 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 
+export type EmailTemplateType = "offer" | "rejection";
+
 export interface IEmailTemplate extends Document {
   clubId: Types.ObjectId;
-  groupId: string;
+  groupId: string | null;
+  type: EmailTemplateType;
   subject: string;
   body: string;
   createdBy: Types.ObjectId;
@@ -25,8 +28,13 @@ const EmailTemplateSchema = new Schema<IEmailTemplate>(
     },
     groupId: {
       type: String,
-      required: true,
+      default: null,
       trim: true,
+    },
+    type: {
+      type: String,
+      enum: ["offer", "rejection"],
+      required: true,
     },
     subject: {
       type: String,
@@ -56,11 +64,8 @@ const EmailTemplateSchema = new Schema<IEmailTemplate>(
 
 // ─── Indexes ────────────────────────────────────────────────────────────────────
 
-EmailTemplateSchema.index({ clubId: 1, groupId: 1 }, { unique: true });
+EmailTemplateSchema.index({ clubId: 1, groupId: 1, type: 1 }, { unique: true });
 
 // ─── Export ─────────────────────────────────────────────────────────────────────
 
-export const EmailTemplateModel: Model<IEmailTemplate> = mongoose.model<IEmailTemplate>(
-  "EmailTemplate",
-  EmailTemplateSchema,
-);
+export const EmailTemplateModel: Model<IEmailTemplate> = mongoose.model<IEmailTemplate>("EmailTemplate", EmailTemplateSchema);

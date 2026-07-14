@@ -787,6 +787,75 @@ paths:
         "429":
           $ref: "#/components/responses/TooManyRequests"
 
+  /tryouts/{id}/registrations/{regId}/decision:
+    put:
+      tags: [Tryouts]
+      summary: Offer or reject a swimmer
+      description: |
+        Updates the registration status to `offered` or `rejected`. After the
+        status is saved, the swimmer's parent is emailed using the club's
+        saved email template.
+
+        For `offered`, the email template is selected from the swimmer's
+        `coachRecommendation` group. For `rejected`, the club-wide rejection
+        template is used. If no matching template exists, a default email is
+        sent.
+      operationId: registrationDecision
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tryout ID
+          schema:
+            type: string
+        - name: regId
+          in: path
+          required: true
+          description: Registration ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [offered, rejected]
+                  description: New registration status
+            example:
+              status: offered
+      responses:
+        "200":
+          description: Status updated and email queued
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          registration:
+                            type: object
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
   /tryouts/{id}/bulk-email:
     post:
       tags: [Tryouts]

@@ -14,6 +14,7 @@ export type PlainGroup = {
   _id: string;
   name: string;
   color: string;
+  description: string;
   clubId: string;
   createdBy: PopulatedUser;
   updatedBy: PopulatedUser;
@@ -26,6 +27,7 @@ export type PlainGroup = {
 export type CreateGroupData = {
   name: string;
   color: string;
+  description: string;
   clubId: string;
   createdBy: string;
   updatedBy: string;
@@ -34,6 +36,7 @@ export type CreateGroupData = {
 export type UpdateGroupData = {
   name?: string;
   color?: string;
+  description?: string;
   updatedBy: string;
 };
 
@@ -81,6 +84,7 @@ export class GroupRepository {
     const created = await GroupModel.create({
       name: data.name.trim(),
       color: data.color?.trim() ?? "",
+      description: data.description?.trim() ?? "",
       clubId: new Types.ObjectId(data.clubId),
       createdBy: new Types.ObjectId(data.createdBy),
       updatedBy: new Types.ObjectId(data.updatedBy),
@@ -94,6 +98,7 @@ export class GroupRepository {
       {
         ...(data.name !== undefined && { name: data.name.trim() }),
         ...(data.color !== undefined && { color: data.color.trim() }),
+        ...(data.description !== undefined && { description: data.description.trim() }),
         updatedBy: new Types.ObjectId(data.updatedBy),
       },
       { new: true },

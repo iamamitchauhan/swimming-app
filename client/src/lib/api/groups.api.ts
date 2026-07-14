@@ -13,6 +13,7 @@ export interface Group {
   _id: string;
   name: string;
   color: string;
+  description: string;
   clubId: string;
   createdBy: PopulatedUser;
   updatedBy: PopulatedUser;
@@ -25,11 +26,13 @@ export interface Group {
 export interface CreateGroupInput {
   name: string;
   color?: string;
+  description?: string;
 }
 
 export interface UpdateGroupInput {
   name: string;
   color?: string;
+  description?: string;
 }
 
 // ─── API calls ─────────────────────────────────────────────────────────────────

@@ -14,9 +14,16 @@ export class EmailTemplateService {
       throw new BadRequestError("templates must be a non-empty array");
     }
 
+    const validTypes = new Set<"offer" | "rejection">(["offer", "rejection"]);
+
     for (let i = 0; i < templates.length; i++) {
       const t = templates[i];
-      if (!t.groupId?.trim()) throw new BadRequestError(`templates[${i}].groupId is required`);
+      if (!validTypes.has(t.type as "offer" | "rejection")) {
+        throw new BadRequestError(`templates[${i}].type must be offer or rejection`);
+      }
+      if (t.type === "offer" && !t.groupId?.trim()) {
+        throw new BadRequestError(`templates[${i}].groupId is required for offer templates`);
+      }
       if (typeof t.subject !== "string") throw new BadRequestError(`templates[${i}].subject must be a string`);
       if (typeof t.body !== "string") throw new BadRequestError(`templates[${i}].body must be a string`);
     }

@@ -11,8 +11,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BulkEmailDialog } from "./BulkEmailDialog";
-import { tryoutsApi } from "@/lib/api/tryouts.api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { LeaderboardEntry } from "@/lib/api/tryouts.api";
 import { calculateDetailedScoreTotal } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth.store";
@@ -47,7 +55,7 @@ export function LeaderboardTab({ tryoutId }: Props) {
   const { data: leaderboard = [], isLoading } = useTryoutLeaderboard(tryoutId, enabled);
   const decision = useSendDecision(tryoutId);
 
-  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
   const [pendingRegId, setPendingRegId] = useState<string | null>(null);
 
@@ -57,19 +65,13 @@ export function LeaderboardTab({ tryoutId }: Props) {
   function openDecisionDialog(regId: string, status: "offered" | "rejected") {
     setPendingRegId(regId);
     setBulkAction(status);
-    setBulkEmailOpen(true);
+    setConfirmOpen(true);
   }
 
-  async function handleSend(subject: string, body: string) {
+  function handleConfirm() {
     if (!pendingRegId || !bulkAction) return;
-    await tryoutsApi.bulkEmail(tryoutId, {
-      registrationIds: [pendingRegId],
-      subject,
-      body,
-      action: bulkAction,
-    });
     decision.mutate({ regId: pendingRegId, status: bulkAction });
-    setBulkEmailOpen(false);
+    setConfirmOpen(false);
     setBulkAction(null);
     setPendingRegId(null);
   }
@@ -291,17 +293,41 @@ export function LeaderboardTab({ tryoutId }: Props) {
         })}
       </div>
 
-      <BulkEmailDialog
-        open={bulkEmailOpen}
-        action={bulkAction}
-        count={1}
-        onClose={() => {
-          setBulkEmailOpen(false);
-          setBulkAction(null);
-          setPendingRegId(null);
-        }}
-        onSend={handleSend}
-      />
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Confirm {bulkAction === "offered" ? "Offer" : "Reject"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to {bulkAction === "offered" ? "offer" : "reject"} this swimmer?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setConfirmOpen(false);
+                setBulkAction(null);
+                setPendingRegId(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirm}
+              disabled={decision.isPending}
+              className={
+                bulkAction === "offered"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }
+            >
+              {decision.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

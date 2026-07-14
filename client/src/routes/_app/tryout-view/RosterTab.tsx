@@ -12,9 +12,17 @@ import {
   XCircle,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BulkEmailDialog } from "./BulkEmailDialog";
 import { ManageCoachesDialog } from "./ManageCoachesDialog";
-import { tryoutsApi } from "@/lib/api/tryouts.api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { calculateDetailedScoreTotal } from "@/lib/utils";
 import type {
   Registration,
@@ -158,7 +166,7 @@ export function RosterTab({ tryoutId }: Props) {
 
   // ── Bulk selection ─────────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
   const [pendingRegId, setPendingRegId] = useState<string | null>(null);
   const [manageCoachesOpen, setManageCoachesOpen] = useState(false);
@@ -169,7 +177,7 @@ export function RosterTab({ tryoutId }: Props) {
   function openDecisionDialog(regId: string, status: "offered" | "rejected") {
     setPendingRegId(regId);
     setBulkAction(status);
-    setBulkEmailOpen(true);
+    setConfirmOpen(true);
   }
 
   useEffect(() => {
@@ -206,29 +214,25 @@ export function RosterTab({ tryoutId }: Props) {
     });
   }
 
-  async function handleBulkSend(subject: string, emailBody: string) {
+  async function handleConfirm() {
     if (!bulkAction) return;
-    if (pendingRegId) {
-      await tryoutsApi.bulkEmail(tryoutId, {
-        registrationIds: [pendingRegId],
-        subject,
-        body: emailBody,
-        action: bulkAction,
-      });
-      sendDecision.mutate({ regId: pendingRegId, status: bulkAction });
-      setPendingRegId(null);
-    } else {
-      const ids = Array.from(selectedIds);
-      await tryoutsApi.bulkEmail(tryoutId, {
-        registrationIds: ids,
-        subject,
-        body: emailBody,
-        action: bulkAction,
-      });
-      setSelectedIds(new Set());
+    try {
+      if (pendingRegId) {
+        await sendDecision.mutateAsync({ regId: pendingRegId, status: bulkAction });
+        setPendingRegId(null);
+      } else if (selectedIds.size > 0) {
+        const ids = Array.from(selectedIds);
+        await Promise.all(
+          ids.map((id) => sendDecision.mutateAsync({ regId: id, status: bulkAction })),
+        );
+        setSelectedIds(new Set());
+      }
+    } catch {
+      // Errors are handled by the mutation's onError
+    } finally {
+      setConfirmOpen(false);
+      setBulkAction(null);
     }
-    setBulkEmailOpen(false);
-    setBulkAction(null);
   }
   const sortBy = rosterParams.sortBy ?? "swimmer_name";
   const sortOrder = rosterParams.sortOrder ?? "asc";
@@ -477,7 +481,11 @@ export function RosterTab({ tryoutId }: Props) {
                       <CoachRecommendationSelect
                         tryoutId={tryoutId}
                         regId={r.id}
-                        value={r.coach_recommendation ?? null}
+                        value={
+                          r.coach_recommendation === REJECTED_VALUE
+                            ? undefined
+                            : (r.coach_recommendation ?? null)
+                        }
                       />
                     </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
@@ -581,7 +589,7 @@ export function RosterTab({ tryoutId }: Props) {
           <button
             onClick={() => {
               setBulkAction("offered");
-              setBulkEmailOpen(true);
+              setConfirmOpen(true);
             }}
             className="flex items-center gap-1.5 text-green-400 hover:text-green-300 transition cursor-pointer font-medium"
           >
@@ -590,7 +598,7 @@ export function RosterTab({ tryoutId }: Props) {
           <button
             onClick={() => {
               setBulkAction("rejected");
-              setBulkEmailOpen(true);
+              setConfirmOpen(true);
             }}
             className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition cursor-pointer font-medium"
           >
@@ -648,17 +656,43 @@ export function RosterTab({ tryoutId }: Props) {
         </div>
       )}
 
-      <BulkEmailDialog
-        open={bulkEmailOpen}
-        action={bulkAction}
-        count={pendingRegId ? 1 : selectedIds.size}
-        onClose={() => {
-          setBulkEmailOpen(false);
-          setBulkAction(null);
-          setPendingRegId(null);
-        }}
-        onSend={handleBulkSend}
-      />
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Confirm {bulkAction === "offered" ? "Offer" : "Reject"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingRegId
+                ? `Are you sure you want to ${bulkAction === "offered" ? "offer" : "reject"} this swimmer?`
+                : `Are you sure you want to ${bulkAction === "offered" ? "offer" : "reject"} the ${selectedIds.size} selected swimmers?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setConfirmOpen(false);
+                setBulkAction(null);
+                setPendingRegId(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirm}
+              disabled={sendDecision.isPending}
+              className={
+                bulkAction === "offered"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }
+            >
+              {sendDecision.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <RegistrationDetailModal
         tryoutId={tryoutId}
@@ -678,7 +712,7 @@ export function RosterTab({ tryoutId }: Props) {
 
 // ─── Coach Recommendation Dropdown ─────────────────────────────────────────────
 
-const REJECT_OPTION = "Reject";
+const REJECTED_VALUE = "__rejected__";
 
 function CoachRecommendationSelect({
   tryoutId,
@@ -687,21 +721,15 @@ function CoachRecommendationSelect({
 }: {
   tryoutId: string;
   regId: string;
-  value: string | null;
+  value: string | undefined | null;
 }) {
   const saveScore = useSaveScore(tryoutId);
   const { data: groups, isLoading } = useGroups();
 
-  const groupNames = groups ? groups.map((g) => g.name) : [];
-  const selectedGroup = groups?.find((g) => g.name === value);
+  const selectedGroup = groups?.find((g) => g._id === value);
 
-  const dotColor = value
-    ? selectedGroup?.color
-      ? selectedGroup.color
-      : value === REJECT_OPTION
-        ? "#ef4444"
-        : "#9ca3af"
-    : "#d1d5db";
+  const isRejected = value === undefined;
+  const dotColor = value ? (selectedGroup?.color ?? "#9ca3af") : isRejected ? "#ef4444" : "#d1d5db";
 
   return (
     <DropdownMenu>
@@ -714,14 +742,14 @@ function CoachRecommendationSelect({
             <Loader2 className="inline h-3 w-3 animate-spin" />
           ) : (
             <>
-              {value && (
+              {value !== null && (
                 <span
                   className="h-2 w-2 rounded-full"
                   style={{ backgroundColor: dotColor }}
                   aria-hidden="true"
                 />
               )}
-              {value ?? "Select"}
+              {isRejected ? "Reject" : (selectedGroup?.name ?? "Select")}
               <ChevronDown className="inline h-3 w-3 ml-1 -mr-0.5" />
             </>
           )}
@@ -737,10 +765,10 @@ function CoachRecommendationSelect({
             onClick={() => {
               saveScore.mutate({
                 regId,
-                edits: { coach_recommendation: group.name } as Partial<Registration>,
+                edits: { coach_recommendation: group._id } as Partial<Registration>,
               });
             }}
-            className={`cursor-pointer flex items-center gap-2 ${value === group.name ? "font-bold" : ""}`}
+            className={`cursor-pointer flex items-center gap-2 ${value === group._id ? "font-bold" : ""}`}
           >
             <span
               className="h-2 w-2 rounded-full"
@@ -750,7 +778,7 @@ function CoachRecommendationSelect({
             {group.name}
           </DropdownMenuItem>
         ))}
-        {groupNames.length > 0 && <DropdownMenuSeparator />}
+        {groups && groups.length > 0 && <DropdownMenuSeparator />}
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
           No group recommended
         </DropdownMenuLabel>
@@ -758,10 +786,10 @@ function CoachRecommendationSelect({
           onClick={() => {
             saveScore.mutate({
               regId,
-              edits: { coach_recommendation: REJECT_OPTION } as Partial<Registration>,
+              edits: { coach_recommendation: REJECTED_VALUE } as Partial<Registration>,
             });
           }}
-          className={`cursor-pointer flex items-center gap-2 ${value === REJECT_OPTION ? "font-bold" : ""}`}
+          className={`cursor-pointer flex items-center gap-2 ${isRejected ? "font-bold" : ""}`}
         >
           <span
             className="h-2 w-2 rounded-full"
@@ -770,7 +798,7 @@ function CoachRecommendationSelect({
           />
           Reject
         </DropdownMenuItem>
-        {value && (
+        {(value !== null || isRejected) && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem

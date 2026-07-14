@@ -204,10 +204,20 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
             <div className="grid gap-4 sm:grid-cols-2 mb-4">
               <div className="space-y-2">
                 <Label className="text-xs font-medium text-muted-foreground">Coach</Label>
-                <Select value={coachId} onValueChange={setCoachId}>
+                <Select
+                  value={coachId}
+                  onValueChange={setCoachId}
+                  disabled={availableCoaches.length === 0 || coachesLoading}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue
-                      placeholder={coachesLoading ? "Loading coaches…" : "Choose a coach or admin"}
+                      placeholder={
+                        coachesLoading
+                          ? "Loading coaches…"
+                          : availableCoaches.length === 0
+                            ? "No coaches available"
+                            : "Choose a coach or admin"
+                      }
                     />
                   </SelectTrigger>
                   <SelectContent>
@@ -240,74 +250,76 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
               </div>
             </div>
 
-            {/* Segments */}
-            <div className="mb-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium text-muted-foreground">Segments</Label>
-                {segmentIds.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSegmentIds([])}
-                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(tryout?.segments ?? []).map((segment) => {
-                  const id = segmentKey(segment);
-                  const selected = segmentIds.includes(id);
-                  return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Segments */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-muted-foreground">Segments</Label>
+                  {segmentIds.length > 0 && (
                     <button
-                      key={id}
                       type="button"
-                      onClick={() => toggleValue(segmentIds, id, setSegmentIds)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted"}`}
+                      onClick={() => setSegmentIds([])}
+                      className="text-xs text-muted-foreground hover:text-foreground hover:underline"
                     >
-                      {segment.name}
+                      Clear
                     </button>
-                  );
-                })}
-                {(tryout?.segments ?? []).length === 0 && (
-                  <span className="text-sm text-muted-foreground">No segments defined.</span>
-                )}
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(tryout?.segments ?? []).map((segment) => {
+                    const id = segmentKey(segment);
+                    const selected = segmentIds.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => toggleValue(segmentIds, id, setSegmentIds)}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted"}`}
+                      >
+                        {segment.name}
+                      </button>
+                    );
+                  })}
+                  {(tryout?.segments ?? []).length === 0 && (
+                    <span className="text-sm text-muted-foreground">No segments defined.</span>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Lanes */}
-            <div className="mb-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium text-muted-foreground">Lanes</Label>
-                {laneIds.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setLaneIds([])}
-                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {lanes.map((lane) => {
-                  const selected = laneIds.includes(lane._id);
-                  return (
+              {/* Lanes */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-muted-foreground">Lanes</Label>
+                  {laneIds.length > 0 && (
                     <button
-                      key={lane._id}
                       type="button"
-                      onClick={() => toggleValue(laneIds, lane._id, setLaneIds)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted"}`}
+                      onClick={() => setLaneIds([])}
+                      className="text-xs text-muted-foreground hover:text-foreground hover:underline"
                     >
-                      {lane.name}
+                      Clear
                     </button>
-                  );
-                })}
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {lanes.map((lane) => {
+                    const selected = laneIds.includes(lane._id);
+                    return (
+                      <button
+                        key={lane._id}
+                        type="button"
+                        onClick={() => toggleValue(laneIds, lane._id, setLaneIds)}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted"}`}
+                      >
+                        {lane.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between gap-3 pt-1 border-t">
+            <div className="flex items-center justify-between gap-3 pt-1">
               <p className="text-xs text-muted-foreground">
                 Leave segments or lanes unselected for full access.
               </p>

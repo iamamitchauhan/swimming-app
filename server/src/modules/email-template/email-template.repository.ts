@@ -6,7 +6,8 @@ import { EmailTemplateModel, IEmailTemplate } from "../../models/email-template.
 export type PlainEmailTemplate = {
   _id: string;
   clubId: string;
-  groupId: string;
+  groupId: string | null;
+  type: "offer" | "rejection";
   subject: string;
   body: string;
   createdBy: string;
@@ -16,7 +17,8 @@ export type PlainEmailTemplate = {
 };
 
 export type TemplateInput = {
-  groupId: string;
+  groupId: string | null;
+  type: "offer" | "rejection";
   subject: string;
   body: string;
 };
@@ -30,17 +32,13 @@ export class EmailTemplateRepository {
       .exec();
   }
 
-  async upsertBulk(
-    clubId: string,
-    userId: string,
-    templates: TemplateInput[],
-  ): Promise<PlainEmailTemplate[]> {
+  async upsertBulk(clubId: string, userId: string, templates: TemplateInput[]): Promise<PlainEmailTemplate[]> {
     const clubOid = new Types.ObjectId(clubId);
     const userOid = new Types.ObjectId(userId);
 
     const ops = templates.map((t) => ({
       updateOne: {
-        filter: { clubId: clubOid, groupId: t.groupId },
+        filter: { clubId: clubOid, groupId: t.groupId, type: t.type },
         update: {
           $set: {
             subject: t.subject,
@@ -50,6 +48,7 @@ export class EmailTemplateRepository {
           $setOnInsert: {
             clubId: clubOid,
             groupId: t.groupId,
+            type: t.type,
             createdBy: userOid,
           },
         },

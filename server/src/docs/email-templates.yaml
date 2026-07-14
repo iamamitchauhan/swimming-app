@@ -29,6 +29,7 @@ paths:
                     - _id: "665f1a2b3c4d5e6f7a8b9c0e"
                       clubId: "665f1a2b3c4d5e6f7a8b9c0e"
                       groupId: "platinum"
+                      type: "offer"
                       subject: "🎉 You've been offered a spot!"
                       body: "Dear {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!"
                       createdBy: "665f1a2b3c4d5e6f7a8b9c0d"
@@ -53,7 +54,7 @@ paths:
       summary: Bulk upsert email templates for the user's club
       description: |
         Creates or updates email templates for the authenticated user's club.
-        Each template is keyed by `clubId` + `groupId`. `createdBy` is set on
+        Each template is keyed by `clubId` + `groupId` + `type`. `createdBy` is set on
         insert and `updatedBy` is set on every save.
         Requires admin or coach role.
       operationId: bulkUpsertEmailTemplates
@@ -85,6 +86,7 @@ paths:
                     - _id: "665f1a2b3c4d5e6f7a8b9c0e"
                       clubId: "665f1a2b3c4d5e6f7a8b9c0e"
                       groupId: "platinum"
+                      type: "offer"
                       subject: "🎉 You've been offered a spot!"
                       body: "Dear {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!"
                       createdBy: "665f1a2b3c4d5e6f7a8b9c0d"

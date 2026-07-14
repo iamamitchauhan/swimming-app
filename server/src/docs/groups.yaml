@@ -28,6 +28,8 @@ paths:
                   groups:
                     - _id: "665f1a2b3c4d5e6f7a8b9c20"
                       name: "Platinum"
+                      color: "#7c3aed"
+                      description: "Top-tier competitive swimmers"
                       clubId: "665f1a2b3c4d5e6f7a8b9c0e"
                       createdBy: "665f1a2b3c4d5e6f7a8b9c0d"
                       updatedBy: "665f1a2b3c4d5e6f7a8b9c0d"
@@ -84,6 +86,8 @@ paths:
                   group:
                     _id: "665f1a2b3c4d5e6f7a8b9c20"
                     name: "Platinum"
+                    color: "#7c3aed"
+                    description: "Top-tier competitive swimmers"
                     clubId: "665f1a2b3c4d5e6f7a8b9c0e"
                     createdBy: "665f1a2b3c4d5e6f7a8b9c0d"
                     updatedBy: "665f1a2b3c4d5e6f7a8b9c0d"
@@ -151,7 +155,7 @@ paths:
       tags: [Groups]
       summary: Update a group
       description: |
-        Updates a group's name. `updatedBy` and `updatedAt` are set automatically.
+        Updates a group's name, color and description. `updatedBy` and `updatedAt` are set automatically.
         Requires admin or coach role.
       operationId: updateGroup
       security:
