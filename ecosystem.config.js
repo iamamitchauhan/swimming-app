@@ -25,7 +25,7 @@ module.exports = {
       name: "client",
       cwd: "./client",
       script: "npm",
-      args: "run preview -- --host --strictPort --port 3000",
+      args: "run preview -- --host --strictPort --port 5002",
       instances: 1,
       exec_mode: "fork",
       env: {
@@ -41,7 +41,7 @@ module.exports = {
       name: "landing",
       cwd: "./landing",
       script: "npm",
-      args: "run preview -- --host --strictPort --port 3002",
+      args: "run preview -- --host --strictPort --port 5001",
       instances: 1,
       exec_mode: "fork",
       env: {
