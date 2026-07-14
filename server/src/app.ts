@@ -47,9 +47,16 @@ export function createApp(): express.Application {
 
   // Security & parsing middleware
   app.use(helmet());
+  const allowedOrigins = config.CORS_ORIGIN.split(",").map((o) => o.trim().replace(/\/$/, ""));
   app.use(
     cors({
-      origin: "*",
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+      },
       credentials: true,
     }),
   );
