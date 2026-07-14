@@ -4,6 +4,7 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 export interface IGroup extends Document {
   name: string;
+  color: string;
   clubId: Types.ObjectId;
   createdBy: Types.ObjectId;
   updatedBy: Types.ObjectId;
@@ -20,6 +21,11 @@ const GroupSchema = new Schema<IGroup>(
     name: {
       type: String,
       required: true,
+      trim: true,
+    },
+    color: {
+      type: String,
+      default: "",
       trim: true,
     },
     clubId: {

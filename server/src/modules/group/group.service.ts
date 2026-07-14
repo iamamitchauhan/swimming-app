@@ -15,7 +15,7 @@ export class GroupService {
     return group;
   }
 
-  async create(clubId: string, userId: string, name: string) {
+  async create(clubId: string, userId: string, name: string, color: string) {
     if (!name?.trim()) throw new BadRequestError("name is required");
 
     const existing = await this.repo.findByName(clubId, name);
@@ -23,6 +23,7 @@ export class GroupService {
 
     const data: CreateGroupData = {
       name: name.trim(),
+      color: color?.trim() ?? "",
       clubId,
       createdBy: userId,
       updatedBy: userId,
@@ -33,18 +34,18 @@ export class GroupService {
     return created;
   }
 
-  async update(id: string, userId: string, name: string) {
+  async update(id: string, userId: string, name: string, color: string) {
     if (!name?.trim()) throw new BadRequestError("name is required");
 
     const existing = await this.repo.findById(id);
     if (!existing) throw new NotFoundError("Group not found");
 
     const conflict = await this.repo.findByName(existing.clubId, name);
-    if (conflict && conflict._id !== id) {
+    if (conflict && conflict._id.toString() !== id) {
       throw new ConflictError(`Group "${name.trim()}" already exists`);
     }
 
-    const data: UpdateGroupData = { name: name.trim(), updatedBy: userId };
+    const data: UpdateGroupData = { name: name.trim(), color: color?.trim() ?? "", updatedBy: userId };
     const updated = await this.repo.update(id, data);
     if (!updated) throw new NotFoundError("Group not found");
 

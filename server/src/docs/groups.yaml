@@ -73,20 +73,24 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: "#/components/schemas/Group"
+                        type: object
+                        properties:
+                          group:
+                            $ref: "#/components/schemas/Group"
               example:
                 success: true
                 message: Group created
                 data:
-                  _id: "665f1a2b3c4d5e6f7a8b9c20"
-                  name: "Platinum"
-                  clubId: "665f1a2b3c4d5e6f7a8b9c0e"
-                  createdBy: "665f1a2b3c4d5e6f7a8b9c0d"
-                  updatedBy: "665f1a2b3c4d5e6f7a8b9c0d"
-                  deletedBy: null
-                  createdAt: "2024-06-15T10:00:00Z"
-                  updatedAt: "2024-06-15T10:00:00Z"
-                  deletedAt: null
+                  group:
+                    _id: "665f1a2b3c4d5e6f7a8b9c20"
+                    name: "Platinum"
+                    clubId: "665f1a2b3c4d5e6f7a8b9c0e"
+                    createdBy: "665f1a2b3c4d5e6f7a8b9c0d"
+                    updatedBy: "665f1a2b3c4d5e6f7a8b9c0d"
+                    deletedBy: null
+                    createdAt: "2024-06-15T10:00:00Z"
+                    updatedAt: "2024-06-15T10:00:00Z"
+                    deletedAt: null
                 error: null
         "400":
           description: Validation error
@@ -132,7 +136,10 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: "#/components/schemas/Group"
+                        type: object
+                        properties:
+                          group:
+                            $ref: "#/components/schemas/Group"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -172,7 +179,10 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: "#/components/schemas/Group"
+                        type: object
+                        properties:
+                          group:
+                            $ref: "#/components/schemas/Group"
         "400":
           description: Validation error
           content:

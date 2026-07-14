@@ -31,7 +31,7 @@ export class GroupController {
   getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const data = await this.service.getById(req.params["id"]!);
-      sendSuccess(res, data, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+      sendSuccess(res, { group: data }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }
@@ -40,11 +40,11 @@ export class GroupController {
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { userId, clubId } = this.getUserIds(req);
-      const { name } = req.body as { name?: string };
+      const { name, color } = req.body as { name?: string; color?: string };
       if (!name?.trim()) throw new BadRequestError("name is required");
 
-      const data = await this.service.create(clubId, userId, name);
-      sendSuccess(res, data, "Group created", HTTP_STATUS.CREATED);
+      const data = await this.service.create(clubId, userId, name, color ?? "");
+      sendSuccess(res, { group: data }, "Group created", HTTP_STATUS.CREATED);
     } catch (err) {
       next(err);
     }
@@ -53,11 +53,11 @@ export class GroupController {
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { userId } = this.getUserIds(req);
-      const { name } = req.body as { name?: string };
+      const { name, color } = req.body as { name?: string; color?: string };
       if (!name?.trim()) throw new BadRequestError("name is required");
 
-      const data = await this.service.update(req.params["id"]!, userId, name);
-      sendSuccess(res, data, "Group updated", HTTP_STATUS.OK);
+      const data = await this.service.update(req.params["id"]!, userId, name, color ?? "");
+      sendSuccess(res, { group: data }, "Group updated", HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

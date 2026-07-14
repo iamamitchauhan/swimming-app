@@ -24,6 +24,7 @@ import type {
 } from "@/lib/api/tryouts.api";
 import { useTryout } from "@/hooks/use-tryouts";
 import { useTryoutRegistration, useSendDecision, useSaveScore } from "@/hooks/use-tryout-dashboard";
+import { useGroups } from "@/hooks/use-groups";
 import { useAuthStore } from "@/lib/auth.store";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -31,6 +32,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -675,13 +678,7 @@ export function RosterTab({ tryoutId }: Props) {
 
 // ─── Coach Recommendation Dropdown ─────────────────────────────────────────────
 
-const COACH_RECOMMENDATION_OPTIONS = ["Platinum", "Gold", "Silver", "Reject"] as const;
-
-const RECOMMENDATION_COLORS: Record<string, string> = {
-  Platinum: "bg-violet-100 text-violet-700 border-violet-200",
-  Gold: "bg-amber-100 text-amber-700 border-amber-200",
-  Silver: "bg-slate-100 text-slate-600 border-slate-200",
-};
+const REJECT_OPTION = "Reject";
 
 function CoachRecommendationSelect({
   tryoutId,
@@ -693,48 +690,101 @@ function CoachRecommendationSelect({
   value: string | null;
 }) {
   const saveScore = useSaveScore(tryoutId);
+  const { data: groups, isLoading } = useGroups();
+
+  const groupNames = groups ? groups.map((g) => g.name) : [];
+  const selectedGroup = groups?.find((g) => g.name === value);
+
+  const dotColor = value
+    ? selectedGroup?.color
+      ? selectedGroup.color
+      : value === REJECT_OPTION
+        ? "#ef4444"
+        : "#9ca3af"
+    : "#d1d5db";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className={`text-xs px-2.5 py-1 rounded-full border font-medium transition cursor-pointer hover:opacity-80 ${
-            value
-              ? (RECOMMENDATION_COLORS[value] ?? "bg-gray-100 text-gray-600 border-gray-200")
-              : "bg-gray-50 text-gray-400 border-gray-200"
-          }`}
+          disabled={isLoading}
+          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition cursor-pointer hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 border-gray-200"
         >
-          {value ?? "Select"}
-          <ChevronDown className="inline h-3 w-3 ml-1 -mr-0.5" />
+          {isLoading ? (
+            <Loader2 className="inline h-3 w-3 animate-spin" />
+          ) : (
+            <>
+              {value && (
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: dotColor }}
+                  aria-hidden="true"
+                />
+              )}
+              {value ?? "Select"}
+              <ChevronDown className="inline h-3 w-3 ml-1 -mr-0.5" />
+            </>
+          )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        {COACH_RECOMMENDATION_OPTIONS.map((opt) => (
+      <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          Assign group
+        </DropdownMenuLabel>
+        {groups?.map((group) => (
           <DropdownMenuItem
-            key={opt}
+            key={group._id}
             onClick={() => {
               saveScore.mutate({
                 regId,
-                edits: { coach_recommendation: opt } as Partial<Registration>,
+                edits: { coach_recommendation: group.name } as Partial<Registration>,
               });
             }}
-            className={`cursor-pointer ${value === opt ? "font-bold" : ""}`}
+            className={`cursor-pointer flex items-center gap-2 ${value === group.name ? "font-bold" : ""}`}
           >
-            {opt}
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: group.color || "#e5e7eb" }}
+              aria-hidden="true"
+            />
+            {group.name}
           </DropdownMenuItem>
         ))}
+        {groupNames.length > 0 && <DropdownMenuSeparator />}
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          No group recommended
+        </DropdownMenuLabel>
+        <DropdownMenuItem
+          onClick={() => {
+            saveScore.mutate({
+              regId,
+              edits: { coach_recommendation: REJECT_OPTION } as Partial<Registration>,
+            });
+          }}
+          className={`cursor-pointer flex items-center gap-2 ${value === REJECT_OPTION ? "font-bold" : ""}`}
+        >
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: "#ef4444" }}
+            aria-hidden="true"
+          />
+          Reject
+        </DropdownMenuItem>
         {value && (
-          <DropdownMenuItem
-            onClick={() => {
-              saveScore.mutate({
-                regId,
-                edits: { coach_recommendation: null } as Partial<Registration>,
-              });
-            }}
-            className="cursor-pointer text-gray-400"
-          >
-            Clear
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => {
+                saveScore.mutate({
+                  regId,
+                  edits: { coach_recommendation: null } as Partial<Registration>,
+                });
+              }}
+              className="cursor-pointer text-gray-400"
+            >
+              Clear
+            </DropdownMenuItem>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

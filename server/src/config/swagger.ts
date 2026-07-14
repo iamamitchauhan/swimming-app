@@ -388,9 +388,26 @@ const options: swaggerJsdoc.Options = {
           properties: {
             _id: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c20" },
             name: { type: "string", example: "Platinum" },
+            color: { type: "string", example: "#7c3aed" },
             clubId: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
-            createdBy: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
-            updatedBy: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
+            createdBy: {
+              type: "object",
+              properties: {
+                _id: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
+                email: { type: "string", example: "admin@club.com" },
+                firstName: { type: "string", example: "Jane" },
+                lastName: { type: "string", example: "Doe" },
+              },
+            },
+            updatedBy: {
+              type: "object",
+              properties: {
+                _id: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
+                email: { type: "string", example: "admin@club.com" },
+                firstName: { type: "string", example: "Jane" },
+                lastName: { type: "string", example: "Doe" },
+              },
+            },
             deletedBy: { type: "string", nullable: true, example: null },
             createdAt: { type: "string", format: "date-time" },
             updatedAt: { type: "string", format: "date-time" },
@@ -402,6 +419,7 @@ const options: swaggerJsdoc.Options = {
           required: ["name"],
           properties: {
             name: { type: "string", example: "Platinum" },
+            color: { type: "string", example: "#7c3aed" },
           },
         },
         UpdateGroupRequest: {
@@ -409,6 +427,7 @@ const options: swaggerJsdoc.Options = {
           required: ["name"],
           properties: {
             name: { type: "string", example: "Gold" },
+            color: { type: "string", example: "#f59e0b" },
           },
         },
         GroupListResponse: {
