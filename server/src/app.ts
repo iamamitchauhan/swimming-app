@@ -45,6 +45,9 @@ const rateLimiter = rateLimit({
 export function createApp(): express.Application {
   const app = express();
 
+  // Trust the first proxy hop (nginx) so X-Forwarded-* headers are respected
+  app.set("trust proxy", 1);
+
   // Security & parsing middleware
   app.use(helmet());
   app.use(
