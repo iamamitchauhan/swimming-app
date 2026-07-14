@@ -149,8 +149,18 @@ export class AuthService {
     const codeHash = hashOtp(otp);
     const expiresAt = new Date(Date.now() + config.OTP_EXPIRES_MINUTES * 60 * 1000);
 
+    logger.info({ email, otpLength: otp.length, expiresAt }, "auth.otp.generated");
+
     await this.repository.createOtp({ email, codeHash, purpose: "login", expiresAt });
-    await sendOtpEmail({ to: email, otp });
+    logger.info({ email }, "auth.otp.stored");
+
+    try {
+      await sendOtpEmail({ to: email, otp });
+      logger.info({ email, from: config.SMTP_FROM_EMAIL, host: config.SMTP_HOST, port: config.SMTP_PORT }, "auth.otp.email_sent");
+    } catch (err) {
+      logger.error({ email, err, from: config.SMTP_FROM_EMAIL, host: config.SMTP_HOST, port: config.SMTP_PORT }, "auth.otp.email_failed");
+      throw err;
+    }
 
     logger.info({ email }, "auth.otp.sent");
   }
