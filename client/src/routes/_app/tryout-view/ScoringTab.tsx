@@ -9,6 +9,7 @@ import type {
 import { ChevronDown, ChevronUp, ChevronsUpDown, Loader2 } from "lucide-react";
 import { useTryout } from "@/hooks/use-tryouts";
 import { useTryoutRegistration, useSaveScore } from "@/hooks/use-tryout-dashboard";
+import { calculateDetailedScoreTotal } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -30,11 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function avg(r: Partial<Registration>) {
-  const scores = [r.freestyle, r.backstroke, r.breaststroke, r.butterfly]
-    .map(Number)
-    .filter((v) => !isNaN(v) && v > 0);
-  if (!scores.length) return null;
-  return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+  return calculateDetailedScoreTotal(r.detailed_scores);
 }
 
 // ─── ScoreCell ────────────────────────────────────────────────────────────────
@@ -478,7 +475,7 @@ export function ScoringTab({ tryoutId, registerId }: Props) {
                 <TableHead className="text-center">Backstroke</TableHead>
                 <TableHead className="text-center">Breaststroke</TableHead>
                 <TableHead className="text-center">Butterfly</TableHead>
-                <TableHead className="text-center">Avg</TableHead>
+                <TableHead className="text-center">Score</TableHead>
                 <TableHead className="text-center">Notes</TableHead>
                 <TableHead className="text-center">Save</TableHead>
               </TableRow>

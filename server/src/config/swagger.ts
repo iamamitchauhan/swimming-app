@@ -336,6 +336,90 @@ const options: swaggerJsdoc.Options = {
             },
           },
         },
+        EmailTemplate: {
+          type: "object",
+          properties: {
+            _id: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
+            clubId: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
+            groupId: { type: "string", example: "platinum" },
+            subject: { type: "string", example: "🎉 You've been offered a spot!" },
+            body: {
+              type: "string",
+              example: "Dear {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!",
+            },
+            createdBy: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
+            updatedBy: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        EmailTemplateBulkRequest: {
+          type: "object",
+          required: ["templates"],
+          properties: {
+            templates: {
+              type: "array",
+              items: {
+                type: "object",
+                required: ["groupId", "subject", "body"],
+                properties: {
+                  groupId: { type: "string", example: "platinum" },
+                  subject: { type: "string", example: "🎉 You've been offered a spot!" },
+                  body: {
+                    type: "string",
+                    example: "Dear {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!",
+                  },
+                },
+              },
+            },
+          },
+        },
+        EmailTemplateListResponse: {
+          type: "object",
+          properties: {
+            templates: {
+              type: "array",
+              items: { $ref: "#/components/schemas/EmailTemplate" },
+            },
+          },
+        },
+        Group: {
+          type: "object",
+          properties: {
+            _id: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c20" },
+            name: { type: "string", example: "Platinum" },
+            clubId: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
+            createdBy: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
+            updatedBy: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
+            deletedBy: { type: "string", nullable: true, example: null },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+            deletedAt: { type: "string", format: "date-time", nullable: true, example: null },
+          },
+        },
+        CreateGroupRequest: {
+          type: "object",
+          required: ["name"],
+          properties: {
+            name: { type: "string", example: "Platinum" },
+          },
+        },
+        UpdateGroupRequest: {
+          type: "object",
+          required: ["name"],
+          properties: {
+            name: { type: "string", example: "Gold" },
+          },
+        },
+        GroupListResponse: {
+          type: "object",
+          properties: {
+            groups: {
+              type: "array",
+              items: { $ref: "#/components/schemas/Group" },
+            },
+          },
+        },
         UpdateTryoutRequest: {
           type: "object",
           properties: {
@@ -516,6 +600,8 @@ const options: swaggerJsdoc.Options = {
       { name: "Invitations", description: "Send and accept user invitations" },
       { name: "Users", description: "User profile and listing" },
       { name: "Tryouts", description: "Swim tryout management for clubs and public registration" },
+      { name: "Email Templates", description: "Per-group email template configuration" },
+      { name: "Groups", description: "Club group management" },
     ],
   },
   apis: ["./src/docs/**/*.yaml"],

@@ -127,14 +127,21 @@ export function useSaveScore(tryoutId: string) {
         queryKey: ["tryouts", tryoutId, "roster"],
       });
 
-      // Patch every matching roster query
+      // Patch every matching roster query (merge detailed_scores, don't replace)
       qc.getQueriesData<RegistrationListResult>({
         queryKey: ["tryouts", tryoutId, "roster"],
       }).forEach(([key, data]) => {
         if (data?.registrations) {
           qc.setQueryData<RegistrationListResult>(key, {
             ...data,
-            registrations: data.registrations.map((r) => (r.id === regId ? { ...r, ...edits } : r)),
+            registrations: data.registrations.map((r) => {
+              if (r.id !== regId) return r;
+              const next = { ...r, ...edits } as Registration;
+              if (edits.detailed_scores) {
+                next.detailed_scores = { ...r.detailed_scores, ...edits.detailed_scores };
+              }
+              return next;
+            }),
           });
         }
       });

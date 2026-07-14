@@ -24,6 +24,8 @@ import { publicRouter } from "./modules/public/public.routes";
 import { parentRouter } from "./modules/parent/parent.routes";
 import { questionLibraryRouter } from "./modules/question-library/question-library.routes";
 import { waitlistRouter } from "./modules/waitlist/waitlist.routes";
+import { emailTemplateRouter } from "./modules/email-template/email-template.routes";
+import { groupRouter } from "./modules/group/group.routes";
 
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -115,6 +117,8 @@ export function createApp(): express.Application {
   app.use(`${API_PREFIX}/parent`, parentRouter);
   app.use(`${API_PREFIX}/question-library`, questionLibraryRouter);
   app.use(`${API_PREFIX}/waitlist`, waitlistRouter);
+  app.use(`${API_PREFIX}/email-templates`, emailTemplateRouter);
+  app.use(`${API_PREFIX}/groups`, groupRouter);
 
   // Global error handler — must be last
   app.use(errorHandler);

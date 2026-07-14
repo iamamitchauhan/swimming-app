@@ -1,0 +1,104 @@
+paths:
+  /email-templates:
+    get:
+      tags: [Email Templates]
+      summary: List email templates for the user's club
+      description: |
+        Returns all saved email templates for the authenticated user's club.
+        Requires admin or coach role.
+      operationId: listEmailTemplates
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Email templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/EmailTemplateListResponse"
+              example:
+                success: true
+                message: Success
+                data:
+                  templates:
+                    - _id: "665f1a2b3c4d5e6f7a8b9c0e"
+                      clubId: "665f1a2b3c4d5e6f7a8b9c0e"
+                      groupId: "platinum"
+                      subject: "🎉 You've been offered a spot!"
+                      body: "Dear {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!"
+                      createdBy: "665f1a2b3c4d5e6f7a8b9c0d"
+                      updatedBy: "665f1a2b3c4d5e6f7a8b9c0d"
+                      createdAt: "2024-06-15T10:00:00Z"
+                      updatedAt: "2024-06-15T10:00:00Z"
+                error: null
+        "400":
+          description: clubId is missing for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /email-templates/bulk:
+    post:
+      tags: [Email Templates]
+      summary: Bulk upsert email templates for the user's club
+      description: |
+        Creates or updates email templates for the authenticated user's club.
+        Each template is keyed by `clubId` + `groupId`. `createdBy` is set on
+        insert and `updatedBy` is set on every save.
+        Requires admin or coach role.
+      operationId: bulkUpsertEmailTemplates
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailTemplateBulkRequest"
+      responses:
+        "200":
+          description: Email templates saved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/EmailTemplateListResponse"
+              example:
+                success: true
+                message: Email templates saved
+                data:
+                  templates:
+                    - _id: "665f1a2b3c4d5e6f7a8b9c0e"
+                      clubId: "665f1a2b3c4d5e6f7a8b9c0e"
+                      groupId: "platinum"
+                      subject: "🎉 You've been offered a spot!"
+                      body: "Dear {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!"
+                      createdBy: "665f1a2b3c4d5e6f7a8b9c0d"
+                      updatedBy: "665f1a2b3c4d5e6f7a8b9c0d"
+                      createdAt: "2024-06-15T10:00:00Z"
+                      updatedAt: "2024-06-15T10:00:00Z"
+                error: null
+        "400":
+          description: Validation error (e.g. missing templates or required fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"

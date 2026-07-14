@@ -786,3 +786,78 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/TooManyRequests"
+
+  /tryouts/{id}/bulk-email:
+    post:
+      tags: [Tryouts]
+      summary: Send bulk template email to selected registrations
+      description: |
+        Sends a templated email to the parents of the selected registrations.
+        The following template variables are supported:
+        `{{swimmer_name}}`, `{{parent_name}}`, `{{parent_email}}`,
+        `{{club_name}}`, `{{tryout_name}}`, `{{group_name}}`.
+        `{{group_name}}` is resolved from the registration's `coachRecommendation` field.
+      operationId: sendBulkEmail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tryout ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [registrationIds, subject, body, action]
+              properties:
+                registrationIds:
+                  type: array
+                  description: IDs of registrations to email
+                  items:
+                    type: string
+                  example: ["665f1a2b3c4d5e6f7a8b9c1a"]
+                subject:
+                  type: string
+                  description: Email subject template
+                  example: "Team Offer for {{swimmer_name}}"
+                body:
+                  type: string
+                  description: Email body template
+                  example: "Dear {{parent_name}}, we are pleased to offer {{swimmer_name}} a spot in the {{group_name}} group."
+                action:
+                  type: string
+                  enum: [offered, rejected]
+                  description: Registration status to apply after sending
+                  example: offered
+      responses:
+        "202":
+          description: Bulk email queued successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          queued:
+                            type: integer
+                            description: Number of recipients queued
+                            example: 5
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"

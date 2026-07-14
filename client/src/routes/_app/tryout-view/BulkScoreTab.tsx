@@ -32,6 +32,12 @@ const SCORING_CRITERIA: Criterion[] = [
     label: "Ready position on wall",
     type: "yesno",
   },
+  {
+    id: "didnt_finish",
+    category: "General deck & fundamentals",
+    label: "Didn't finish",
+    type: "yesno",
+  },
 
   // Freestyle
   { id: "hand_entry", category: "Freestyle", label: "Hand entry", type: "yesno" },

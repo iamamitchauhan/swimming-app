@@ -11,6 +11,11 @@ export const clubsApi = {
   /** GET /clubs — list all clubs (super_admin) */
   listAll: () => api<{ clubs: Club[] }>(apiClient.get("/clubs")),
 
+  fetchClubGroups: (queryString: string) =>
+    api<{ groups: { name: string; _id: string }[] }>(
+      apiClient.get(`/groups${queryString ? `?${queryString}` : ""}`),
+    ),
+
   /** GET /clubs/pending — clubs awaiting approval (super_admin) */
   listPending: () => api<{ clubs: Club[] }>(apiClient.get("/clubs/pending")),
 

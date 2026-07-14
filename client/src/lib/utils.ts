@@ -36,3 +36,18 @@ export const tryoutCoverPhotos = () => {
 
   return [1, 2, 3, 4, 5, 6].map((num) => `${origin}/assets/cover/${num}.jpg`);
 };
+
+/**
+ * Sum all numeric detailed scores.
+ * Ignores yes/no values, booleans, nulls, empties, and non-numeric strings.
+ */
+export function calculateDetailedScoreTotal(
+  detailedScores?: Record<string, string | number | boolean | null | undefined> | null,
+): number | null {
+  const numericScores = Object.values(detailedScores ?? {})
+    .map((v) => (typeof v === "string" ? Number(v) : v))
+    .filter((v): v is number => typeof v === "number" && !isNaN(v) && v > 0);
+
+  if (!numericScores.length) return null;
+  return numericScores.reduce((a, b) => a + b, 0);
+}

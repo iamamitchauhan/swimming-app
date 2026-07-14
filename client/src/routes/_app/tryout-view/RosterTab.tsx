@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { BulkEmailDialog } from "./BulkEmailDialog";
 import { ManageCoachesDialog } from "./ManageCoachesDialog";
 import { tryoutsApi } from "@/lib/api/tryouts.api";
+import { calculateDetailedScoreTotal } from "@/lib/utils";
 import type {
   Registration,
   RegistrationListParams,
@@ -23,6 +24,7 @@ import type {
 } from "@/lib/api/tryouts.api";
 import { useTryout } from "@/hooks/use-tryouts";
 import { useTryoutRegistration, useSendDecision, useSaveScore } from "@/hooks/use-tryout-dashboard";
+import { useAuthStore } from "@/lib/auth.store";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -91,11 +93,7 @@ function fmtTime(t?: string) {
 const DETAILED_SCORE_TOTAL = 23;
 
 function avg(r: Registration) {
-  const scores = [r.freestyle, r.backstroke, r.breaststroke, r.butterfly]
-    .map(Number)
-    .filter((v) => !isNaN(v) && v > 0);
-  if (!scores.length) return null;
-  return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+  return calculateDetailedScoreTotal(r.detailed_scores);
 }
 
 function countYesNo(r: Registration) {
@@ -161,6 +159,9 @@ export function RosterTab({ tryoutId }: Props) {
   const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
   const [pendingRegId, setPendingRegId] = useState<string | null>(null);
   const [manageCoachesOpen, setManageCoachesOpen] = useState(false);
+
+  const user = useAuthStore((state) => state.user);
+  const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
 
   function openDecisionDialog(regId: string, status: "offered" | "rejected") {
     setPendingRegId(regId);
@@ -305,14 +306,16 @@ export function RosterTab({ tryoutId }: Props) {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="ml-auto"
-          onClick={() => setManageCoachesOpen(true)}
-        >
-          <UserCog className="mr-1.5 h-4 w-4" /> Manage coaches
-        </Button>
+        {canManageCoaches && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto"
+            onClick={() => setManageCoachesOpen(true)}
+          >
+            <UserCog className="mr-1.5 h-4 w-4" /> Manage coaches
+          </Button>
+        )}
       </div>
 
       {/* ── Table ─────────────────────────────────────────────────────────── */}
@@ -453,7 +456,7 @@ export function RosterTab({ tryoutId }: Props) {
                         title="Open in Scoring tab"
                       >
                         <div>{avg(r) || <span className="text-gray-400">Score</span>}</div>
-                        <div className="text-xs font-normal text-gray-400">
+                        {/* <div className="text-xs font-normal text-gray-400">
                           {(() => {
                             const completion = detailedScoreCompletion(r);
                             return `${completion.pct}% (${completion.done}/${completion.total})`;
@@ -464,7 +467,7 @@ export function RosterTab({ tryoutId }: Props) {
                             className="h-full bg-blue-600 transition-all"
                             style={{ width: `${detailedScoreCompletion(r).pct}%` }}
                           />
-                        </div>
+                        </div> */}
                       </button>
                     </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
@@ -490,7 +493,7 @@ export function RosterTab({ tryoutId }: Props) {
                       {/* show yes/no chip like this [(10)Yes/(5)No] */}
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      {r.status !== "registered" ? (
+                      {r.status !== "registered" || !canManageCoaches ? (
                         <span className="text-gray-400">—</span>
                       ) : (
                         (() => {
@@ -672,7 +675,7 @@ export function RosterTab({ tryoutId }: Props) {
 
 // ─── Coach Recommendation Dropdown ─────────────────────────────────────────────
 
-const COACH_RECOMMENDATION_OPTIONS = ["Platinum", "Gold", "Silver"] as const;
+const COACH_RECOMMENDATION_OPTIONS = ["Platinum", "Gold", "Silver", "Reject"] as const;
 
 const RECOMMENDATION_COLORS: Record<string, string> = {
   Platinum: "bg-violet-100 text-violet-700 border-violet-200",

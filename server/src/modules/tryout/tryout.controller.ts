@@ -713,16 +713,16 @@ export class TryoutController {
           case "offered": {
             // fetch tryout detail by Id
 
-            sendRegistrationOffer({
-              to: parentEmail,
-              swimmerName,
-              parentName,
-              tryoutName: tryout.name,
-              location: tryout.location,
-              sessionDate: slot?.sessionDate || "",
-              startTime: slot?.startTime || "",
-              endTime: slot?.endTime || "",
-            });
+            // sendRegistrationOffer({
+            //   to: parentEmail,
+            //   swimmerName,
+            //   parentName,
+            //   tryoutName: tryout.name,
+            //   location: tryout.location,
+            //   sessionDate: slot?.sessionDate || "",
+            //   startTime: slot?.startTime || "",
+            //   endTime: slot?.endTime || "",
+            // });
             break;
           }
 
@@ -969,6 +969,8 @@ export class TryoutController {
           const clubName = (tryout as any).club?.name ?? (tryout as any).clubName ?? "";
           const tryoutName = (tryout as any).name ?? "";
 
+          const groupName = reg.coachRecommendation ?? "";
+
           return {
             to: parentEmail,
             swimmer_name: swimmerName,
@@ -976,6 +978,7 @@ export class TryoutController {
             parent_email: parentEmail,
             club_name: clubName,
             tryout_name: tryoutName,
+            group_name: groupName,
           };
         })
         .filter((r) => !!r.to);
