@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { UserModel } from "../../models/user.model";
 import { OtpModel } from "../../models/otp.model";
 import { EmailVerificationModel } from "../../models/email-verification.model";
@@ -55,6 +56,21 @@ export class AuthRepository {
 
   async findUserByEmailAndRoles(email: string, roles: UserRole[]): Promise<PlainUser | null> {
     return UserModel.findOne({ email, role: { $in: roles } })
+      .lean<PlainUser>()
+      .exec();
+  }
+
+  async findUsersByEmailAndRoles(email: string, roles: UserRole[]): Promise<PlainUser[]> {
+    return UserModel.find({ email, role: { $in: roles } })
+      .lean<PlainUser[]>()
+      .exec();
+  }
+
+  async findUserByEmailAndClub(email: string, clubId: string): Promise<PlainUser | null> {
+    return UserModel.findOne({
+      email,
+      clubId: new mongoose.Types.ObjectId(clubId),
+    })
       .lean<PlainUser>()
       .exec();
   }

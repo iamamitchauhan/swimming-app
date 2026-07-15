@@ -7,6 +7,7 @@ import logger from "../../shared/utils/logger";
 import { generateOtp, hashOtp, verifyOtp } from "../../shared/utils/otp";
 import { generateSecureToken, hashToken } from "../../shared/utils/token";
 import { sendEmailVerification, sendOtp as sendOtpEmail } from "../../shared/utils/mailer";
+import { ClubModel } from "../../models/club.model";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,17 @@ export type PublicUser = {
   firstName: string;
   lastName: string;
 };
+
+export type ClubOption = {
+  clubId: string;
+  clubName: string;
+  role: string;
+  status: string;
+};
+
+export type VerifyOtpResult =
+  | { token: string; user: PublicUser; requiresClubSelection: false }
+  | { token: string; user: PublicUser; requiresClubSelection: true; clubs: ClubOption[] };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -126,22 +138,24 @@ export class AuthService {
   }
 
   /**
-   * Accepts email, looks up an active user, and sends a 6-digit OTP.
+   * Accepts email, looks up active users (possibly across multiple clubs), and sends a 6-digit OTP.
    */
   async login(email: string): Promise<void> {
-    const user = await this.repository.findUserByEmailAndRoles(email, [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.COACH]);
+    const users = await this.repository.findUsersByEmailAndRoles(email, [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.COACH]);
 
-    if (!user) {
+    if (users.length === 0) {
       logger.warn({ email }, "auth.login.email_not_found");
       throw new NotFoundError("No account found with this email. Please register first.");
     }
 
-    if (!user.emailVerified) {
+    const anyVerified = users.some((u) => u.emailVerified);
+    if (!anyVerified) {
       logger.warn({ email }, "auth.login.unverified");
       throw new BadRequestError("Your email is not verified. Please check your inbox for the verification link.", "EMAIL_NOT_VERIFIED");
     }
 
-    if (user.status === "suspended") {
+    const anyActive = users.some((u) => u.status !== "suspended");
+    if (!anyActive) {
       throw new ForbiddenError("This account has been suspended.");
     }
 
@@ -167,10 +181,12 @@ export class AuthService {
 
   /**
    * Verifies the submitted OTP for the given email.
-   * Returns a signed JWT and the public user on success.
+   * If the email belongs to a single club, returns a JWT immediately.
+   * If the email belongs to multiple clubs, returns a temporary JWT and
+   * a list of clubs for the user to select from.
    * Enforces max-attempt lockout and single-use semantics.
    */
-  async verifyOtp(email: string, otp: string): Promise<{ token: string; user: PublicUser }> {
+  async verifyOtp(email: string, otp: string): Promise<VerifyOtpResult> {
     const record = await this.repository.findValidOtp(email, "login");
 
     if (!record) {
@@ -191,8 +207,76 @@ export class AuthService {
 
     await this.repository.markOtpUsed(record._id.toString());
 
-    const user = await this.repository.findUserByEmailAndRoles(email, [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.COACH]);
-    if (!user) throw new NotFoundError("User not found");
+    const users = await this.repository.findUsersByEmailAndRoles(email, [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.COACH]);
+    if (users.length === 0) throw new NotFoundError("User not found");
+
+    // Filter to active, verified users only
+    const eligibleUsers = users.filter((u) => u.emailVerified && u.status !== "suspended");
+    if (eligibleUsers.length === 0) {
+      throw new ForbiddenError("This account has been suspended.");
+    }
+
+    // Single club — issue token immediately
+    if (eligibleUsers.length === 1) {
+      const user = eligibleUsers[0];
+      const publicUser = toPublicUser(user);
+      const token = signToken({
+        id: publicUser.id,
+        email: publicUser.email,
+        role: publicUser.role,
+        clubId: publicUser.clubId,
+      });
+      logger.info({ email, userId: publicUser.id }, "auth.login.success");
+      return { token, user: publicUser, requiresClubSelection: false };
+    }
+
+    // Multiple clubs — return temp token + club list
+    const clubIds = eligibleUsers.map((u) => u.clubId).filter((c): c is string => c !== null);
+
+    const clubs = await ClubModel.find({ _id: { $in: clubIds } })
+      .lean()
+      .exec();
+
+    const clubMap = new Map(clubs.map((c) => [c._id.toString(), c]));
+
+    const clubOptions: ClubOption[] = eligibleUsers
+      .filter((u) => u.clubId && clubMap.has(u.clubId.toString()))
+      .map((u) => ({
+        clubId: u.clubId!.toString(),
+        clubName: clubMap.get(u.clubId!.toString())!.name,
+        role: u.role,
+        status: u.status,
+      }));
+
+    // Issue a temp token using the first eligible user's ID (clubId = null)
+    const firstUser = eligibleUsers[0];
+    const tempToken = signToken({
+      id: firstUser._id.toString(),
+      email: firstUser.email,
+      role: firstUser.role,
+      clubId: null,
+    });
+
+    const publicUser = toPublicUser(firstUser);
+    publicUser.clubId = null;
+
+    logger.info({ email, clubCount: clubOptions.length }, "auth.login.multi_club");
+
+    return { token: tempToken, user: publicUser, requiresClubSelection: true, clubs: clubOptions };
+  }
+
+  /**
+   * Selects a club for a multi-club user and issues a new JWT with the chosen clubId.
+   */
+  async selectClub(email: string, clubId: string): Promise<{ token: string; user: PublicUser }> {
+    const user = await this.repository.findUserByEmailAndClub(email, clubId);
+    if (!user) {
+      throw new NotFoundError("You are not a member of this club.");
+    }
+
+    if (user.status === "suspended") {
+      throw new ForbiddenError("This account has been suspended.");
+    }
 
     const publicUser = toPublicUser(user);
     const token = signToken({
@@ -202,9 +286,34 @@ export class AuthService {
       clubId: publicUser.clubId,
     });
 
-    logger.info({ email, userId: publicUser.id }, "auth.login.success");
+    logger.info({ email, userId: publicUser.id, clubId }, "auth.club.selected");
 
     return { token, user: publicUser };
+  }
+
+  /**
+   * Lists all clubs the authenticated user belongs to.
+   */
+  async listMyClubs(email: string): Promise<ClubOption[]> {
+    const users = await this.repository.findUsersByEmailAndRoles(email, [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.COACH]);
+
+    const clubIds = users.filter((u) => u.emailVerified && u.status !== "suspended" && u.clubId).map((u) => u.clubId!);
+
+    if (clubIds.length === 0) return [];
+
+    const clubs = await ClubModel.find({ _id: { $in: clubIds } })
+      .lean()
+      .exec();
+    const clubMap = new Map(clubs.map((c) => [c._id.toString(), c]));
+
+    return users
+      .filter((u) => u.emailVerified && u.status !== "suspended" && u.clubId && clubMap.has(u.clubId.toString()))
+      .map((u) => ({
+        clubId: u.clubId!.toString(),
+        clubName: clubMap.get(u.clubId!.toString())!.name,
+        role: u.role,
+        status: u.status,
+      }));
   }
 
   /**

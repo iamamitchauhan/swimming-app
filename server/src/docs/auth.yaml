@@ -21,25 +21,25 @@ paths:
                   format: email
                   example: jane.doe@example.com
       responses:
-        '200':
+        "200":
           description: Verification email sent
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/SuccessResponse' }
+              schema: { $ref: "#/components/schemas/SuccessResponse" }
               example:
                 success: true
                 message: Verification email sent
                 data: null
                 error: null
-        '409':
+        "409":
           description: Email already registered
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /auth/verify-email:
     get:
@@ -58,24 +58,24 @@ paths:
           description: One-time verification token from the email link
           example: a3f8c1d2e4b5...
       responses:
-        '200':
+        "200":
           description: Email verified, account activated
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: object
                         properties:
-                          user: { $ref: '#/components/schemas/PublicUser' }
-        '400':
+                          user: { $ref: "#/components/schemas/PublicUser" }
+        "400":
           description: Token is invalid or expired
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
               example:
                 success: false
                 message: Invalid or expired verification link.
@@ -104,34 +104,40 @@ paths:
                   format: email
                   example: jane.doe@example.com
       responses:
-        '200':
+        "200":
           description: OTP sent (or silently ignored if email not found)
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/SuccessResponse' }
+              schema: { $ref: "#/components/schemas/SuccessResponse" }
               example:
                 success: true
                 message: OTP sent to your email
                 data: null
                 error: null
-        '403':
+        "403":
           description: Account is suspended
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /auth/verify-otp:
     post:
       tags: [Auth]
       summary: Verify OTP and receive JWT
       description: |
-        Validates the 6-digit OTP for the given email. Returns a short-lived JWT
+        Validates the 6-digit OTP for the given email. Returns a signed JWT
         on success. After 5 failed attempts the OTP is locked and a new one must
         be requested.
+
+        **Multi-club support:** If the email is associated with multiple clubs,
+        the response includes `requiresClubSelection: true` and a `clubs` array.
+        The client should present a club selection screen and call
+        `POST /auth/select-club` with the chosen `clubId` to receive a
+        final JWT scoped to that club.
       operationId: verifyOtp
       requestBody:
         required: true
@@ -148,15 +154,15 @@ paths:
                 otp:
                   type: string
                   pattern: '^\d{6}$'
-                  example: '482951'
+                  example: "482951"
       responses:
-        '200':
-          description: OTP verified — JWT returned
+        "200":
+          description: OTP verified — JWT returned (or club list for multi-club users)
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -165,24 +171,139 @@ paths:
                           token:
                             type: string
                             example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                          user: { $ref: '#/components/schemas/PublicUser' }
-        '400':
+                          user: { $ref: "#/components/schemas/PublicUser" }
+                          requiresClubSelection:
+                            type: boolean
+                            description: True when the user belongs to multiple clubs
+                            example: false
+                          clubs:
+                            type: array
+                            description: List of clubs (only present when requiresClubSelection is true)
+                            items:
+                              type: object
+                              properties:
+                                clubId:
+                                  type: string
+                                  example: 6a340fea62ea4115fda22a19
+                                clubName:
+                                  type: string
+                                  example: Aquatics Swim Club
+                                role:
+                                  type: string
+                                  example: admin
+                                status:
+                                  type: string
+                                  example: active
+        "400":
           description: Invalid or expired OTP
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
               example:
                 success: false
                 message: Invalid or expired OTP.
                 data: null
                 error: OTP_INVALID
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
           description: Too many OTP attempts
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /auth/select-club:
+    post:
+      tags: [Auth]
+      summary: Select a club for multi-club users
+      description: |
+        After a successful OTP verification that returned `requiresClubSelection: true`,
+        the client calls this endpoint with the chosen `clubId`. The server validates
+        that the authenticated user belongs to that club and issues a new JWT
+        containing the selected `clubId`.
+      operationId: selectClub
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clubId]
+              properties:
+                clubId:
+                  type: string
+                  example: 6a340fea62ea4115fda22a19
+      responses:
+        "200":
+          description: Club selected — new JWT returned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+                            example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                          user: { $ref: "#/components/schemas/PublicUser" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: User is not a member of the specified club
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/my-clubs:
+    get:
+      tags: [Auth]
+      summary: List all clubs the user belongs to
+      description: |
+        Returns an array of clubs the authenticated user is a member of.
+        Used by the client to populate the club switcher in the sidebar.
+      operationId: listMyClubs
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of clubs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          clubs:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                clubId:
+                                  type: string
+                                  example: 6a340fea62ea4115fda22a19
+                                clubName:
+                                  type: string
+                                  example: Aquatics Swim Club
+                                role:
+                                  type: string
+                                  example: admin
+                                status:
+                                  type: string
+                                  example: active
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /auth/logout:
     post:
@@ -195,13 +316,13 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Logged out
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/SuccessResponse' }
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+              schema: { $ref: "#/components/schemas/SuccessResponse" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /auth/me:
     get:
@@ -212,18 +333,18 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Authenticated user profile
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: object
                         properties:
-                          user: { $ref: '#/components/schemas/PublicUser' }
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                          user: { $ref: "#/components/schemas/PublicUser" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"

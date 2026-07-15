@@ -1,15 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import { AuthService } from './auth.service';
-import { HTTP_STATUS } from '../../shared/constants/httpStatus';
-import { MESSAGES } from '../../shared/constants/messages';
-import { sendSuccess } from '../../shared/utils/response';
-import {
-  registerSchema,
-  verifyEmailSchema,
-  loginSchema,
-  verifyOtpSchema,
-} from './auth.validation';
-import { UnauthorizedError } from '../../shared/errors/domain.errors';
+import { Request, Response, NextFunction } from "express";
+import { AuthService } from "./auth.service";
+import { HTTP_STATUS } from "../../shared/constants/httpStatus";
+import { MESSAGES } from "../../shared/constants/messages";
+import { sendSuccess } from "../../shared/utils/response";
+import { registerSchema, verifyEmailSchema, loginSchema, verifyOtpSchema, selectClubSchema } from "./auth.validation";
+import { UnauthorizedError } from "../../shared/errors/domain.errors";
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
@@ -66,12 +61,44 @@ export class AuthController {
   /**
    * POST /auth/verify-otp
    * Validates the OTP and returns a signed JWT + public user.
+   * If the user belongs to multiple clubs, returns a club list for selection.
    */
   verifyOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { email, otp } = verifyOtpSchema.parse(req.body);
       const result = await this.service.verifyOtp(email, otp);
       sendSuccess(res, result, MESSAGES.OTP_VERIFIED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * POST /auth/select-club
+   * Selects a club for a multi-club user and issues a new JWT.
+   */
+  selectClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const user = req.user;
+      if (!user) return next(new UnauthorizedError());
+      const { clubId } = selectClubSchema.parse(req.body);
+      const result = await this.service.selectClub(user.email, clubId);
+      sendSuccess(res, result, MESSAGES.CLUB_SELECTED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /auth/my-clubs
+   * Lists all clubs the authenticated user belongs to.
+   */
+  listMyClubs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const user = req.user;
+      if (!user) return next(new UnauthorizedError());
+      const clubs = await this.service.listMyClubs(user.email);
+      sendSuccess(res, { clubs }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }
