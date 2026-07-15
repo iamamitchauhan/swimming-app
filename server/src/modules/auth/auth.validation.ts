@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -7,9 +7,9 @@ import { z } from 'zod';
  */
 export const registerSchema = z
   .object({
-    email: z.string().email('Email must be a valid email address').toLowerCase(),
-    firstName: z.string().min(1, 'First name is required').trim(),
-    lastName: z.string().min(1, 'Last name is required').trim(),
+    email: z.string().email("Email must be a valid email address").toLowerCase(),
+    firstName: z.string().min(1, "First name is required").trim(),
+    lastName: z.string().min(1, "Last name is required").trim(),
   })
   .strict();
 
@@ -18,7 +18,7 @@ export const registerSchema = z
  */
 export const verifyEmailSchema = z
   .object({
-    token: z.string().min(1, 'Verification token is required'),
+    token: z.string().min(1, "Verification token is required"),
   })
   .strict();
 
@@ -27,7 +27,7 @@ export const verifyEmailSchema = z
  */
 export const loginSchema = z
   .object({
-    email: z.string().email('Email must be a valid email address').toLowerCase(),
+    email: z.string().email("Email must be a valid email address").toLowerCase(),
   })
   .strict();
 
@@ -36,11 +36,20 @@ export const loginSchema = z
  */
 export const verifyOtpSchema = z
   .object({
-    email: z.string().email('Email must be a valid email address').toLowerCase(),
+    email: z.string().email("Email must be a valid email address").toLowerCase(),
     otp: z
       .string()
-      .length(6, 'OTP must be exactly 6 digits')
-      .regex(/^\d{6}$/, 'OTP must contain only digits'),
+      .length(6, "OTP must be exactly 6 digits")
+      .regex(/^\d{6}$/, "OTP must contain only digits"),
+  })
+  .strict();
+
+/**
+ * POST /auth/select-club — selects a club for multi-club users.
+ */
+export const selectClubSchema = z
+  .object({
+    clubId: z.string().min(1, "Club ID is required"),
   })
   .strict();
 
@@ -50,3 +59,4 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+export type SelectClubInput = z.infer<typeof selectClubSchema>;

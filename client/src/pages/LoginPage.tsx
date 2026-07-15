@@ -8,6 +8,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { ArrowLeft, CheckCircle2, Loader2, Waves } from "lucide-react";
 import { useLogin, useVerifyOtp } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
+import type { ClubOption } from "@/lib/api/auth.api";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [clubs, setClubs] = useState<ClubOption[] | null>(null);
 
   const { toastError } = useApiError();
   const loginMutation = useLogin();
@@ -56,6 +58,10 @@ export default function LoginPage() {
       { email, otp },
       {
         onSuccess: (data) => {
+          if (data.requiresClubSelection && data.clubs && data.clubs.length > 1) {
+            setClubs(data.clubs);
+            return;
+          }
           setSuccess(true);
           const { role, clubId, onboardingStep } = data.user;
           const needsOnboarding = role === "admin" && !clubId && onboardingStep < 3;
@@ -111,6 +117,45 @@ export default function LoginPage() {
               <h2 className="text-xl font-bold">Signed in!</h2>
               <p className="text-sm text-muted-foreground">Redirecting you now…</p>
             </div>
+          ) : clubs ? (
+            <>
+              <button
+                onClick={() => {
+                  setClubs(null);
+                  setOtp("");
+                  setError(null);
+                  setStep("email");
+                }}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back
+              </button>
+              <div className="mb-8">
+                <h1 className="text-2xl font-bold tracking-tight">Select a club</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  You're a member of multiple clubs. Choose one to continue.
+                </p>
+              </div>
+              <div className="space-y-3">
+                {clubs.map((club) => (
+                  <button
+                    key={club.clubId}
+                    onClick={() =>
+                      navigate(
+                        `/select-club?clubId=${club.clubId}&email=${encodeURIComponent(email)}`,
+                      )
+                    }
+                    className="w-full flex items-center justify-between rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent hover:border-primary/50"
+                  >
+                    <div>
+                      <p className="font-medium text-foreground">{club.clubName}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{club.role}</p>
+                    </div>
+                    <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
+                  </button>
+                ))}
+              </div>
+            </>
           ) : step === "email" ? (
             <>
               <div className="mb-8">

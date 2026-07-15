@@ -8,29 +8,24 @@
  * useVerifyEmail()  → GET  /auth/verify-email?token=
  * useLogout()       → POST /auth/logout, clears store
  */
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  type UseQueryOptions,
-} from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../lib/api/auth.api";
 import { useAuthStore } from "../lib/auth.store";
 import type { AuthUser } from "../lib/auth.store";
+import type { ClubOption } from "../lib/api/auth.api";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
 export const authKeys = {
   me: ["auth", "me"] as const,
+  myClubs: ["auth", "my-clubs"] as const,
 };
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
 /** Fetch the authenticated user's profile and hydrate the auth store. */
-export function useMe(
-  options?: Partial<UseQueryOptions<AuthUser>>,
-) {
+export function useMe(options?: Partial<UseQueryOptions<AuthUser>>) {
   const setUser = useAuthStore((s) => s.setUser);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
@@ -74,6 +69,33 @@ export function useVerifyOtp() {
       setAuth(data.token, data.user);
       queryClient.setQueryData(authKeys.me, data.user);
     },
+  });
+}
+
+/** POST /auth/select-club — select a club, get new JWT, persist to store. */
+export function useSelectClub() {
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: authApi.selectClub,
+    onSuccess: (data) => {
+      setAuth(data.token, data.user);
+      queryClient.setQueryData(authKeys.me, data.user);
+      queryClient.invalidateQueries();
+    },
+  });
+}
+
+/** GET /auth/my-clubs — list all clubs the user belongs to. */
+export function useMyClubs() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  return useQuery<{ clubs: ClubOption[] }>({
+    queryKey: authKeys.myClubs,
+    queryFn: authApi.myClubs,
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

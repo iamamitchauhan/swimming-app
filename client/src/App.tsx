@@ -9,6 +9,7 @@ const RegisterPage = lazy(() => import("./pages/RegisterPage"));
 const VerifyEmailPage = lazy(() => import("./pages/VerifyEmailPage"));
 const AcceptInvitationPage = lazy(() => import("./pages/AcceptInvitationPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
+const SelectClubPage = lazy(() => import("./pages/SelectClubPage"));
 
 const DashboardPage = lazy(() => import("./pages/app/DashboardPage"));
 const ClubsPage = lazy(() => import("./pages/app/ClubsPage"));
@@ -49,6 +50,14 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/invitation/accept" element={<AcceptInvitationPage />} />
+        <Route
+          path="/select-club"
+          element={
+            <RequireAuth>
+              <SelectClubPage />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/onboarding"
           element={

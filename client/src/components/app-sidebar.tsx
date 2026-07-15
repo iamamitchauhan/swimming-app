@@ -26,6 +26,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { BrandLogo } from "./brand-logo";
+import { ClubSwitcher } from "./club-switcher";
 import { useAuthStore } from "@/lib/auth.store";
 import { Badge } from "@/components/ui/badge";
 import { ROLE_LABEL } from "@/lib/utils";
@@ -88,6 +89,9 @@ export function AppSidebar() {
           </div>
         )}
       </SidebarHeader>
+      <div className="px-2 py-2 border-b border-sidebar-border">
+        <ClubSwitcher />
+      </div>
       <SidebarContent className="px-2 py-4">
         <SidebarGroup>
           {!collapsed && (
