@@ -6,7 +6,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const MINUTE_OPTIONS = Array.from({ length: 31 }, (_, i) => String(i));
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => String(i));
 const SECOND_OPTIONS = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 const MS_OPTIONS = Array.from({ length: 100 }, (_, i) => String(i).padStart(2, "0"));
 
