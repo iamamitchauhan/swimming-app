@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import { useSidebar } from "@/components/ui/sidebar";
 import { useTryout } from "@/hooks/use-tryouts";
 import { useTryoutRegistration } from "@/hooks/use-tryout-dashboard";
 import { BulkScoreTab } from "./tryout-view/BulkScoreTab";
@@ -11,17 +10,6 @@ export default function BulkScoringPage() {
   const { id = "" } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { open, setOpen } = useSidebar();
-  const wasOpen = useRef(open);
-
-  useEffect(() => {
-    wasOpen.current = open;
-    setOpen(false);
-    return () => {
-      setOpen(wasOpen.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const ids = useMemo(
     () => Array.from(new Set((searchParams.get("ids") ?? "").split(",").filter(Boolean))),
     [searchParams],
