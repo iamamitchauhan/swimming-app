@@ -89,9 +89,7 @@ export function AppSidebar() {
           </div>
         )}
       </SidebarHeader>
-      <div className="px-2 py-2 border-b border-sidebar-border">
-        <ClubSwitcher />
-      </div>
+
       <SidebarContent className="px-2 py-4">
         <SidebarGroup>
           {!collapsed && (
@@ -143,8 +141,8 @@ export function AppSidebar() {
           </SidebarGroup>
         )} */}
       </SidebarContent>
-      {/* <SidebarFooter className="border-t border-sidebar-border p-3">
-        {!collapsed ? (
+      <SidebarFooter className="border-t border-sidebar-border p-3">
+        {/* {!collapsed ? (
           <div className="flex items-center gap-3 px-1">
             <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary to-aqua flex items-center justify-center text-primary-foreground font-semibold text-sm">
               {initials}
@@ -160,8 +158,11 @@ export function AppSidebar() {
           <div className="h-9 w-9 mx-auto rounded-full bg-linear-to-br from-primary to-aqua flex items-center justify-center text-primary-foreground font-semibold text-xs">
             {initials}
           </div>
-        )}
-      </SidebarFooter> */}
+        )} */}
+        <div className="px-2 py-2 border-sidebar-border">
+          <ClubSwitcher />
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }

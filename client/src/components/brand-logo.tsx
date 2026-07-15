@@ -19,11 +19,11 @@ export function BrandLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
         }}
       >
         <span className={`font-bold tracking-tight ${text}`}>Swim Tryouts</span>
-        {size !== "sm" && (
+        {/* {size !== "sm" && (
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Club Platform
           </span>
-        )}
+        )} */}
       </div>
     </div>
   );

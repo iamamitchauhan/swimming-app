@@ -22,7 +22,8 @@ import { StepSegments } from "./tryout-steps/step-segments";
 import { StepHowItWorks } from "./tryout-steps/step-how-it-works";
 import { StepPresentation } from "./tryout-steps/step-presentation";
 import { StepRegistration } from "./tryout-steps/step-registration";
-import { useCreateTryout } from "@/hooks/use-tryouts";
+import { StepReviewPublish } from "./tryout-steps/step-review-publish";
+import { useCreateTryout, usePublishTryout } from "@/hooks/use-tryouts";
 import { SelectedQuestion } from "@/lib/api/question-library.api";
 import { tryoutsApi } from "@/lib/api/tryouts.api";
 
@@ -45,6 +46,7 @@ export default function TryoutNewPage() {
   // ── Submission state ─────────────────────────────────────────────────────────
   const [apiError, setApiError] = useState<string>("");
   const createMutation = useCreateTryout();
+  const publishMutation = usePublishTryout();
 
   // ── Single form instance — all state lives here ──────────────────────────────
   const {
@@ -124,9 +126,31 @@ export default function TryoutNewPage() {
       if (registrationQuestions.length > 0) {
         await tryoutsApi.saveRegistrationQuestions(created._id, registrationQuestions);
       }
-      navigate(`/tryouts/edit/${created._id}?step=8`, { replace: true });
+      toast.success("Tryout saved as draft successfully!");
+      navigate("/tryouts");
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    }
+  }
+
+  async function onPublish(data: TryoutFormValues) {
+    setApiError("");
+    try {
+      const swimmersPerSlot = data.lanesAvailable * data.swimmersPerLane;
+      const created = await createMutation.mutateAsync({
+        ...data,
+        swimmersPerSlot,
+        status: "draft",
+        banner: bannerFile ?? undefined,
+      });
+      if (registrationQuestions.length > 0) {
+        await tryoutsApi.saveRegistrationQuestions(created._id, registrationQuestions);
+      }
+      await publishMutation.mutateAsync(created._id);
+      toast.success("Tryout published successfully!");
+      navigate("/tryouts");
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Failed to publish. Please try again.");
     }
   }
 
@@ -151,7 +175,8 @@ export default function TryoutNewPage() {
   }
 
   const isLastStep = currentStep === TOTAL_STEPS;
-  const isSubmitting = createMutation.isPending;
+  const isSubmitting = createMutation.isPending || publishMutation.isPending;
+  const formValues = watch();
 
   return (
     <PageShell
@@ -259,48 +284,63 @@ export default function TryoutNewPage() {
                 {currentStep === 7 && (
                   <StepPresentation register={register} faqsField={faqsField} />
                 )}
+
+                {currentStep === 8 && (
+                  <StepReviewPublish
+                    values={formValues}
+                    bannerPreview={bannerPreview}
+                    onPublish={() => handleSubmit(onPublish)()}
+                    onSaveAsDraft={() => handleSubmit(onSaveAsDraft)()}
+                    onBack={() => setCurrentStep(7)}
+                    isPending={isSubmitting}
+                    canPublish={true}
+                    selectedQuestions={registrationQuestions}
+                  />
+                )}
               </form>
             </div>
           </div>
 
           {/* ── Footer nav ───────────────────────────────────────────────────── */}
-          <div className="shrink-0 py-4 flex items-center justify-between gap-3 border-t border-border">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={currentStep === 1 ? () => navigate("/tryouts") : goBack}
-              disabled={isSubmitting}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              {currentStep === 1 ? "Cancel" : "Back"}
-            </Button>
-
-            <div className="flex items-center gap-3">
-              {currentStep === 7 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleSubmit(onSaveAsDraftAndExit)()}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-1" />
-                  )}
-                  Save as Draft
-                </Button>
-              )}
-
-              <Button type="button" onClick={goNext} disabled={isSubmitting}>
-                {currentStep === 7 && isSubmitting ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : null}
-                {currentStep === 7 ? "Review" : "Continue"}
-                {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
+          {currentStep !== 8 && (
+            <div className="shrink-0 py-4 flex items-center justify-between gap-3 border-t border-border">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={currentStep === 1 ? () => navigate("/tryouts") : goBack}
+                disabled={isSubmitting}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                {currentStep === 1 ? "Cancel" : "Back"}
               </Button>
+
+              <div className="flex items-center gap-3">
+                {currentStep === 7 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleSubmit(onSaveAsDraftAndExit)()}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-1" />
+                    )}
+                    Save as Draft
+                  </Button>
+                )}
+
+                <Button type="button" onClick={goNext} disabled={isSubmitting}>
+                  {currentStep === 7 && isSubmitting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : null}
+                  {currentStep === 7 ? "Review" : "Continue"}
+                  {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </PageShell>
