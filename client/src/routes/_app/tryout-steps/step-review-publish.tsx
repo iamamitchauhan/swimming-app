@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn, formatDate } from "@/lib/utils";
 import { TryoutFormValues, THEMES, calcSlots } from "./shared";
+import { parseTimeString } from "@/components/time-picker/utils";
 import { SelectedQuestion } from "@/lib/api/question-library.api";
 import { RegistrationFormPreview } from "./registration-form-preview";
 import {
@@ -37,6 +38,27 @@ function getThemeBg(theme: string): string {
   return match
     ? cn("bg-gradient-to-br", match.from, match.to)
     : "bg-gradient-to-br from-indigo-700 to-slate-900";
+}
+
+function fmtTimeFromMinutes(min: number): string {
+  const h24 = Math.floor(min / 60) % 24;
+  const m = min % 60;
+  const ampm = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+function computeSlotTimes(
+  sessionStart: string,
+  slotIndex: number,
+  slotDuration: number,
+): { start: string; end: string } {
+  const start = parseTimeString(sessionStart);
+  if (!start) return { start: "—", end: "—" };
+  const baseMin = start.hours24 * 60 + start.minute;
+  const slotStart = baseMin + slotIndex * slotDuration;
+  const slotEnd = slotStart + slotDuration;
+  return { start: fmtTimeFromMinutes(slotStart), end: fmtTimeFromMinutes(slotEnd) };
 }
 
 function formatSessionDate(dateStr: string): string {
@@ -218,32 +240,42 @@ export function StepReviewPublish({
                       </div>
 
                       {/* Slot rows */}
-                      {slotRows.map((i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-4 border-b border-border px-5 py-3 last:border-b-0"
-                        >
-                          <span className="w-8 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">
-                            #{i + 1}
-                          </span>
-                          <span className="text-xs font-bold uppercase tracking-wide text-emerald-600">
-                            Open
-                          </span>
-                          <span className="ml-auto mr-4 text-xs text-muted-foreground tabular-nums">
-                            0 / {swimmersPerSlot}
-                            <br />
-                            <span className="text-[10px] uppercase tracking-wider">Reserved</span>
-                          </span>
-                          <Button
-                            size="sm"
-                            disabled
-                            variant="secondary"
-                            className="bg-slate-800 px-4 text-white hover:bg-slate-700 disabled:opacity-40"
+                      {slotRows.map((i) => {
+                        const { start: slotStart, end: slotEnd } = computeSlotTimes(
+                          session.startTime,
+                          i,
+                          values.slotDuration,
+                        );
+                        return (
+                          <div
+                            key={i}
+                            className="flex items-center gap-4 border-b border-border px-5 py-3 last:border-b-0 transition-colors"
                           >
-                            Join Slot
-                          </Button>
-                        </div>
-                      ))}
+                            <span className="w-8 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">
+                              #{i + 1}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {slotStart} – {slotEnd}
+                            </span>
+                            <span className="text-xs font-bold uppercase tracking-wide text-emerald-600">
+                              Open
+                            </span>
+                            <span className="ml-auto mr-4 text-xs text-muted-foreground tabular-nums">
+                              0 / {swimmersPerSlot}
+                              <br />
+                              <span className="text-[10px] uppercase tracking-wider">Reserved</span>
+                            </span>
+                            <Button
+                              size="sm"
+                              disabled
+                              variant="secondary"
+                              className="bg-slate-800 px-4 text-white hover:bg-slate-700 disabled:opacity-40"
+                            >
+                              Join Slot
+                            </Button>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}

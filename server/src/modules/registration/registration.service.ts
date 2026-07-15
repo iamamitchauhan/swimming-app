@@ -97,7 +97,14 @@ export class RegistrationService {
           tryout: {
             _id: tryoutId,
             name: tryout.name ?? "",
-            status: tryout.startAt && tryout.startAt > new Date() ? "open" : "closed",
+            status:
+              tryout.status === "draft"
+                ? "draft"
+                : tryout.endAt && new Date() > tryout.endAt
+                  ? "completed"
+                  : tryout.startAt && tryout.startAt > new Date()
+                    ? "open"
+                    : "closed",
             location: tryout.location ?? "",
             description: tryout.description ?? "",
             theme: tryout.theme ?? "",

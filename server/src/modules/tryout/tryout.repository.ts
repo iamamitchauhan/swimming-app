@@ -89,7 +89,11 @@ export class TryoutRepository {
         {
           $addFields: {
             status: {
-              $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }],
+              $cond: [
+                { $eq: ["$status", "draft"] },
+                "draft",
+                { $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }] },
+              ],
             },
           },
         },
@@ -168,7 +172,11 @@ export class TryoutRepository {
       {
         $addFields: {
           status: {
-            $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }],
+            $cond: [
+              { $eq: ["$status", "draft"] },
+              "draft",
+              { $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }] },
+            ],
           },
         },
       },
@@ -317,7 +325,11 @@ export class TryoutRepository {
       {
         $addFields: {
           status: {
-            $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }],
+            $cond: [
+              { $eq: ["$status", "draft"] },
+              "draft",
+              { $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }] },
+            ],
           },
         },
       },
@@ -435,7 +447,11 @@ export class TryoutRepository {
       {
         $addFields: {
           status: {
-            $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }],
+            $cond: [
+              { $eq: ["$status", "draft"] },
+              "draft",
+              { $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }] },
+            ],
           },
         },
       },

@@ -4,7 +4,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, AlertCircle, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   tryoutSchema,
@@ -152,7 +152,7 @@ export default function TryoutEditPage() {
     const valid = await (fields.length === 0 || currentStep === 4 ? trigger() : trigger(fields));
     if (!valid) return;
     if (currentStep === 7) {
-      await onSaveAndAdvance(formValues);
+      setCurrentStep((s) => Math.min(TOTAL_STEPS, s + 1));
       return;
     }
     setCurrentStep((s) => Math.min(TOTAL_STEPS, s + 1));
@@ -404,15 +404,33 @@ export default function TryoutEditPage() {
                 {currentStep === 1 ? "Cancel" : "Back"}
               </Button>
 
-              {!isLastStep && (
-                <Button type="button" onClick={goNext} disabled={isSubmitting}>
-                  {currentStep === 7 && isSubmitting ? (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : null}
-                  {currentStep === 7 ? "Save & Continue" : "Continue"}
-                  {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
-                </Button>
-              )}
+              <div className="flex items-center gap-3">
+                {currentStep === 7 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onSaveAsDraft}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-1" />
+                    )}
+                    Save as Draft
+                  </Button>
+                )}
+
+                {!isLastStep && (
+                  <Button type="button" onClick={goNext} disabled={isSubmitting}>
+                    {currentStep === 7 && isSubmitting ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : null}
+                    {currentStep === 7 ? "Review" : "Continue"}
+                    {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </div>

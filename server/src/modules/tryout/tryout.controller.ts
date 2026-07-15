@@ -704,6 +704,8 @@ export class TryoutController {
       const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: { status } }, { new: true }).lean().exec();
       if (!updated) throw new NotFoundError("Registration not found");
 
+      logger.info({ regId, swimmerDetails: updated.swimmerDetails, tryoutId: updated.tryoutId }, "decision.registration_loaded");
+
       const users = await UserModel.find({ _id: updated.parentId }).lean().exec();
       const user = users[0];
 
@@ -730,6 +732,8 @@ export class TryoutController {
         const swimmerName = `${updated.swimmerDetails.firstName} ${updated.swimmerDetails.lastName}`.trim();
         const parentName = `${user.firstName} ${user.lastName}`.trim();
         const parentEmail = user.email;
+
+        logger.info({ regId, swimmerName, parentEmail, templateSubject: template?.subject, templateBody: template?.body }, "decision.email_sending");
 
         try {
           if (template) {
@@ -989,6 +993,8 @@ export class TryoutController {
         .lean()
         .exec();
 
+      logger.info({ registrationIds, count: registrations.length }, "bulk-email.registrations_found");
+
       const recipients = registrations
         .map((reg: any) => {
           const swimmerDoc = reg.swimmerId as any;
@@ -1005,6 +1011,8 @@ export class TryoutController {
 
           const groupName = reg.coachRecommendation ?? "";
 
+          logger.info({ regId: reg._id, swimmerId: reg.swimmerId?._id ?? reg.swimmerId, swimmerName, parentEmail }, "bulk-email.recipient_resolved");
+
           return {
             to: parentEmail,
             swimmer_name: swimmerName,
@@ -1016,6 +1024,11 @@ export class TryoutController {
           };
         })
         .filter((r) => !!r.to);
+
+      logger.info(
+        { recipientCount: recipients.length, recipients: recipients.map((r) => ({ to: r.to, swimmer_name: r.swimmer_name })) },
+        "bulk-email.recipients_final",
+      );
 
       sendSuccess(res, { queued: recipients.length }, "Bulk email queued", 202);
 
