@@ -215,7 +215,10 @@ export default function TryoutsList() {
           <div className="flex items-center gap-3">
             <SearchInput
               value={search}
-              onChange={(v) => { setSearch(v); setPage(1); }}
+              onChange={(v) => {
+                setSearch(v);
+                setPage(1);
+              }}
               placeholder="Search tryouts..."
               className="w-lg"
               debounceMs={400}
@@ -385,9 +388,8 @@ export default function TryoutsList() {
                               <DropdownMenuSeparator />
                               {(() => {
                                 const isDeleteDisabled =
-                                  !["draft", "published", "open"].includes(t.status) ||
-                                  (["published", "open"].includes(t.status) &&
-                                    (t.registeredCount ?? 0) >= 1);
+                                  ["published", "open"].includes(t.status) &&
+                                  (t.registeredCount ?? 0) >= 1;
                                 const deleteItem = (
                                   <DropdownMenuItem
                                     disabled={isDeleteDisabled}
@@ -404,8 +406,7 @@ export default function TryoutsList() {
                                         <span className="block">{deleteItem}</span>
                                       </TooltipTrigger>
                                       <TooltipContent side="left">
-                                        Can only delete drafts or published tryouts with no
-                                        registrations.
+                                        Cannot delete published tryouts with registrations.
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>

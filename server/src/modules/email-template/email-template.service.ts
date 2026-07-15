@@ -1,6 +1,7 @@
 import { EmailTemplateRepository, TemplateInput } from "./email-template.repository";
 import { BadRequestError } from "../../shared/errors/domain.errors";
 import logger from "../../shared/utils/logger";
+import { EmailTemplateModel } from "../../models/email-template.model";
 
 export class EmailTemplateService {
   constructor(private readonly repo: EmailTemplateRepository) {}
@@ -31,5 +32,10 @@ export class EmailTemplateService {
     const saved = await this.repo.upsertBulk(clubId, userId, templates);
     logger.info({ clubId, count: saved.length }, "email-templates.bulk-upserted");
     return saved;
+  }
+
+  async create(template: TemplateInput & { clubId: string; userId: string; createdBy: string; updatedBy: string }) {
+    const created = await EmailTemplateModel.create(template);
+    return created;
   }
 }

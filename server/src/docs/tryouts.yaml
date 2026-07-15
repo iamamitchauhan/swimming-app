@@ -676,6 +676,10 @@ paths:
         - Rate 1-5 criteria: integer 1-5
         - Checkbox criteria: boolean
 
+        When `detailed_scores` are provided, `scores.totalScore` is automatically
+        computed by summing all numeric values (rate 1-5 scores) in the merged
+        `detailed_scores` object. This ensures the swimmer appears in the leaderboard.
+
         Requires admin or coach role.
       operationId: updateScore
       security:
@@ -778,6 +782,89 @@ paths:
                         properties:
                           registration:
                             type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /tryouts/{id}/leaderboard:
+    get:
+      tags: [Tryouts]
+      summary: Get scored swimmer leaderboard
+      description: |
+        Returns all scored swimmers for a tryout, sorted by total score (descending).
+        A registration is considered "scored" if it has either `scores.totalScore` set
+        or a non-empty `detailedScores` object.
+
+        The `total_score` field is computed from `scores.totalScore` if available,
+        otherwise it is derived by summing all numeric values in `detailed_scores`.
+
+        Results are grouped by segment on the client side using `segment_name` / `age_segment`.
+      operationId: getTryoutLeaderboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tryout ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Leaderboard retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            registration_id:
+                              type: string
+                              example: "665f1a2b3c4d5e6f7a8b9c1a"
+                            swimmer_name:
+                              type: string
+                              example: "Jane Doe"
+                            swimmer_age:
+                              type: integer
+                              example: 8
+                            segment_name:
+                              type: string
+                              example: "Junior Swimmers"
+                            age_segment:
+                              type: string
+                              example: "6-10"
+                            total_score:
+                              type: number
+                              example: 18.5
+                            status:
+                              type: string
+                              enum: [registered, waitlisted, offered, rejected, cancelled]
+                              example: registered
+                            detailed_scores:
+                              type: object
+                              additionalProperties:
+                                oneOf:
+                                  - type: string
+                                    enum: [yes, no]
+                                  - type: integer
+                                    minimum: 1
+                                    maximum: 5
+                                  - type: boolean
+                              example:
+                                circle_swim: "yes"
+                                hand_entry: "no"
+                                legs_straight: 3
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":

@@ -395,6 +395,11 @@ export interface Registration {
   parent_email?: string;
   status: "registered" | "waitlisted" | "offered" | "rejected" | "cancelled";
   waitlist_position?: number;
+  slot_id?: {
+    _id: string;
+    startTime: string;
+    endTime: string;
+  };
   safety_entry_exit?: boolean | null;
   safety_float?: boolean | null;
   freestyle?: number | string;

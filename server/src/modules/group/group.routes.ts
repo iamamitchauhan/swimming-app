@@ -5,10 +5,14 @@ import { USER_ROLES } from "../../shared/constants/roles";
 import { GroupRepository } from "./group.repository";
 import { GroupService } from "./group.service";
 import { GroupController } from "./group.controller";
+import { EmailTemplateRepository } from "../email-template/email-template.repository";
+import { EmailTemplateService } from "../email-template/email-template.service";
 
 const repo = new GroupRepository();
 const service = new GroupService(repo);
-const controller = new GroupController(service);
+const emailTemplateRepo = new EmailTemplateRepository();
+const emailTemplateService = new EmailTemplateService(emailTemplateRepo);
+const controller = new GroupController(service, emailTemplateService);
 
 /**
  * Group router — mounted at /api/v1/groups by app.ts.

@@ -1292,6 +1292,7 @@ export interface BulkEmailRecipient {
   club_name: string;
   tryout_name: string;
   group_name: string;
+  sender_name: string;
 }
 
 function interpolateTemplate(template: string, vars: Record<string, string>): string {
@@ -1315,6 +1316,7 @@ export async function sendBulkTemplateEmail(opts: {
         club_name: r.club_name,
         tryout_name: r.tryout_name,
         group_name: r.group_name,
+        sender_name: r.sender_name,
       };
       const subject = interpolateTemplate(opts.subjectTemplate, vars);
       const bodyText = interpolateTemplate(opts.bodyTemplate, vars);

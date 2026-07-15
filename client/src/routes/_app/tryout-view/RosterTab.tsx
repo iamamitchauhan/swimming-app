@@ -358,7 +358,6 @@ export function RosterTab({ tryoutId }: Props) {
               </TableHead>
               <TableHead>Segment</TableHead>
               <TableHead>When</TableHead>
-              <TableHead>USA-S ID</TableHead>
               <TableHead>Parent</TableHead>
               <TableHead
                 className="cursor-pointer select-none whitespace-nowrap"
@@ -367,9 +366,9 @@ export function RosterTab({ tryoutId }: Props) {
                 Status
                 <SortIcon field="status" active={sortBy} order={sortOrder} />
               </TableHead>
+              <TableHead>Yes/No</TableHead>
               <TableHead>Evaluation</TableHead>
               <TableHead>Coach Recommendation</TableHead>
-              <TableHead>Yes/No</TableHead>
               <TableHead>Action</TableHead>
             </TableRow>
           </TableHeader>
@@ -421,28 +420,11 @@ export function RosterTab({ tryoutId }: Props) {
                       {r.segment_name || "—"}
                     </TableCell>
                     <TableCell className="text-gray-600 px-4 py-3 whitespace-nowrap">
-                      {r.session_date ? fmtDate(r.session_date) : "—"}
-                      {r.slot_start && (
+                      {r.session_date ? fmtDate(r.session_date) : "—"} <br />
+                      {r.slot_id?.startTime && (
                         <span className="text-gray-400">
-                          {" "}
-                          · {fmtTime(r.slot_start)}–{fmtTime(r.slot_end)}
+                          {fmtTime(r.slot_id.startTime)} – {fmtTime(r.slot_id.endTime)}
                         </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-3">
-                      {r.usa_membership_id ? (
-                        <div>
-                          <div className="font-mono text-xs text-gray-700">
-                            {r.usa_membership_id}
-                          </div>
-                          <span
-                            className={`text-xs px-1.5 py-0.5 rounded-full ${VERIFY_COLORS[verSt]}`}
-                          >
-                            {VERIFY_LABELS[verSt]}
-                          </span>
-                        </div>
-                      ) : (
-                        "—"
                       )}
                     </TableCell>
                     <TableCell className="px-4 py-3">
@@ -458,15 +440,30 @@ export function RosterTab({ tryoutId }: Props) {
                         {r.status}
                       </span>
                     </TableCell>
+
+                    <TableCell className="px-4 py-3 font-semibold text-blue-700">
+                      {(() => {
+                        const { yes, no } = countYesNo(r);
+                        if (yes === 0 && no === 0) return <span className="text-gray-400">—</span>;
+                        return (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-green-600">{yes}</span>
+                            <span className="text-gray-400 font-normal">/</span>
+                            <span className="text-red-500">{no}</span>
+                          </div>
+                        );
+                      })()}
+
+                      {/* show yes/no chip like this [(10)Yes/(5)No] */}
+                    </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
                       <button
                         onClick={() =>
                           navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)
                         }
                         className="hover:underline cursor-pointer"
-                        title="Open in Scoring tab"
                       >
-                        <div>{avg(r) || <span className="text-gray-400">Score</span>}</div>
+                        <div>{avg(r) || <span className="">Add Score</span>}</div>
                         {/* <div className="text-xs font-normal text-gray-400">
                           {(() => {
                             const completion = detailedScoreCompletion(r);
@@ -492,27 +489,12 @@ export function RosterTab({ tryoutId }: Props) {
                         }
                       />
                     </TableCell>
-                    <TableCell className="px-4 py-3 font-semibold text-blue-700">
-                      {(() => {
-                        const { yes, no } = countYesNo(r);
-                        if (yes === 0 && no === 0) return <span className="text-gray-400">—</span>;
-                        return (
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-green-600">{yes}</span>
-                            <span className="text-gray-400 font-normal">/</span>
-                            <span className="text-red-500">{no}</span>
-                          </div>
-                        );
-                      })()}
-
-                      {/* show yes/no chip like this [(10)Yes/(5)No] */}
-                    </TableCell>
                     <TableCell className="px-4 py-3">
                       {r.status !== "registered" || !canManageCoaches ? (
                         <span className="text-gray-400">—</span>
                       ) : (
                         (() => {
-                          const isComplete = detailedScoreCompletion(r).pct === 100;
+                          const isComplete = avg(r);
 
                           const offerBtn = (
                             <button

@@ -4,9 +4,13 @@ import { HTTP_STATUS } from "../../shared/constants/httpStatus";
 import { MESSAGES } from "../../shared/constants/messages";
 import { sendSuccess } from "../../shared/utils/response";
 import { BadRequestError } from "../../shared/errors/domain.errors";
+import { EmailTemplateService } from "../email-template/email-template.service";
 
 export class GroupController {
-  constructor(private readonly service: GroupService) {}
+  constructor(
+    private readonly service: GroupService,
+    private readonly emailTemplateService: EmailTemplateService,
+  ) {}
 
   listByClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -44,6 +48,31 @@ export class GroupController {
       if (!name?.trim()) throw new BadRequestError("name is required");
 
       const data = await this.service.create(clubId, userId, name, color ?? "", description ?? "");
+
+      const subject = `Congratulations – Team Offer for {{swimmer_name}}`;
+      const body = `
+      Dear {{parent_name}},
+      
+I am pleased to officially offer {{swimmer_name}} a spot on the {{group_name}} following a great performance at the {{tryout_name}} tryout.
+We are thrilled to have {{swimmer_name}} join {{club_name}}! I will be sending a separate email shortly with all the registration details, practice schedules, and next steps.
+Congratulations again—we look forward to seeing {{swimmer_name}} on deck!
+
+Best regards,
+{{sender_name}}
+{{club_name}}`;
+
+      // save email template
+      // TODO: save email template
+      await this.emailTemplateService.create({
+        clubId,
+        userId,
+        subject,
+        body,
+        groupId: data._id.toString(),
+        type: "offer",
+        createdBy: userId,
+        updatedBy: userId,
+      });
       sendSuccess(res, { group: data }, "Group created", HTTP_STATUS.CREATED);
     } catch (err) {
       next(err);
