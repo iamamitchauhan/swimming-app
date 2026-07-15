@@ -10,6 +10,15 @@ import { sendRegistrationReceivedEmail } from "../../shared/utils/mailer";
 import { UserModel } from "../auth/auth.schema";
 import { WaitlistService } from "../waitlist/waitlist.service";
 
+function formatTimeWithAmPm(time: string): string {
+  const [hourStr, minuteStr = "00"] = time.trim().split(":");
+  let hour = parseInt(hourStr, 10);
+  if (Number.isNaN(hour)) return time;
+  const ampm = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
+  return `${hour}:${minuteStr} ${ampm}`;
+}
+
 export class RegistrationService {
   constructor(
     private readonly repo: RegistrationRepository,
@@ -274,7 +283,7 @@ export class RegistrationService {
         swimmerName: `${swimmerFirstName} ${swimmerLastName}`.trim(),
         tryoutName: tryout?.name || "",
         location: tryout.location || "",
-        slotLabel: slot.label || "",
+        slotLabel: `${slot.sessionDate} · ${formatTimeWithAmPm(slot.startTime)} – ${formatTimeWithAmPm(slot.endTime)}`,
       });
     }
 

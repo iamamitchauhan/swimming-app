@@ -152,6 +152,14 @@ export default function TryoutEditPage() {
     const valid = await (fields.length === 0 || currentStep === 4 ? trigger() : trigger(fields));
     if (!valid) return;
     if (currentStep === 7) {
+      // Persist registration questions before showing the review/publish step
+      try {
+        setApiError("");
+        await tryoutsApi.saveRegistrationQuestions(id, registrationQuestions);
+      } catch (err: unknown) {
+        setApiError(err instanceof Error ? err.message : "Failed to save registration questions.");
+        return;
+      }
       setCurrentStep((s) => Math.min(TOTAL_STEPS, s + 1));
       return;
     }
@@ -160,24 +168,6 @@ export default function TryoutEditPage() {
 
   function goBack() {
     setCurrentStep((s) => Math.max(1, s - 1));
-  }
-
-  // ── Save & advance to Review step ────────────────────────────────────────────
-  async function onSaveAndAdvance(data: TryoutFormValues) {
-    setApiError("");
-    try {
-      const swimmersPerSlot = data.lanesAvailable * data.swimmersPerLane;
-      await updateMutation.mutateAsync({
-        ...data,
-        swimmersPerSlot,
-        status: "draft",
-        banner: bannerFile ?? undefined,
-      });
-      await tryoutsApi.saveRegistrationQuestions(id, registrationQuestions);
-      setCurrentStep(8);
-    } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : "Something went wrong.");
-    }
   }
 
   // ── Submit (update) ──────────────────────────────────────────────────────────
@@ -198,6 +188,7 @@ export default function TryoutEditPage() {
   async function onPublish() {
     setApiError("");
     try {
+      await tryoutsApi.saveRegistrationQuestions(id, registrationQuestions);
       await publishMutation.mutateAsync(id);
       toast.success("Tryout published successfully!");
       navigate("/tryouts");
@@ -216,6 +207,7 @@ export default function TryoutEditPage() {
         status: "draft",
         banner: bannerFile ?? undefined,
       });
+      await tryoutsApi.saveRegistrationQuestions(id, registrationQuestions);
       toast.success("Tryout saved as draft successfully!");
       navigate("/tryouts");
     } catch (err: unknown) {

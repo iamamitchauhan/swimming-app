@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SwimTimeField } from "@/components/registrations/SwimTimeField";
 import { SelectedQuestion } from "@/lib/api/question-library.api";
 import { cn } from "@/lib/utils";
 
@@ -137,35 +138,10 @@ export function RegistrationFormPreview({ selectedQuestions }: Props) {
               if (q.type === "text" && isSwimTime) {
                 return (
                   <Field key={idx} label={q.label} required={q.required}>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <input
-                          disabled
-                          className="w-14 h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed text-center"
-                          placeholder="MM"
-                        />
-                        <span className="text-muted-foreground">:</span>
-                        <input
-                          disabled
-                          className="w-14 h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed text-center"
-                          placeholder="SS"
-                        />
-                        <span className="text-muted-foreground">.</span>
-                        <input
-                          disabled
-                          className="w-16 h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed text-center"
-                          placeholder="ms"
-                        />
-                      </div>
-                      <select
-                        disabled
-                        className="h-9 rounded-md border border-input bg-background px-2 text-sm text-muted-foreground cursor-not-allowed"
-                      >
-                        {((q.meta?.unitOptions as string[]) ?? ["yards", "meters"]).map((u) => (
-                          <option key={u}>{u}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <SwimTimeField
+                      unitOptions={(q.meta?.unitOptions as string[]) ?? ["yards", "meters"]}
+                      disabled
+                    />
                   </Field>
                 );
               }

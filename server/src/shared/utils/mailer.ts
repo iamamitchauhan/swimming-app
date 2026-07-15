@@ -906,190 +906,141 @@ export async function sendRegistrationReceivedEmail(opts: {
     background:#ffffff;
     border-radius:12px;
     overflow:hidden;
-    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    border:1px solid #e5e7eb;
+    font-family:Arial,Helvetica,sans-serif;
   "
 >
 
+  <!-- Header -->
   <tr>
-    <td align="center" style="background:#2563eb;padding:30px;">
+    <td align="center" style="background:#2563eb;padding:28px;">
       <h1 style="margin:0;color:#ffffff;font-size:28px;">
         Swimming App
       </h1>
     </td>
   </tr>
 
+  <!-- Content -->
   <tr>
-    <td style="padding:40px 30px;color:#374151;">
+    <td style="padding:36px 30px;color:#374151;">
 
       <div style="text-align:center;margin-bottom:24px;">
-        <div style="font-size:56px;">🏊</div>
-      </div>
+        <div style="font-size:48px;">🏊</div>
 
-      <h2 style="margin-top:0;text-align:center;color:#111827;">
-        Tryout Registration Confirmed
-      </h2>
+        <h2 style="margin:16px 0 8px;color:#111827;">
+          Tryout Registration Confirmed
+        </h2>
 
-      <p style="font-size:16px;line-height:24px;text-align:center;">
-        We are excited to meet your swimmer at the upcoming tryout session.
-      </p>
-
-      <div
-        style="
-          margin:30px 0;
-          padding:24px;
-          background:#eff6ff;
-          border:1px solid #bfdbfe;
-          border-radius:10px;
-          text-align:center;
-        "
-      >
-        <p style="margin:0;font-size:14px;color:#6b7280;">
-          Registered Swimmer
-        </p>
-
-        <p
-          style="
-            margin:10px 0 0;
-            font-size:24px;
-            font-weight:700;
-            color:#2563eb;
-          "
-        >
-          ${opts.swimmerName}
+        <p style="margin:0;font-size:15px;line-height:24px;color:#6b7280;">
+          Thank you for registering for a swimming tryout. We look forward to seeing you soon.
         </p>
       </div>
 
       <p style="font-size:15px;line-height:24px;">
-        Dear ${opts.parentName},
+        Hi ${opts.parentName},
       </p>
 
       <p style="font-size:15px;line-height:24px;">
-        Thank you for registering
-        <strong>${opts.swimmerName}</strong>
-        for a swimming tryout with our team.
+        Your swimmer, <strong>${opts.swimmerName}</strong>, has been successfully
+        registered for the following tryout.
       </p>
 
-      <p style="font-size:15px;line-height:24px;">
-        We are excited to meet <strong>${opts.swimmerName}</strong> and
-        evaluate their swimming skills, experience, and goals during the
-        scheduled tryout session.
-      </p>
-
-      <div
+      <!-- Details -->
+      <table
+        width="100%"
+        cellpadding="0"
+        cellspacing="0"
         style="
-          margin:30px 0;
-          background:#f9fafb;
+          margin:28px 0;
           border:1px solid #e5e7eb;
-          border-radius:10px;
-          overflow:hidden;
-        "
-      >
-        <div
-          style="
-            background:#f3f4f6;
-            padding:14px 20px;
-            font-size:18px;
-            font-weight:700;
-            color:#111827;
-          "
-        >
-          🏊 Tryout Details
-        </div>
-
-        <table width="100%" cellpadding="0" cellspacing="0">
-
-          <tr>
-            <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;font-weight:600;width:35%;">
-              Swimmer
-            </td>
-            <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
-              ${opts.swimmerName}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;font-weight:600;">
-              Tryout
-            </td>
-            <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
-              ${opts.tryoutName}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;font-weight:600;">
-              Location
-            </td>
-            <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
-              ${opts.location}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;font-weight:600;">
-              Date and Time
-            </td>
-            <td style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
-              ${opts.slotLabel}
-            </td>
-          </tr>
-
-        </table>
-      </div>
-
-      <div
-        style="
-          margin:24px 0;
-          padding:20px;
-          background:#eff6ff;
-          border:1px solid #bfdbfe;
           border-radius:8px;
         "
       >
-        <p style="margin:0 0 12px;font-weight:700;color:#1d4ed8;">
-          Before You Arrive
-        </p>
+        <tr>
+          <td style="padding:16px 20px;background:#f9fafb;font-weight:bold;" colspan="2">
+            Tryout Details
+          </td>
+        </tr>
 
-        <p style="margin:0;font-size:14px;line-height:22px;">
-          Please arrive <strong>10 minutes before</strong> the scheduled
-          session for check-in.
-        </p>
+        <tr>
+          <td style="padding:14px 20px;border-top:1px solid #e5e7eb;font-weight:600;width:35%;">
+            Swimmer
+          </td>
+          <td style="padding:14px 20px;border-top:1px solid #e5e7eb;">
+            ${opts.swimmerName}
+          </td>
+        </tr>
 
-        <p style="margin:12px 0 0;font-size:14px;line-height:22px;">
-          Kindly bring required swim equipment, including swimwear,
-          goggles, and any other recommended gear.
-        </p>
+        <tr>
+          <td style="padding:14px 20px;border-top:1px solid #e5e7eb;font-weight:600;">
+            Tryout
+          </td>
+          <td style="padding:14px 20px;border-top:1px solid #e5e7eb;">
+            ${opts.tryoutName}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:14px 20px;border-top:1px solid #e5e7eb;font-weight:600;">
+            Date & Time
+          </td>
+          <td style="padding:14px 20px;border-top:1px solid #e5e7eb;">
+            ${opts.slotLabel}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:14px 20px;border-top:1px solid #e5e7eb;font-weight:600;">
+            Location
+          </td>
+          <td style="padding:14px 20px;border-top:1px solid #e5e7eb;">
+            ${opts.location}
+          </td>
+        </tr>
+      </table>
+
+      <!-- Reminder -->
+      <div
+        style="
+          padding:18px 20px;
+          background:#f9fafb;
+          border-left:4px solid #2563eb;
+          margin:28px 0;
+        "
+      >
+        <strong>Before you arrive</strong>
+
+        <ul style="margin:12px 0 0 18px;padding:0;color:#4b5563;font-size:14px;line-height:22px;">
+          <li>Please arrive 10 minutes early for check-in.</li>
+          <li>Bring swimwear, goggles, and any required swim equipment.</li>
+        </ul>
       </div>
 
       <p style="font-size:15px;line-height:24px;">
-        Our coaching team looks forward to welcoming your family and getting
-        to know <strong>${opts.swimmerName}</strong> in the pool.
+        If you have any questions before the tryout, feel free to contact us.
       </p>
 
-      <p style="font-size:15px;line-height:24px;font-weight:600;color:#2563eb;">
-        See you at the tryout!
-      </p>
-
-      <p style="font-size:15px;line-height:24px;margin-top:30px;">
-        Best regards,<br />
-        The Coaching Team
+      <p style="margin-top:28px;font-size:15px;line-height:24px;">
+        Best regards,<br>
+        <strong>The Coaching Team</strong>
       </p>
 
     </td>
   </tr>
 
+  <!-- Footer -->
   <tr>
     <td
       style="
-        padding:20px 30px;
+        padding:18px 30px;
+        text-align:center;
         background:#f9fafb;
         border-top:1px solid #e5e7eb;
-        text-align:center;
+        color:#6b7280;
+        font-size:13px;
       "
     >
-      <p style="margin:0;font-size:13px;color:#6b7280;">
-        © ${currentYear} Swimming App. All rights reserved.
-      </p>
+      © ${currentYear} Swimming App. All rights reserved.
     </td>
   </tr>
 

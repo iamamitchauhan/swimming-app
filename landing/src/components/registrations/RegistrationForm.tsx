@@ -545,6 +545,10 @@ function buildSwimTimeValue(minutes: string, seconds: string, ms: string, unit: 
   return `${m}:${s}.${paddedMs} ${unit}`;
 }
 
+const MINUTE_OPTIONS = Array.from({ length: 31 }, (_, i) => String(i));
+const SECOND_OPTIONS = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
+const MS_OPTIONS = Array.from({ length: 100 }, (_, i) => String(i).padStart(2, "0"));
+
 function SwimTimeField({
   value,
   unitOptions,
@@ -571,38 +575,54 @@ function SwimTimeField({
     onChange(newVal);
   }
 
+  const minuteValue = minutes ? String(Number(minutes)) : "";
+  const secondValue = seconds ? String(Number(seconds)).padStart(2, "0") : "";
+  const msValue = ms ? String(Number(ms)).padStart(2, "0") : "";
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="MM"
-            value={minutes}
-            onChange={(e) => update({ minutes: e.target.value.replace(/\D/g, "") })}
-            className="w-14 h-9 rounded-md border border-input bg-background px-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
-          />
+          <Select value={minuteValue} onValueChange={(v) => update({ minutes: v })}>
+            <SelectTrigger className="w-16 h-9 px-2 text-sm">
+              <SelectValue placeholder="MM">
+                {minuteValue ? minuteValue.padStart(2, "0") : null}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              {MINUTE_OPTIONS.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {m.padStart(2, "0")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <span className="text-muted-foreground">:</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="SS"
-            value={seconds}
-            maxLength={2}
-            onChange={(e) => update({ seconds: e.target.value.replace(/\D/g, "").slice(0, 2) })}
-            className="w-14 h-9 rounded-md border border-input bg-background px-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
-          />
+          <Select value={secondValue} onValueChange={(v) => update({ seconds: v })}>
+            <SelectTrigger className="w-16 h-9 px-2 text-sm">
+              <SelectValue placeholder="SS">{secondValue || null}</SelectValue>
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              {SECOND_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <span className="text-muted-foreground">.</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="ms"
-            value={ms}
-            maxLength={2}
-            onChange={(e) => update({ ms: e.target.value.replace(/\D/g, "").slice(0, 2) })}
-            className="w-16 h-9 rounded-md border border-input bg-background px-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-ring"
-          />
+          <Select value={msValue} onValueChange={(v) => update({ ms: v })}>
+            <SelectTrigger className="w-16 h-9 px-2 text-sm">
+              <SelectValue placeholder="ms">{msValue || null}</SelectValue>
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              {MS_OPTIONS.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <select
           value={unit}
