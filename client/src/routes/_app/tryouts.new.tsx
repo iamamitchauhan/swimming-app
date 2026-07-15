@@ -4,7 +4,8 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, AlertCircle, Save } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   tryoutSchema,
@@ -98,7 +99,7 @@ export default function TryoutNewPage() {
     const valid = await (fields.length === 0 || currentStep === 4 ? trigger() : trigger(fields));
     if (!valid) return;
     if (currentStep === 7) {
-      await handleSubmit(onSaveAsDraft)();
+      setCurrentStep((s) => Math.min(TOTAL_STEPS, s + 1));
       return;
     }
     setCurrentStep((s) => Math.min(TOTAL_STEPS, s + 1));
@@ -124,6 +125,26 @@ export default function TryoutNewPage() {
         await tryoutsApi.saveRegistrationQuestions(created._id, registrationQuestions);
       }
       navigate(`/tryouts/edit/${created._id}?step=8`, { replace: true });
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    }
+  }
+
+  async function onSaveAsDraftAndExit(data: TryoutFormValues) {
+    setApiError("");
+    try {
+      const swimmersPerSlot = data.lanesAvailable * data.swimmersPerLane;
+      const created = await createMutation.mutateAsync({
+        ...data,
+        swimmersPerSlot,
+        status: "draft",
+        banner: bannerFile ?? undefined,
+      });
+      if (registrationQuestions.length > 0) {
+        await tryoutsApi.saveRegistrationQuestions(created._id, registrationQuestions);
+      }
+      toast.success("Tryout saved as draft successfully!");
+      navigate("/tryouts");
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     }
@@ -254,13 +275,31 @@ export default function TryoutNewPage() {
               {currentStep === 1 ? "Cancel" : "Back"}
             </Button>
 
-            <Button type="button" onClick={goNext} disabled={isSubmitting}>
-              {currentStep === 7 && isSubmitting ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : null}
-              {currentStep === 7 ? "Review and Publish" : "Continue"}
-              {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
-            </Button>
+            <div className="flex items-center gap-3">
+              {currentStep === 7 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleSubmit(onSaveAsDraftAndExit)()}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-1" />
+                  )}
+                  Save as Draft
+                </Button>
+              )}
+
+              <Button type="button" onClick={goNext} disabled={isSubmitting}>
+                {currentStep === 7 && isSubmitting ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : null}
+                {currentStep === 7 ? "Review" : "Continue"}
+                {!isSubmitting && <ChevronRight className="h-4 w-4 ml-1" />}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

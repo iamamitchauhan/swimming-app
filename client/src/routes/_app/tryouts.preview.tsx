@@ -33,6 +33,15 @@ const THEMES = [
   { id: "coral", from: "from-rose-400", to: "to-orange-500" },
 ] as const;
 
+function fmtTime(t?: string) {
+  if (!t) return "—";
+  if (/^\d{1,2}:\d{2}\s*[AaPp][Mm]$/.test(t)) return t;
+  const [h, m] = t.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return t;
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 function getThemeBg(theme: string): string {
   const match = THEMES.find((t) => t.id === theme);
   return match
@@ -255,10 +264,13 @@ export default function TryoutPreviewPage() {
                           return (
                             <div
                               key={sl._id}
-                              className="flex items-center gap-4 border-b border-border px-5 py-3 last:border-b-0"
+                              className="flex items-center gap-4 border-b border-border px-5 py-3 last:border-b-0 transition-colors"
                             >
                               <span className="w-8 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">
                                 #{sl.slotIndex + 1}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {fmtTime(sl.startTime)} – {fmtTime(sl.endTime)}
                               </span>
                               {full ? (
                                 <span className="text-xs font-bold uppercase tracking-wide text-destructive">

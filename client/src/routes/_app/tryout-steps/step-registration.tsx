@@ -376,7 +376,7 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-430px)] overflow-hidden">
+    <div className="flex gap-6 h-[calc(100vh-352px)] overflow-hidden">
       {/* ── Left: Question Library ─────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         <div className="shrink-0 pb-4">
