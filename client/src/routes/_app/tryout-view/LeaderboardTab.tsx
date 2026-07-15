@@ -166,7 +166,7 @@ export function LeaderboardTab({ tryoutId }: Props) {
     };
     return (
       <span
-        className={`text-[10px] font-bold capitalize tracking-wider rounded px-1.5 py-0.5 border ${colors[status] || colors.registered}`}
+        className={`rounded-full text-[10px] font-bold capitalize tracking-wider rounded px-1.5 py-0.5 border ${colors[status] || colors.registered}`}
       >
         {status}
       </span>

@@ -658,7 +658,7 @@ export class TryoutController {
       const registrations = await RegistrationModel.find({
         tryoutId: id,
         status: { $nin: ["cancelled"] },
-        "scores.totalScore": { $exists: true, $ne: null },
+        $or: [{ "scores.totalScore": { $exists: true, $ne: null } }, { detailedScores: { $exists: true, $ne: {}, $type: "object" } }],
       })
         .populate("swimmerId", "firstName lastName birthDate")
         .lean()
@@ -675,7 +675,14 @@ export class TryoutController {
           swimmer_age: r.swimmerDetails?.ageOnTryoutDay ?? 0,
           segment_name: segmentMap.get(r.segmentId) || r.segmentId,
           age_segment: r.segmentId,
-          total_score: r.scores?.totalScore ?? 0,
+          total_score:
+            r.scores?.totalScore ??
+            (() => {
+              const nums = Object.values(r.detailedScores ?? {})
+                .map((v: any) => (typeof v === "string" ? Number(v) : v))
+                .filter((v: any): v is number => typeof v === "number" && !isNaN(v) && v > 0);
+              return nums.length > 0 ? parseFloat(nums.reduce((a, b) => a + b, 0).toFixed(1)) : 0;
+            })(),
           status: r.status,
           detailed_scores: r.detailedScores || {},
         };
@@ -860,6 +867,14 @@ export class TryoutController {
         const existing = await RegistrationModel.findById(regId).lean().exec();
         const merged = { ...(existing?.detailedScores ?? {}), ...body.detailed_scores };
         scoreUpdate["detailedScores"] = merged;
+
+        // Compute totalScore from numeric values in detailed_scores
+        const numericScores = Object.values(merged)
+          .map((v) => (typeof v === "string" ? Number(v) : v))
+          .filter((v): v is number => typeof v === "number" && !isNaN(v) && v > 0);
+        if (numericScores.length > 0) {
+          scoreUpdate["scores.totalScore"] = parseFloat(numericScores.reduce((a, b) => a + b, 0).toFixed(1));
+        }
       }
 
       if (body.coach_recommendation !== undefined) {

@@ -83,12 +83,11 @@ function DetailContent({ detail }: { detail: RegistrationDetail }) {
       {detail.dynamicAnswers && detail.dynamicAnswers.length > 0 && (
         <Section title="Registration Answers">
           {detail.dynamicAnswers.map((a, i) => (
-            <div key={i} className="py-1.5 border-b border-border/50 last:border-0">
-              <div className="text-xs font-medium text-muted-foreground">{a.label}</div>
-              <div className="text-sm text-foreground mt-0.5">
-                {Array.isArray(a.value) ? a.value.join(", ") : a.value}
-              </div>
-            </div>
+            <Row
+              key={i}
+              label={a.label}
+              value={Array.isArray(a.value) ? a.value.join(", ") : String(a.value)}
+            />
           ))}
         </Section>
       )}

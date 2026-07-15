@@ -24,6 +24,7 @@ import { useTryout, useUpdateTryout } from "@/hooks/use-tryouts";
 import type { CoachAssignment, CoachRole, LaneDetail } from "@/lib/api/tryouts.api";
 
 const COACH_ROLES: CoachRole[] = ["Lead Coach", "Assistant Coach", "Evaluator"];
+const MAX_LANE_NAME_LENGTH = 20;
 
 type DraftAssignment = Omit<CoachAssignment, "_id"> & { _id?: string };
 
@@ -176,6 +177,7 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
                     <Input
                       id={`lane-${lane._id}`}
                       value={lane.name}
+                      maxLength={MAX_LANE_NAME_LENGTH}
                       onChange={(event) =>
                         setLanes((current) =>
                           current.map((item) =>
@@ -184,6 +186,11 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
                         )
                       }
                     />
+                    {lane.name.length >= MAX_LANE_NAME_LENGTH && (
+                      <p className="text-xs text-destructive">
+                        Lane name cannot exceed {MAX_LANE_NAME_LENGTH} characters.
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
