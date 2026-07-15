@@ -729,16 +729,18 @@ export class TryoutController {
           return;
         }
 
-        const [tryout, group, template, club] = await Promise.all([
+        const [tryout, group, template, club, sender] = await Promise.all([
           this.service.getPublicById(updated.tryoutId.toString()),
           groupId ? GroupModel.findById(groupId).lean().exec() : Promise.resolve(null),
           EmailTemplateModel.findOne({ clubId, groupId, type: emailType }).lean().exec(),
           clubId ? ClubModel.findById(clubId).lean().exec() : Promise.resolve(null),
+          req.user?.id ? UserModel.findById(req.user.id).lean().exec() : Promise.resolve(null),
         ]);
 
         const swimmerName = `${updated.swimmerDetails.firstName} ${updated.swimmerDetails.lastName}`.trim();
         const parentName = `${user.firstName} ${user.lastName}`.trim();
         const parentEmail = user.email;
+        const senderName = sender ? `${sender.firstName ?? ""} ${sender.lastName ?? ""}`.trim() : "";
 
         logger.info({ regId, swimmerName, parentEmail, templateSubject: template?.subject, templateBody: template?.body }, "decision.email_sending");
 
@@ -754,6 +756,7 @@ export class TryoutController {
                   club_name: club?.name ?? "",
                   tryout_name: tryout.name,
                   group_name: group?.name ?? "",
+                  sender_name: senderName,
                 },
               ],
               subjectTemplate: template.subject,
@@ -1010,6 +1013,22 @@ export class TryoutController {
 
       logger.info({ registrationIds, count: registrations.length }, "bulk-email.registrations_found");
 
+      // Fetch sender (calling user) name
+      const sender = await UserModel.findById(req.user!.id).lean().exec();
+      const senderName = sender ? `${sender.firstName ?? ""} ${sender.lastName ?? ""}`.trim() : "";
+
+      console.info("senderName => ", senderName);
+
+      // Batch-fetch group names for all coachRecommendation group IDs
+      const groupIds = registrations.map((r: any) => r.coachRecommendation).filter((gid: any) => gid && String(gid).trim());
+      const groups =
+        groupIds.length > 0
+          ? await GroupModel.find({ _id: { $in: groupIds } })
+              .lean()
+              .exec()
+          : [];
+      const groupNameMap = new Map<string, string>(groups.map((g) => [g._id.toString(), g.name]));
+
       const recipients = registrations
         .map((reg: any) => {
           const swimmerDoc = reg.swimmerId as any;
@@ -1024,7 +1043,8 @@ export class TryoutController {
           const clubName = (tryout as any).club?.name ?? (tryout as any).clubName ?? "";
           const tryoutName = (tryout as any).name ?? "";
 
-          const groupName = reg.coachRecommendation ?? "";
+          const groupId = reg.coachRecommendation ? String(reg.coachRecommendation) : "";
+          const groupName = groupId ? (groupNameMap.get(groupId) ?? "") : "";
 
           logger.info({ regId: reg._id, swimmerId: reg.swimmerId?._id ?? reg.swimmerId, swimmerName, parentEmail }, "bulk-email.recipient_resolved");
 
@@ -1036,6 +1056,7 @@ export class TryoutController {
             club_name: clubName,
             tryout_name: tryoutName,
             group_name: groupName,
+            sender_name: senderName,
           };
         })
         .filter((r) => !!r.to);

@@ -494,7 +494,7 @@ export function RosterTab({ tryoutId }: Props) {
                         <span className="text-gray-400">—</span>
                       ) : (
                         (() => {
-                          const isComplete = detailedScoreCompletion(r).pct === 100;
+                          const isComplete = avg(r);
 
                           const offerBtn = (
                             <button
