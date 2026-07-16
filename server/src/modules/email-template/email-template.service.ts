@@ -10,6 +10,10 @@ export class EmailTemplateService {
     return this.repo.findByClub(clubId);
   }
 
+  async findByGroupAndType(groupId: string, type: "offer" | "rejection") {
+    return this.repo.findByGroupAndType(groupId, type);
+  }
+
   async bulkUpsert(clubId: string, userId: string, templates: TemplateInput[]) {
     if (!Array.isArray(templates) || templates.length === 0) {
       throw new BadRequestError("templates must be a non-empty array");

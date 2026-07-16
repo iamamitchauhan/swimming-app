@@ -32,6 +32,10 @@ export class EmailTemplateRepository {
       .exec();
   }
 
+  async findByGroupAndType(groupId: string, type: "offer" | "rejection"): Promise<PlainEmailTemplate | null> {
+    return EmailTemplateModel.findOne({ groupId, type }).lean<PlainEmailTemplate>().exec();
+  }
+
   async upsertBulk(clubId: string, userId: string, templates: TemplateInput[]): Promise<PlainEmailTemplate[]> {
     const clubOid = new Types.ObjectId(clubId);
     const userOid = new Types.ObjectId(userId);
