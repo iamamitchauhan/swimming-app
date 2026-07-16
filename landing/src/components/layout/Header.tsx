@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, LogOut, Menu, User, Waves } from "lucide-react";
@@ -17,6 +18,7 @@ import { notificationsQuery, parentQuery, qk } from "@/lib/queries";
 import { logout } from "@/lib/api/auth";
 
 export function Header() {
+  const [sheetOpen, setSheetOpen] = useState(false);
   const { data: parent } = useQuery(parentQuery());
   const { data: notes = [] } = useQuery({ ...notificationsQuery(), enabled: !!parent });
   const unread = notes.filter((n) => !n.read).length;
@@ -45,18 +47,18 @@ export function Header() {
           <span className="font-display text-lg font-bold tracking-tight">SwimTryouts</span>
         </Link>
         <nav className="hidden items-center gap-1 md:flex">
+          {parent && (
+            <>
+              <HeaderLink to="/tryouts">Tryouts</HeaderLink>
+              {/* <HeaderLink to="/dashboard">Dashboard</HeaderLink> */}
+              <HeaderLink to="/registrations">My Registrations</HeaderLink>
+            </>
+          )}
           {/* <HeaderLink to="/" end>Home</HeaderLink> */}
         </nav>
         <div className="flex items-center gap-2">
           {parent ? (
             <>
-              {parent && (
-                <>
-                  <HeaderLink to="/tryouts">Tryouts</HeaderLink>
-                  {/* <HeaderLink to="/dashboard">Dashboard</HeaderLink> */}
-                  <HeaderLink to="/registrations">My Registrations</HeaderLink>
-                </>
-              )}
               {/* <Button asChild variant="ghost" size="icon" className="relative" aria-label="Notifications">
                 <Link to="/notifications">
                   <Bell className="h-5 w-5" />
@@ -65,7 +67,7 @@ export function Header() {
               </Button> */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-muted">
+                  <button className="hidden md:flex items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-muted">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                         {initials}
@@ -103,35 +105,57 @@ export function Header() {
               </Button>
             </>
           )}
-          <Sheet>
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden" aria-label="Menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-72">
+            <SheetContent side="right" className="w-[80vw] max-w-xs sm:w-72">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
                   <Waves className="h-5 w-5 text-primary" /> SwimTryouts
                 </SheetTitle>
               </SheetHeader>
+              {parent && (
+                <div className="mt-4 flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">
+                      {parent.firstName} {parent.lastName}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">{parent.email}</div>
+                  </div>
+                </div>
+              )}
               <div className="mt-6 flex flex-col gap-1">
-                <MobileLink to="/" end>
+                <MobileLink to="/" end onClick={() => setSheetOpen(false)}>
                   Home
                 </MobileLink>
-                <MobileLink to="/tryouts">Tryouts</MobileLink>
+                <MobileLink to="/tryouts" onClick={() => setSheetOpen(false)}>
+                  Tryouts
+                </MobileLink>
                 {parent ? (
                   <>
-                    <MobileLink to="/dashboard">Dashboard</MobileLink>
-                    {/* <MobileLink to="/registrations">My Registrations</MobileLink>
-                    <MobileLink to="/children">My Children</MobileLink>
+                    <MobileLink to="/registrations" onClick={() => setSheetOpen(false)}>
+                      My Registrations
+                    </MobileLink>
+                    {/* <MobileLink to="/children">My Children</MobileLink>
                     <MobileLink to="/profile">Profile Settings</MobileLink>
                     <MobileLink to="/notifications">Notifications {unread > 0 && <Badge className="ml-1">{unread}</Badge>}</MobileLink> */}
                   </>
                 ) : (
                   <>
-                    <MobileLink to="/login">Login</MobileLink>
-                    <MobileLink to="/register">Create account</MobileLink>
+                    <MobileLink to="/login" onClick={() => setSheetOpen(false)}>
+                      Login
+                    </MobileLink>
+                    <MobileLink to="/register" onClick={() => setSheetOpen(false)}>
+                      Create account
+                    </MobileLink>
                   </>
                 )}
               </div>
@@ -139,7 +163,10 @@ export function Header() {
                 <Button
                   variant="outline"
                   className="mt-6 w-full"
-                  onClick={() => logoutMut.mutate()}
+                  onClick={() => {
+                    setSheetOpen(false);
+                    logoutMut.mutate();
+                  }}
                 >
                   <User className="mr-2 h-4 w-4" /> Logout
                 </Button>
@@ -178,15 +205,18 @@ function MobileLink({
   to,
   end,
   children,
+  onClick,
 }: {
   to: string;
   end?: boolean;
   children: React.ReactNode;
+  onClick?: () => void;
 }) {
   return (
     <NavLink
       to={to}
       end={end}
+      onClick={onClick}
       className={({ isActive }) =>
         `rounded-md px-3 py-3 text-sm font-medium transition-colors hover:bg-muted ${isActive ? "bg-muted text-primary" : "text-foreground"}`
       }

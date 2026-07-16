@@ -359,7 +359,7 @@ export function RegistrationForm({
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
         {/* ── Fixed: Swimmer name ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Swimmer first name" required error={errors.swimmerFirstName?.message}>
             <Input placeholder="First name" {...register("swimmerFirstName")} />
           </Field>
@@ -369,7 +369,7 @@ export function RegistrationForm({
         </div>
 
         {/* ── Fixed: DOB + Segment ───────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Date of birth" required error={errors.dob?.message}>
             <Controller
               name="dob"
@@ -412,7 +412,7 @@ export function RegistrationForm({
         </div>
 
         {/* ── Fixed: Guardian ─────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Guardian name" required error={errors.guardianName?.message}>
             <Input placeholder="Full name" {...register("guardianName")} />
           </Field>
@@ -581,51 +581,49 @@ function SwimTimeField({
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <Select value={minuteValue} onValueChange={(v) => update({ minutes: v })}>
-            <SelectTrigger className="w-16 h-9 px-2 text-sm">
-              <SelectValue placeholder="MM">
-                {minuteValue ? minuteValue.padStart(2, "0") : null}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {MINUTE_OPTIONS.map((m) => (
-                <SelectItem key={m} value={m}>
-                  {m.padStart(2, "0")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-muted-foreground">:</span>
-          <Select value={secondValue} onValueChange={(v) => update({ seconds: v })}>
-            <SelectTrigger className="w-16 h-9 px-2 text-sm">
-              <SelectValue placeholder="SS">{secondValue || null}</SelectValue>
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {SECOND_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-muted-foreground">.</span>
-          <Select value={msValue} onValueChange={(v) => update({ ms: v })}>
-            <SelectTrigger className="w-16 h-9 px-2 text-sm">
-              <SelectValue placeholder="ms">{msValue || null}</SelectValue>
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {MS_OPTIONS.map((m) => (
-                <SelectItem key={m} value={m}>
-                  {m}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
+        <Select value={minuteValue} onValueChange={(v) => update({ minutes: v })}>
+          <SelectTrigger className="w-full sm:w-16 h-9 px-2 text-sm">
+            <SelectValue placeholder="MM">
+              {minuteValue ? minuteValue.padStart(2, "0") : null}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {MINUTE_OPTIONS.map((m) => (
+              <SelectItem key={m} value={m}>
+                {m.padStart(2, "0")}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="hidden sm:inline text-muted-foreground">:</span>
+        <Select value={secondValue} onValueChange={(v) => update({ seconds: v })}>
+          <SelectTrigger className="w-full sm:w-16 h-9 px-2 text-sm">
+            <SelectValue placeholder="SS">{secondValue || null}</SelectValue>
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {SECOND_OPTIONS.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="hidden sm:inline text-muted-foreground">.</span>
+        <Select value={msValue} onValueChange={(v) => update({ ms: v })}>
+          <SelectTrigger className="w-full sm:w-16 h-9 px-2 text-sm">
+            <SelectValue placeholder="ms">{msValue || null}</SelectValue>
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {MS_OPTIONS.map((m) => (
+              <SelectItem key={m} value={m}>
+                {m}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={unit} onValueChange={(v) => update({ unit: v })}>
-          <SelectTrigger className="w-24 h-9 px-2 text-sm ml-3">
+          <SelectTrigger className="w-full sm:w-24 h-9 px-2 text-sm sm:ml-3">
             <SelectValue placeholder="unit">{unit || null}</SelectValue>
           </SelectTrigger>
           <SelectContent>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Calendar, CheckCircle2, MapPin } from "lucide-react";
@@ -72,16 +72,12 @@ export default function TryoutDetailPage() {
   }
   if (!tryout) return null;
 
-  console.info("tryout =>", tryout);
-
   const slots = tryout.slots ?? [];
   const sessions = tryout.sessions ?? [];
   const steps = tryout.steps ?? [];
   const faqs = tryout.faqs ?? [];
   const eligibility = tryout.eligibility ?? [];
   const segments = tryout.segments ?? [];
-
-  console.info("segments =>", segments);
 
   const status = tryoutStatus({ ...tryout, slots });
   const totalCap = slots.reduce((s, x) => s + x.capacity, 0);
@@ -238,7 +234,7 @@ export default function TryoutDetailPage() {
           <section className="mt-10">
             <div className="overflow-hidden rounded-xl border border-border">
               {/* Header */}
-              <div className="flex items-center justify-between bg-slate-800 px-5 py-4 text-white">
+              <div className="flex flex-col items-start justify-between gap-2 bg-slate-800 px-5 py-4 text-white sm:flex-row sm:items-center">
                 <div>
                   <h2 className="font-display text-base font-bold">Registration Windows</h2>
                   <p className="text-xs text-white/60 uppercase tracking-wider mt-0.5">
@@ -258,7 +254,7 @@ export default function TryoutDetailPage() {
                     return (
                       <div key={session.id}>
                         {/* Session label row */}
-                        <div className="flex items-center gap-4 border-b border-border bg-muted/40 px-5 py-3">
+                        <div className="flex flex-wrap items-center gap-3 border-b border-border bg-muted/40 px-5 py-3 sm:gap-4">
                           <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-slate-800 text-white">
                             <span className="text-[10px] font-semibold uppercase leading-none">
                               {sessionDate
@@ -278,7 +274,7 @@ export default function TryoutDetailPage() {
                               slots
                             </div>
                           </div>
-                          <span className="ml-auto rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold">
+                          <span className="ml-auto rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold sm:ml-auto w-full sm:w-auto text-center sm:text-left">
                             {session.totalSlots} slots · {session.swimmersPerSlot} per slot
                           </span>
                         </div>
@@ -299,7 +295,7 @@ export default function TryoutDetailPage() {
                           return (
                             <div
                               key={sl.id}
-                              className={`flex items-center gap-4 border-b border-border px-5 py-3 last:border-b-0 transition-colors ${
+                              className={`flex flex-wrap items-center gap-3 border-b border-border px-5 py-3 last:border-b-0 transition-colors sm:gap-4 ${
                                 selected ? "bg-sky-50 dark:bg-sky-950/30" : ""
                               }`}
                             >
@@ -324,7 +320,7 @@ export default function TryoutDetailPage() {
                                   Open
                                 </span>
                               )}
-                              <span className="ml-auto mr-4 text-xs text-muted-foreground tabular-nums">
+                              <span className="ml-auto text-xs text-muted-foreground tabular-nums sm:mr-4">
                                 {sl.registeredCount} / {sl.capacity}
                                 <br />
                                 <span className="text-[10px] uppercase tracking-wider">
