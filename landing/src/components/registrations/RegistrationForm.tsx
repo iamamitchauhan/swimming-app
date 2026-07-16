@@ -538,7 +538,7 @@ function parseSwimTime(value: string, defaultUnit: string) {
 
 function buildSwimTimeValue(minutes: string, seconds: string, ms: string, unit: string) {
   const hasAny = minutes || seconds || ms;
-  if (!hasAny) return "";
+  if (!hasAny) return unit ? `0:00.00 ${unit}` : "";
   const m = minutes || "0";
   const s = seconds || "00";
   const paddedMs = ms || "00";
@@ -562,7 +562,7 @@ function SwimTimeField({
   error?: string;
   onChange: (val: string) => void;
 }) {
-  const defaultUnit = unitOptions[0] ?? "yards";
+  const defaultUnit = unitOptions[0] ?? "SCY";
   const { minutes, seconds, ms, unit } = parseSwimTime(value, defaultUnit);
 
   function update(next: Partial<{ minutes: string; seconds: string; ms: string; unit: string }>) {
@@ -624,17 +624,18 @@ function SwimTimeField({
             </SelectContent>
           </Select>
         </div>
-        <select
-          value={unit}
-          onChange={(e) => update({ unit: e.target.value })}
-          className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-        >
-          {unitOptions.map((u) => (
-            <option key={u} value={u}>
-              {u}
-            </option>
-          ))}
-        </select>
+        <Select value={unit} onValueChange={(v) => update({ unit: v })}>
+          <SelectTrigger className="w-24 h-9 px-2 text-sm ml-3">
+            <SelectValue placeholder="unit">{unit || null}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {unitOptions.map((u) => (
+              <SelectItem key={u} value={u}>
+                {u}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
@@ -660,7 +661,7 @@ function DynamicField({
       {question.type === "text" && isSwimTime && (
         <SwimTimeField
           value={value as string}
-          unitOptions={(question.meta?.unitOptions as string[]) ?? ["yards", "meters"]}
+          unitOptions={(question.meta?.unitOptions as string[]) ?? ["SCY", "SCM", "LCM"]}
           required={question.required}
           error={error}
           onChange={(val) => onChange(val)}

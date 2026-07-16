@@ -1,0 +1,46 @@
+paths:
+  /public/stats:
+    get:
+      tags: [Public]
+      summary: Platform-wide stats for the public landing page
+      description: |
+        Returns aggregate statistics about open tryouts, available slots,
+        registered families, and participating clubs.
+
+        Only tryouts with a computed status of "open" are counted — i.e.,
+        the stored status is not "draft" and the tryout has not yet started
+        (startAt is in the future). Tryouts that have already ended or are
+        currently in progress are excluded.
+
+        No authentication required.
+      operationId: getPublicStats
+      responses:
+        '200':
+          description: Platform stats retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: 'Retrieved successfully' }
+                  data:
+                    type: object
+                    properties:
+                      openTryouts:
+                        type: integer
+                        description: Count of tryouts with computed status "open" (not draft, not completed, not in-progress).
+                        example: 3
+                      availableSlots:
+                        type: integer
+                        description: Sum of (capacity - registeredCount) across all slots belonging to open tryouts.
+                        example: 120
+                      registeredFamilies:
+                        type: integer
+                        description: Count of distinct parent IDs with at least one non-cancelled registration.
+                        example: 6
+                      participatingClubs:
+                        type: integer
+                        description: Count of distinct clubs that have at least one open tryout.
+                        example: 2
+                  error: { type: string, nullable: true, example: null }

@@ -170,9 +170,9 @@ export class AuthService {
 
     try {
       await sendOtpEmail({ to: email, otp });
-      logger.info({ email, from: config.SMTP_FROM_EMAIL, host: config.SMTP_HOST, port: config.SMTP_PORT }, "auth.otp.email_sent");
+      logger.info({ email, from: config.SES_FROM_EMAIL, region: config.AWS_REGION }, "auth.otp.email_sent");
     } catch (err) {
-      logger.error({ email, err, from: config.SMTP_FROM_EMAIL, host: config.SMTP_HOST, port: config.SMTP_PORT }, "auth.otp.email_failed");
+      logger.error({ email, err, from: config.SES_FROM_EMAIL, region: config.AWS_REGION }, "auth.otp.email_failed");
       throw err;
     }
 

@@ -73,6 +73,8 @@ function DatePickerField({
           mode="single"
           selected={selectedDate}
           captionLayout="dropdown"
+          startMonth={new Date(today.getFullYear(), today.getMonth())}
+          endMonth={new Date(today.getFullYear() + 10, 11)}
           defaultMonth={selectedDate ?? lowerBound}
           disabled={(d) => {
             const day = new Date(d);

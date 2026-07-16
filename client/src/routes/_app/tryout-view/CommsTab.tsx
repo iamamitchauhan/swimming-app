@@ -14,14 +14,14 @@ const COMM_TEMPLATES: Record<
   EmailTemplateType,
   { label: string; sub: string; subject: string; body: string }
 > = {
-  offer: {
-    label: "Offer",
+  offered: {
+    label: "Offered",
     sub: "Send an offer",
     subject: "🎉 You've been offered a spot!",
     body: "Dear {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!\n\nPlease confirm your acceptance within 48 hours.\n\nBest,\nThe Coaching Team",
   },
-  rejection: {
-    label: "Rejection",
+  rejected: {
+    label: "Rejected",
     sub: "Decline politely",
     subject: "Tryout Result for {{swimmer_name}}",
     body: "Dear {{parent_name}},\n\nThank you for participating in our tryout. After careful evaluation, we are unable to offer {{swimmer_name}} a spot at this time.\n\nWe encourage you to try again next season.\n\nBest regards,\nThe Coaching Team",
@@ -56,7 +56,7 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
 
   console.log("groupData", { groupData, groupLoading });
 
-  const [commTemplate, setCommTemplate] = useState<EmailTemplateType | "">("offer");
+  const [commTemplate, setCommTemplate] = useState<EmailTemplateType | "">("offered");
   const [selectedGroup, setSelectedGroup] = useState("");
   const [commSubject, setCommSubject] = useState("");
   const [commBody, setCommBody] = useState("");
@@ -84,14 +84,14 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
 
     const offerMap: Record<string, { subject: string; body: string }> = {};
     templates.forEach((t) => {
-      if (t.type === "offer" && t.groupId) {
+      if (t.type === "offered" && t.groupId) {
         offerMap[t.groupId] = { subject: t.subject, body: t.body };
       }
     });
 
     const rejectionTemplateData =
-      templates.find((t) => t.type === "rejection" && t.groupId === null) ??
-      templates.find((t) => t.type === "rejection");
+      templates.find((t) => t.type === "rejected" && t.groupId === null) ??
+      templates.find((t) => t.type === "rejected");
 
     setGroupComms(offerMap);
     setRejectionTemplate(
@@ -102,9 +102,9 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
   }, [templates]);
 
   useEffect(() => {
-    if (commTemplate === "rejection") {
-      setCommSubject(rejectionTemplate?.subject ?? COMM_TEMPLATES.rejection.subject);
-      setCommBody(rejectionTemplate?.body ?? COMM_TEMPLATES.rejection.body);
+    if (commTemplate === "rejected") {
+      setCommSubject(rejectionTemplate?.subject ?? COMM_TEMPLATES.rejected.subject);
+      setCommBody(rejectionTemplate?.body ?? COMM_TEMPLATES.rejected.body);
       return;
     }
 
@@ -115,7 +115,7 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
   }, [commTemplate, groupComms, rejectionTemplate, selectedGroup]);
 
   function handleSelectGroup(groupId: string) {
-    if (selectedGroup && commTemplate === "offer") {
+    if (selectedGroup && commTemplate === "offered") {
       setGroupComms((prev) => ({
         ...prev,
         [selectedGroup]: { subject: commSubject, body: commBody },
@@ -125,21 +125,21 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
   }
 
   function switchTemplate(key: EmailTemplateType) {
-    if (commTemplate === "offer" && selectedGroup) {
+    if (commTemplate === "offered" && selectedGroup) {
       setGroupComms((prev) => ({
         ...prev,
         [selectedGroup]: { subject: commSubject, body: commBody },
       }));
-    } else if (commTemplate === "rejection") {
+    } else if (commTemplate === "rejected") {
       setRejectionTemplate({ subject: commSubject, body: commBody });
     }
 
     setCommTemplate(key);
 
-    if (key === "rejection") {
+    if (key === "rejected") {
       const saved = rejectionTemplate;
-      setCommSubject(saved?.subject ?? COMM_TEMPLATES.rejection.subject);
-      setCommBody(saved?.body ?? COMM_TEMPLATES.rejection.body);
+      setCommSubject(saved?.subject ?? COMM_TEMPLATES.rejected.subject);
+      setCommBody(saved?.body ?? COMM_TEMPLATES.rejected.body);
     } else {
       const saved = selectedGroup ? groupComms[selectedGroup] : null;
       if (saved) {
@@ -200,11 +200,11 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
   }
 
   function buildTemplatesForSave() {
-    if (commTemplate === "rejection") {
+    if (commTemplate === "rejected") {
       return [
         {
           groupId: null,
-          type: "rejection" as const,
+          type: "rejected" as const,
           subject: commSubject,
           body: commBody,
         },
@@ -213,7 +213,7 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
 
     const templates = Object.entries(groupComms).map(([groupId, { subject, body }]) => ({
       groupId,
-      type: "offer" as const,
+      type: "offered" as const,
       subject,
       body,
     }));
@@ -222,7 +222,7 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
       const existingIndex = templates.findIndex((t) => t.groupId === selectedGroup);
       const entry = {
         groupId: selectedGroup,
-        type: "offer" as const,
+        type: "offered" as const,
         subject: commSubject,
         body: commBody,
       };
@@ -286,7 +286,7 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
       </div>
 
       {/* Group tabs */}
-      {commTemplate !== "rejection" && (
+      {commTemplate !== "rejected" && (
         <>
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
             Group

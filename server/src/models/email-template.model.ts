@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 
-export type EmailTemplateType = "offer" | "rejection";
+export type EmailTemplateType = "offered" | "rejected";
 
 export interface IEmailTemplate extends Document {
   clubId: Types.ObjectId;
@@ -33,7 +33,7 @@ const EmailTemplateSchema = new Schema<IEmailTemplate>(
     },
     type: {
       type: String,
-      enum: ["offer", "rejection"],
+      enum: ["offered", "rejected"],
       required: true,
     },
     subject: {

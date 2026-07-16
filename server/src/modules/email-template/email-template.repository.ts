@@ -7,7 +7,7 @@ export type PlainEmailTemplate = {
   _id: string;
   clubId: string;
   groupId: string | null;
-  type: "offer" | "rejection";
+  type: "offered" | "rejected";
   subject: string;
   body: string;
   createdBy: string;
@@ -18,7 +18,7 @@ export type PlainEmailTemplate = {
 
 export type TemplateInput = {
   groupId: string | null;
-  type: "offer" | "rejection";
+  type: "offered" | "rejected";
   subject: string;
   body: string;
 };
@@ -30,6 +30,10 @@ export class EmailTemplateRepository {
     return EmailTemplateModel.find({ clubId: new Types.ObjectId(clubId) })
       .lean<PlainEmailTemplate[]>()
       .exec();
+  }
+
+  async findByGroupAndType(groupId: string, type: "offered" | "rejected"): Promise<PlainEmailTemplate | null> {
+    return EmailTemplateModel.findOne({ groupId, type }).lean<PlainEmailTemplate>().exec();
   }
 
   async upsertBulk(clubId: string, userId: string, templates: TemplateInput[]): Promise<PlainEmailTemplate[]> {

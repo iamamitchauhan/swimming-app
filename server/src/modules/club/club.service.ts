@@ -1,9 +1,11 @@
+import mongoose from "mongoose";
 import { ClubRepository, PlainClub } from "./club.repository";
 import { BadRequestError, NotFoundError } from "../../shared/errors/domain.errors";
 import { UserModel } from "../../models/user.model";
 import { ClubModel } from "../../models/club.model";
 import { TryoutModel } from "../../models/tryout.model";
 import { RegistrationModel } from "../../models/registration.model";
+import { WaitlistModel } from "../../models/waitlist.model";
 import { USER_ROLES } from "../../shared/constants/roles";
 import { sendClubApproved, sendClubRejected } from "../../shared/utils/mailer";
 import logger from "../../shared/utils/logger";
@@ -143,37 +145,64 @@ export class ClubService {
     registeredSwimmerCount: number;
     pendingRegistrationCount: number;
     activeTryoutCount: number;
+    waitlistCount: number;
   }> {
     const club = await this.repo.findById(clubId);
     if (!club) throw new NotFoundError("Club not found");
 
     const tryoutIds = await TryoutModel.find({ clubId }).distinct("_id");
 
-    const [memberCount, coachCount, tryoutCount, activeTryoutCount, pendingRegistrationCount, registeredSwimmerCount] = await Promise.all([
-      UserModel.countDocuments({
-        clubId: clubId,
-        status: { $ne: "suspended" },
-      }).exec(),
-      UserModel.countDocuments({
-        clubId: clubId,
-        role: USER_ROLES.COACH,
-        status: { $ne: "suspended" },
-      }).exec(),
-      TryoutModel.countDocuments({ clubId: clubId }).exec(),
-      TryoutModel.countDocuments({
-        clubId: clubId,
-        status: "open",
-        startAt: { $gt: new Date() },
-      }).exec(),
-      RegistrationModel.countDocuments({
-        tryoutId: { $in: tryoutIds },
-        status: "registered",
-      }).exec(),
-      RegistrationModel.distinct("swimmerId", {
-        tryoutId: { $in: tryoutIds },
-      }).then((ids) => ids.length),
-    ]);
+    const [memberCount, coachCount, tryoutCount, activeTryoutAgg, pendingRegistrationCount, registeredSwimmerCount, waitlistCount] =
+      await Promise.all([
+        UserModel.countDocuments({
+          clubId: clubId,
+          status: "active",
+        }).exec(),
+        UserModel.countDocuments({
+          clubId: clubId,
+          role: USER_ROLES.COACH,
+          status: { $ne: "suspended" },
+        }).exec(),
+        TryoutModel.countDocuments({ clubId: clubId }).exec(),
+        TryoutModel.aggregate([
+          {
+            $addFields: {
+              status: {
+                $cond: [
+                  { $eq: ["$status", "draft"] },
+                  "draft",
+                  {
+                    $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }],
+                  },
+                ],
+              },
+            },
+          },
+          { $match: { status: "open", clubId: new mongoose.Types.ObjectId(clubId) } },
+          { $count: "count" },
+        ]).exec(),
+        RegistrationModel.countDocuments({
+          tryoutId: { $in: tryoutIds },
+          status: "registered",
+        }).exec(),
+        RegistrationModel.distinct("swimmerId", {
+          tryoutId: { $in: tryoutIds },
+          status: { $nin: ["cancelled"] },
+        }).then((ids) => ids.length),
+        WaitlistModel.countDocuments({
+          tryoutId: { $in: tryoutIds },
+        }).exec(),
+      ]);
 
-    return { club, memberCount, coachCount, tryoutCount, registeredSwimmerCount, pendingRegistrationCount, activeTryoutCount };
+    return {
+      club,
+      memberCount,
+      coachCount,
+      tryoutCount,
+      registeredSwimmerCount,
+      pendingRegistrationCount,
+      activeTryoutCount: activeTryoutAgg[0]?.count ?? 0,
+      waitlistCount,
+    };
   }
 }

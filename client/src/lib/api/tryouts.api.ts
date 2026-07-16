@@ -423,6 +423,8 @@ export interface LeaderboardEntry {
   total_score: number | string;
   status: string;
   detailed_scores?: Record<string, string | number | boolean | null>;
+  coach_recommendation?: string | null;
+  coach_recommendation_name?: string | null;
 }
 
 export interface RegistrationDetail {

@@ -86,7 +86,7 @@ function PreviewField({ q }: { q: SelectedQuestion }) {
       </label>
       {q.type === "text" && isSwimTime && (
         <SwimTimeField
-          unitOptions={(q.meta?.unitOptions as string[]) ?? ["yards", "meters"]}
+          unitOptions={(q.meta?.unitOptions as string[]) ?? ["SCY", "SCM", "LCM"]}
           disabled
         />
       )}
