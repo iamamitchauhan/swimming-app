@@ -897,6 +897,7 @@ export class TryoutController {
                 sessionDate: slot?.sessionDate || "",
                 startTime: slot?.startTime || "",
                 endTime: slot?.endTime || "",
+                clubName: club?.name ?? "",
               });
             } else {
               await sendRegistrationReject({
@@ -905,6 +906,7 @@ export class TryoutController {
                 parentName,
                 tryoutName: tryout.name,
                 sessionDate: "",
+                clubName: club?.name ?? "",
               });
             }
           }

@@ -15,7 +15,6 @@ We are thrilled to have {{swimmer_name}} join {{club_name}}! I will be sending a
 Congratulations again—we look forward to seeing {{swimmer_name}} on deck!
 
 Best regards,
-{{sender_name}}
 {{club_name}}`;
 
 export class GroupController {
