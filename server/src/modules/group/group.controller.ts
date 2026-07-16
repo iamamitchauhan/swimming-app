@@ -68,7 +68,7 @@ export class GroupController {
         subject,
         body,
         groupId: data._id.toString(),
-        type: "offer",
+        type: "offered",
         createdBy: userId,
         updatedBy: userId,
       });
@@ -87,7 +87,7 @@ export class GroupController {
       const data = await this.service.update(req.params["id"]!, userId, name, color ?? "", description ?? "");
 
       const groupId = data._id.toString();
-      const existingTemplate = await this.emailTemplateService.findByGroupAndType(groupId, "offer");
+      const existingTemplate = await this.emailTemplateService.findByGroupAndType(groupId, "offered");
       if (!existingTemplate) {
         await this.emailTemplateService.create({
           clubId,
@@ -95,7 +95,7 @@ export class GroupController {
           subject,
           body,
           groupId,
-          type: "offer",
+          type: "offered",
           createdBy: userId,
           updatedBy: userId,
         });

@@ -68,6 +68,7 @@ export const clubsApi = {
       registeredSwimmerCount: number;
       pendingRegistrationCount: number;
       activeTryoutCount: number;
+      waitlistCount: number;
     }>(apiClient.get("/clubs/state")),
 
   adminState: () =>

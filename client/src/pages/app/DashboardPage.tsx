@@ -5,7 +5,6 @@ import {
   Building2,
   Waves,
   Clock,
-  UserCog,
   GraduationCap,
   Trophy,
   CalendarRange,
@@ -21,7 +20,8 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTryouts } from "@/hooks/use-tryouts";
-import { useClubCoaches, useClubState, useAdminState } from "@/hooks/use-clubs";
+import { useClubState, useAdminState } from "@/hooks/use-clubs";
+import { useUsersByClub } from "@/hooks/use-users";
 import { useNavigate } from "react-router-dom";
 
 function MiniChart() {
@@ -85,9 +85,13 @@ function ActivityFeed() {
   );
 }
 
-function CoachList() {
-  const { data, isLoading, isError, error, isFetching } = useClubCoaches();
+function RecentUsers() {
+  const user = useAuthStore((s) => s.user);
+  const clubId = user?.clubId ?? "";
+  const { data, isLoading } = useUsersByClub(clubId);
   const navigate = useNavigate();
+
+  const users = (data ?? []).filter((item: any) => item.type === "user").slice(0, 3);
 
   if (isLoading) {
     return (
@@ -96,16 +100,14 @@ function CoachList() {
       </div>
     );
   }
-  if (!data || data?.length === 0) {
+  if (users.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
           <Users className="h-5 w-5 text-muted-foreground" />
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">
-            No coach applications in the last 24 hours.
-          </p>
+          <p className="text-sm text-muted-foreground">No users in this club yet.</p>
         </div>
         <Button
           variant="link"
@@ -113,7 +115,7 @@ function CoachList() {
           className="h-auto p-0 text-xs font-medium text-primary"
           onClick={() => navigate("/users")}
         >
-          View all staff →
+          View all users →
         </Button>
       </div>
     );
@@ -121,22 +123,22 @@ function CoachList() {
 
   return (
     <ul className="space-y-3">
-      {data?.slice(0, 5).map((c: any) => (
-        <li key={c._id} className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary to-aqua text-primary-foreground flex items-center justify-center text-xs font-semibold">
-            {c.firstName
-              .split(" ")
-              .map((x: any) => x[0])
-              .join("")}
-          </div>
-          <div className="flex-1">
-            <div className="text-sm font-medium">
-              {c.firstName} {c.lastName}
+      {users.map((item: any) => {
+        const u = item.data;
+        return (
+          <li key={u._id} className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary to-aqua text-primary-foreground flex items-center justify-center text-xs font-semibold">
+              {u.firstName ? `${u.firstName[0] ?? ""}${u.lastName[0] ?? ""}` : "?"}
             </div>
-            <div className="text-xs text-muted-foreground capitalize">{c.status}</div>
-          </div>
-        </li>
-      ))}
+            <div className="flex-1">
+              <div className="text-sm font-medium">
+                {u.firstName} {u.lastName}
+              </div>
+              <div className="text-xs text-muted-foreground capitalize">{u.role}</div>
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -299,6 +301,9 @@ function SuperAdminDash() {
 
 function AdminDash() {
   const { data: clubState, isLoading: stateLoading } = useClubState();
+  const role = useAuthStore((s) => s.user?.role);
+  const navigate = useNavigate();
+  const isAdmin = role === "admin";
 
   console.info("clubState =>", clubState);
 
@@ -306,10 +311,10 @@ function AdminDash() {
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Total Coaches"
-          value={clubState?.coachCount || 0}
-          hint={`${clubState?.pendingRegistrationCount || 0} invitations pending`}
-          icon={UserCog}
+          label="Active Members"
+          value={clubState?.memberCount || 0}
+          hint={`${clubState?.coachCount || 0} coaches`}
+          icon={Users}
         />
         <StatCard
           label="Active Tryouts"
@@ -318,15 +323,16 @@ function AdminDash() {
           accent="aqua"
         />
         <StatCard
-          label="Registered Swimmers"
-          value={clubState?.registeredSwimmerCount || 0}
-          icon={GraduationCap}
+          label="Total Tryouts"
+          value={clubState?.tryoutCount || 0}
+          icon={Trophy}
           accent="success"
         />
         <StatCard
-          label="Pending Registrations"
-          value={clubState?.pendingRegistrationCount || 0}
-          icon={Clock}
+          label="Registered Swimmers"
+          value={clubState?.registeredSwimmerCount || 0}
+          hint={`${clubState?.waitlistCount || 0} on waitlist`}
+          icon={GraduationCap}
           accent="warning"
         />
       </div>
@@ -340,9 +346,12 @@ function AdminDash() {
             <dl className="space-y-3 text-sm">
               {[
                 ["Club name", clubState.club.name || "—"],
-                ["Members", `${clubState.memberCount} swimmers`],
+                ["Active members", `${clubState.memberCount} users`],
                 ["Coaches", String(clubState.coachCount)],
-                ["Tryouts", String(clubState.tryoutCount)],
+                ["Total tryouts", String(clubState.tryoutCount)],
+                ["Active tryouts", String(clubState.activeTryoutCount)],
+                ["Registered swimmers", String(clubState.registeredSwimmerCount)],
+                ["Waitlist count", String(clubState.waitlistCount)],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between">
                   <dt className="text-muted-foreground">{k}</dt>
@@ -352,10 +361,38 @@ function AdminDash() {
             </dl>
           )}
         </Card>
-        <Card title="Recent Coaches">
-          <CoachList />
+        <Card
+          title="Recent 3 Users"
+          // action={
+          //   isAdmin ? (
+          //     <Button
+          //       variant="link"
+          //       size="sm"
+          //       className="h-auto p-0 text-xs font-medium text-primary"
+          //       onClick={() => navigate("/users")}
+          //     >
+          //       View all →
+          //     </Button>
+          //   ) : undefined
+          // }
+        >
+          <RecentUsers />
         </Card>
-        <Card title="Upcoming Tryouts">
+        <Card
+          title="Upcoming Tryouts"
+          // action={
+          //   isAdmin ? (
+          //     <Button
+          //       variant="link"
+          //       size="sm"
+          //       className="h-auto p-0 text-xs font-medium text-primary"
+          //       onClick={() => navigate("/tryouts")}
+          //     >
+          //       View all →
+          //     </Button>
+          //   ) : undefined
+          // }
+        >
           <TryoutList />
         </Card>
       </div>

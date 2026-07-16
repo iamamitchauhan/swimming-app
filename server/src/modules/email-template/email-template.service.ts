@@ -10,7 +10,7 @@ export class EmailTemplateService {
     return this.repo.findByClub(clubId);
   }
 
-  async findByGroupAndType(groupId: string, type: "offer" | "rejection") {
+  async findByGroupAndType(groupId: string, type: "offered" | "rejected") {
     return this.repo.findByGroupAndType(groupId, type);
   }
 
@@ -19,15 +19,15 @@ export class EmailTemplateService {
       throw new BadRequestError("templates must be a non-empty array");
     }
 
-    const validTypes = new Set<"offer" | "rejection">(["offer", "rejection"]);
+    const validTypes = new Set<"offered" | "rejected">(["offered", "rejected"]);
 
     for (let i = 0; i < templates.length; i++) {
       const t = templates[i];
-      if (!validTypes.has(t.type as "offer" | "rejection")) {
-        throw new BadRequestError(`templates[${i}].type must be offer or rejection`);
+      if (!validTypes.has(t.type as "offered" | "rejected")) {
+        throw new BadRequestError(`templates[${i}].type must be offered or rejected`);
       }
-      if (t.type === "offer" && !t.groupId?.trim()) {
-        throw new BadRequestError(`templates[${i}].groupId is required for offer templates`);
+      if (t.type === "offered" && !t.groupId?.trim()) {
+        throw new BadRequestError(`templates[${i}].groupId is required for offered templates`);
       }
       if (typeof t.subject !== "string") throw new BadRequestError(`templates[${i}].subject must be a string`);
       if (typeof t.body !== "string") throw new BadRequestError(`templates[${i}].body must be a string`);

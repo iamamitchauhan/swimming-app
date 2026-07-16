@@ -267,3 +267,73 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /clubs/state:
+    get:
+      tags: [Clubs]
+      summary: Get club overview stats
+      description: |
+        Returns aggregate statistics for the authenticated user's club dashboard.
+
+        Counts are computed as follows:
+        - **memberCount**: Users with `status: "active"` belonging to the club.
+        - **coachCount**: Users with role `coach` and non-suspended status.
+        - **tryoutCount**: All tryouts belonging to the club (any status).
+        - **activeTryoutCount**: Tryouts with computed status "open" (not draft,
+          not completed, not in-progress) — uses date-based computation.
+        - **registeredSwimmerCount**: Distinct swimmers with non-cancelled registrations
+          across the club's tryouts.
+        - **pendingRegistrationCount**: Registrations with status "registered"
+          across the club's tryouts.
+        - **waitlistCount**: Total waitlist entries across the club's tryouts.
+
+        **admin** and **coach** roles only.
+      operationId: getClubState
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Club state retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          club: { $ref: "#/components/schemas/Club" }
+                          memberCount:
+                            type: integer
+                            description: Active users in the club.
+                            example: 12
+                          coachCount:
+                            type: integer
+                            description: Non-suspended coaches in the club.
+                            example: 3
+                          tryoutCount:
+                            type: integer
+                            description: Total tryouts (all statuses).
+                            example: 8
+                          activeTryoutCount:
+                            type: integer
+                            description: Tryouts with computed status "open".
+                            example: 2
+                          registeredSwimmerCount:
+                            type: integer
+                            description: Distinct swimmers with non-cancelled registrations.
+                            example: 45
+                          pendingRegistrationCount:
+                            type: integer
+                            description: Registrations with status "registered".
+                            example: 30
+                          waitlistCount:
+                            type: integer
+                            description: Total waitlist entries across club tryouts.
+                            example: 7
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"

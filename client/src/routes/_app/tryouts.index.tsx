@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuthStore } from "@/lib/auth.store";
 import { PageShell } from "@/components/page-shell";
 import { SegmentBadges } from "@/components/swimmer-tryout/SegmentBadges";
 import { Button } from "@/components/ui/button";
@@ -223,9 +224,11 @@ export default function TryoutsList() {
               className="w-lg"
               debounceMs={400}
             />
-            <Button onClick={() => navigate("/tryouts/new")}>
-              <Plus className="h-4 w-4 mr-1.5" /> New tryout
-            </Button>
+            {useAuthStore((s) => s.user?.role) === "admin" && (
+              <Button onClick={() => navigate("/tryouts/new")}>
+                <Plus className="h-4 w-4 mr-1.5" /> New tryout
+              </Button>
+            )}
           </div>
         </div>
       </div>

@@ -667,8 +667,20 @@ export class TryoutController {
       const tryout = await this.service.getById(id, req.user?.clubId ?? "");
       const segmentMap = new Map((tryout.segments || []).map((s: any) => [s.id || s.name, s.name]));
 
+      const groupIds = registrations
+        .map((r: any) => r.coachRecommendation)
+        .filter((gid: any) => gid && String(gid).trim() && mongoose.Types.ObjectId.isValid(gid));
+      const groups =
+        groupIds.length > 0
+          ? await GroupModel.find({ _id: { $in: groupIds } })
+              .lean()
+              .exec()
+          : [];
+      const groupNameMap = new Map<string, string>(groups.map((g) => [g._id.toString(), g.name]));
+
       const data = registrations.map((r: any) => {
         const swimmer = r.swimmerId as any;
+        const groupId = r.coachRecommendation ? String(r.coachRecommendation) : "";
         return {
           registration_id: r._id.toString(),
           swimmer_name: swimmer ? `${swimmer.firstName} ${swimmer.lastName}` : "Unknown",
@@ -685,6 +697,8 @@ export class TryoutController {
             })(),
           status: r.status,
           detailed_scores: r.detailedScores || {},
+          coach_recommendation: groupId || null,
+          coach_recommendation_name: groupId ? (groupNameMap.get(groupId) ?? null) : null,
         };
       });
 
@@ -717,7 +731,7 @@ export class TryoutController {
       const user = users[0];
 
       if (user) {
-        const emailType = status === "offered" ? "offer" : "rejection";
+        const emailType = status === "offered" ? "offered" : "rejected";
         let groupId: string | null = null;
         if (status === "offered" && updated.coachRecommendation && mongoose.Types.ObjectId.isValid(updated.coachRecommendation)) {
           groupId = updated.coachRecommendation;

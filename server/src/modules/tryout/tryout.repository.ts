@@ -478,9 +478,21 @@ export class TryoutRepository {
     registeredFamilies: number;
     participatingClubs: number;
   }> {
-    const [openTryoutsResult, slotsResult, familiesResult, clubsResult] = await Promise.all([
-      TryoutModel.countDocuments({ status: "open" }).exec(),
+    const [statsResult, familiesResult] = await Promise.all([
       TryoutModel.aggregate([
+        {
+          $addFields: {
+            status: {
+              $cond: [
+                { $eq: ["$status", "draft"] },
+                "draft",
+                {
+                  $cond: [{ $gt: [new Date(), "$endAt"] }, "completed", { $cond: [{ $gt: ["$startAt", new Date()] }, "open", "closed"] }],
+                },
+              ],
+            },
+          },
+        },
         { $match: { status: "open" } },
         {
           $lookup: {
@@ -491,31 +503,27 @@ export class TryoutRepository {
           },
         },
         {
-          $project: {
-            totalCapacity: { $sum: "$_slots.capacity" },
-            totalRegistered: { $sum: "$_slots.registeredCount" },
-          },
-        },
-        {
           $group: {
             _id: null,
-            totalCapacity: { $sum: "$totalCapacity" },
-            totalRegistered: { $sum: "$totalRegistered" },
+            openTryouts: { $sum: 1 },
+            totalCapacity: { $sum: { $sum: "$_slots.capacity" } },
+            totalRegistered: { $sum: { $sum: "$_slots.registeredCount" } },
+            clubIds: { $addToSet: "$clubId" },
           },
         },
       ]).exec(),
       RegistrationModel.distinct("parentId", { status: { $nin: ["cancelled"] } }).exec(),
-      TryoutModel.distinct("clubId", { status: "open" }).exec(),
     ]);
 
-    const totalCapacity = slotsResult[0]?.totalCapacity ?? 0;
-    const totalRegistered = slotsResult[0]?.totalRegistered ?? 0;
+    const stats = statsResult[0];
+    const totalCapacity = stats?.totalCapacity ?? 0;
+    const totalRegistered = stats?.totalRegistered ?? 0;
 
     return {
-      openTryouts: openTryoutsResult,
+      openTryouts: stats?.openTryouts ?? 0,
       availableSlots: Math.max(0, totalCapacity - totalRegistered),
       registeredFamilies: familiesResult.length,
-      participatingClubs: clubsResult.length,
+      participatingClubs: stats?.clubIds?.length ?? 0,
     };
   }
 }

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, Loader2, XCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup } from "@/hooks/use-groups";
 import { useAuthStore } from "@/lib/auth.store";
 import type { Group } from "@/lib/api/groups.api";
@@ -109,13 +110,25 @@ export default function GroupsPage() {
 
   return (
     <PageShell title="Groups">
-      <div className="flex justify-end pb-4">
-        {isAdmin && (
-          <Button onClick={() => setIsAddOpen(true)}>
-            <Plus className="h-4 w-4 mr-1.5" /> Add new group
-          </Button>
-        )}
-      </div>
+      {groups && groups.length > 0 && (
+        <div className="flex justify-end pb-4">
+          {isAdmin && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={() => setIsAddOpen(true)}>
+                    <Plus className="h-4 w-4 mr-1.5" /> Add new group
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  Set up your group/team levels. Coaches will recommend swimmers into these groups
+                  after evaluations are complete.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+      )}
 
       <div className="bg-card rounded-xl border border-border">
         {isLoading && (
@@ -133,7 +146,31 @@ export default function GroupsPage() {
           </div>
         )}
 
-        {!isLoading && !isError && (
+        {!isLoading && !isError && groups && groups.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center gap-4">
+            <p className="text-sm text-muted-foreground max-w-md">
+              Set up your group/team levels. Coaches will recommend swimmers into these groups after
+              evaluations are complete.
+            </p>
+            {isAdmin && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={() => setIsAddOpen(true)}>
+                      <Plus className="h-4 w-4 mr-1.5" /> Add new group
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Set up your group/team levels. Coaches will recommend swimmers into these groups
+                    after evaluations are complete.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        )}
+
+        {!isLoading && !isError && groups && groups.length > 0 && (
           <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 overflow-hidden">
             <Table>
               <TableHeader className="bg-gray-900 text-xs uppercase tracking-wide">
@@ -146,17 +183,7 @@ export default function GroupsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {groups?.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={isAdmin ? 5 : 4}
-                      className="text-center text-muted-foreground py-10 align-middle"
-                    >
-                      No groups found.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {groups?.map((group) => (
+                {groups.map((group) => (
                   <TableRow key={group._id}>
                     <TableCell className="font-medium align-middle">
                       <div className="flex items-center gap-2">

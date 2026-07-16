@@ -865,6 +865,16 @@ paths:
                                 circle_swim: "yes"
                                 hand_entry: "no"
                                 legs_straight: 3
+                            coach_recommendation:
+                              type: string
+                              nullable: true
+                              description: Coach recommendation group ID assigned to this swimmer.
+                              example: "665f1a2b3c4d5e6f7a8b9c2b"
+                            coach_recommendation_name:
+                              type: string
+                              nullable: true
+                              description: Resolved group name for the coach recommendation.
+                              example: "Advanced Squad"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":

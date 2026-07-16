@@ -12,6 +12,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1088.0",
     "@types/multer": "^2.1.0",
     "@types/nodemailer": "^8.0.0",
     "bcrypt": "^5.1.1",

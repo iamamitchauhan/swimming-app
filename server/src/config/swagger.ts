@@ -342,7 +342,7 @@ const options: swaggerJsdoc.Options = {
             _id: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
             clubId: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
             groupId: { type: "string", nullable: true, example: "platinum" },
-            type: { type: "string", enum: ["offer", "rejection"], example: "offer" },
+            type: { type: "string", enum: ["offered", "rejection"], example: "offered" },
             subject: { type: "string", example: "🎉 You've been offered a spot!" },
             body: {
               type: "string",
@@ -365,7 +365,7 @@ const options: swaggerJsdoc.Options = {
                 required: ["type", "subject", "body"],
                 properties: {
                   groupId: { type: "string", nullable: true, example: "platinum" },
-                  type: { type: "string", enum: ["offer", "rejection"], example: "offer" },
+                  type: { type: "string", enum: ["offered", "rejection"], example: "offered" },
                   subject: { type: "string", example: "🎉 You've been offered a spot!" },
                   body: {
                     type: "string",
@@ -626,6 +626,7 @@ const options: swaggerJsdoc.Options = {
       { name: "Tryouts", description: "Swim tryout management for clubs and public registration" },
       { name: "Email Templates", description: "Per-group email template configuration" },
       { name: "Groups", description: "Club group management" },
+      { name: "Public", description: "Public endpoints for the landing page (no auth required)" },
     ],
   },
   apis: ["./src/docs/**/*.yaml"],

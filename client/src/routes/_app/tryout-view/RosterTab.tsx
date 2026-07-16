@@ -249,10 +249,11 @@ export function RosterTab({ tryoutId }: Props) {
     }
   }
 
-  const segmentLabel =
-    tryout?.segments?.find(
-      (s) => (s as any).id === rosterParams.segmentId || s.name === rosterParams.segmentId,
-    )?.name ?? (rosterParams.segmentId ? rosterParams.segmentId : "All segments");
+  const segmentLabel = !rosterParams.segmentId
+    ? "All segments"
+    : (tryout?.segments?.find(
+        (s) => (s as any).id === rosterParams.segmentId || s.name === rosterParams.segmentId,
+      )?.name ?? rosterParams.segmentId);
 
   const statusLabel = rosterParams.status
     ? rosterParams.status.charAt(0).toUpperCase() + rosterParams.status.slice(1)

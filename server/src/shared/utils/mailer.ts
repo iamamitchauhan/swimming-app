@@ -1,19 +1,25 @@
-import nodemailer, { Transporter } from "nodemailer";
+import nodemailer from "nodemailer";
+import type { Options as SESOptions } from "nodemailer/lib/ses-transport";
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { config } from "../../config/env";
 import logger from "./logger";
 
 // ─── Transporter (singleton) ─────────────────────────────────────────────────
 
-let _transporter: Transporter | null = null;
+let _transporter: nodemailer.Transporter | null = null;
 
-function getTransporter(): Transporter {
+function getTransporter(): nodemailer.Transporter {
   if (!_transporter) {
-    _transporter = nodemailer.createTransport({
-      host: config.SMTP_HOST,
-      port: config.SMTP_PORT,
-      secure: config.SMTP_SECURE,
-      auth: config.SMTP_USERNAME && config.SMTP_PASSWORD ? { user: config.SMTP_USERNAME, pass: config.SMTP_PASSWORD } : undefined,
+    const sesv2 = new SESv2Client({
+      region: config.AWS_REGION,
+      credentials: {
+        accessKeyId: config.AWS_ACCESS_KEY_ID,
+        secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
+      },
     });
+    _transporter = nodemailer.createTransport({
+      SES: { sesClient: sesv2, SendEmailCommand },
+    } as SESOptions);
   }
   return _transporter;
 }
@@ -31,7 +37,7 @@ interface MailOptions {
 
 export async function sendMail(options: MailOptions): Promise<void> {
   const transporter = getTransporter();
-  const from = `"${config.SMTP_FROM_NAME}" <${config.SMTP_FROM_EMAIL}>`;
+  const from = `"${config.SES_FROM_NAME}" <${config.SES_FROM_EMAIL}>`;
 
   try {
     const info = await transporter.sendMail({

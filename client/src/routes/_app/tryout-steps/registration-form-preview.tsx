@@ -139,7 +139,7 @@ export function RegistrationFormPreview({ selectedQuestions }: Props) {
                 return (
                   <Field key={idx} label={q.label} required={q.required}>
                     <SwimTimeField
-                      unitOptions={(q.meta?.unitOptions as string[]) ?? ["yards", "meters"]}
+                      unitOptions={(q.meta?.unitOptions as string[]) ?? ["SCY", "SCM", "LCM"]}
                       disabled
                     />
                   </Field>

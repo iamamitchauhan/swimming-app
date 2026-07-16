@@ -30,7 +30,7 @@ function parseSwimTime(value: string, defaultUnit: string) {
 
 function buildSwimTimeValue(minutes: string, seconds: string, ms: string, unit: string) {
   const hasAny = minutes || seconds || ms;
-  if (!hasAny) return "";
+  if (!hasAny) return unit ? `0:00.00 ${unit}` : "";
   const m = minutes || "0";
   const s = seconds || "00";
   const paddedMs = ms || "00";
@@ -47,10 +47,10 @@ interface SwimTimeFieldProps {
 export function SwimTimeField({
   value = "",
   onChange,
-  unitOptions = ["yards", "meters"],
+  unitOptions = ["SCY", "SCM", "LCM"],
   disabled = false,
 }: SwimTimeFieldProps) {
-  const defaultUnit = unitOptions[0] ?? "yards";
+  const defaultUnit = unitOptions[0] ?? "SCY";
   const { minutes, seconds, ms, unit } = parseSwimTime(value, defaultUnit);
 
   function update(next: Partial<{ minutes: string; seconds: string; ms: string; unit: string }>) {
@@ -120,18 +120,18 @@ export function SwimTimeField({
           </SelectContent>
         </Select>
       </div>
-      <select
-        value={unit}
-        disabled={disabled}
-        onChange={(e) => update({ unit: e.target.value })}
-        className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:text-muted-foreground"
-      >
-        {unitOptions.map((u) => (
-          <option key={u} value={u}>
-            {u}
-          </option>
-        ))}
-      </select>
+      <Select value={unit} onValueChange={(v) => update({ unit: v })} disabled={disabled}>
+        <SelectTrigger className="w-24 h-9 px-2 text-sm ml-3">
+          <SelectValue placeholder="unit">{unit || null}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {unitOptions.map((u) => (
+            <SelectItem key={u} value={u}>
+              {u}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

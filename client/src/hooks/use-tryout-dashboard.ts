@@ -161,6 +161,7 @@ export function useSaveScore(tryoutId: string) {
 
     // On success, silently invalidate in background (no loading flicker)
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tryouts", tryoutId, "leaderboard"] });
       toast.success("Saved.", { id: "score-toast-success" });
     },
   });

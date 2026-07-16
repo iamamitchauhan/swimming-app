@@ -2,7 +2,7 @@ import { apiClient, api } from "./client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type EmailTemplateType = "offer" | "rejection";
+export type EmailTemplateType = "offered" | "rejected";
 
 export interface EmailTemplate {
   _id: string;

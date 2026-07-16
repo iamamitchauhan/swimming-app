@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { useTryoutLeaderboard, useSendDecision } from "@/hooks/use-tryout-dashboard";
+import { CheckCircle2, ChevronDown, Loader2, XCircle } from "lucide-react";
+import { useTryoutLeaderboard, useSendDecision, useSaveScore } from "@/hooks/use-tryout-dashboard";
+import { useGroups } from "@/hooks/use-groups";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -21,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { LeaderboardEntry } from "@/lib/api/tryouts.api";
+import type { LeaderboardEntry, Registration } from "@/lib/api/tryouts.api";
 import { calculateDetailedScoreTotal } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth.store";
 
@@ -220,6 +229,24 @@ export function LeaderboardTab({ tryoutId }: Props) {
                         <div className="text-[10px] text-gray-400 uppercase tracking-wider">
                           Score
                         </div>
+                        {l.coach_recommendation_name && (
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {l.coach_recommendation_name}
+                          </div>
+                        )}
+                        {canManageCoaches && (
+                          <div className="mt-1">
+                            <CoachRecommendationSelect
+                              tryoutId={tryoutId}
+                              regId={l.registration_id}
+                              value={
+                                l.coach_recommendation === REJECTED_VALUE
+                                  ? undefined
+                                  : (l.coach_recommendation ?? null)
+                              }
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
@@ -242,6 +269,9 @@ export function LeaderboardTab({ tryoutId }: Props) {
                       <TableHead>Swimmer</TableHead>
                       <TableHead className="w-24 max-w-24 text-center">Yes / No</TableHead>
                       <TableHead className="w-20 max-w-20 text-center">Score</TableHead>
+                      <TableHead className="w-52 max-w-52 text-center whitespace-nowrap">
+                        Coach Recommendation
+                      </TableHead>
                       <TableHead className="w-24 max-w-24 text-center">Status</TableHead>
                       <TableHead className="w-36 max-w-36 text-right">Actions</TableHead>
                     </TableRow>
@@ -272,6 +302,23 @@ export function LeaderboardTab({ tryoutId }: Props) {
                           <div className="text-xl font-bold text-gray-900">
                             {calculateDetailedScoreTotal(l.detailed_scores) ?? "—"}
                           </div>
+                        </TableCell>
+                        <TableCell className="text-center px-4 py-3 w-52 max-w-52">
+                          {canManageCoaches ? (
+                            <CoachRecommendationSelect
+                              tryoutId={tryoutId}
+                              regId={l.registration_id}
+                              value={
+                                l.coach_recommendation === REJECTED_VALUE
+                                  ? undefined
+                                  : (l.coach_recommendation ?? null)
+                              }
+                            />
+                          ) : (
+                            <span className="text-sm text-gray-700">
+                              {l.coach_recommendation_name || "—"}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-center px-4 py-3 w-24 max-w-24">
                           <StatusBadge status={l.status} />
@@ -329,5 +376,114 @@ export function LeaderboardTab({ tryoutId }: Props) {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+// ─── Coach Recommendation Dropdown ─────────────────────────────────────────────
+
+const REJECTED_VALUE = "__rejected__";
+
+function CoachRecommendationSelect({
+  tryoutId,
+  regId,
+  value,
+}: {
+  tryoutId: string;
+  regId: string;
+  value: string | undefined | null;
+}) {
+  const saveScore = useSaveScore(tryoutId);
+  const { data: groups, isLoading } = useGroups();
+
+  const selectedGroup = groups?.find((g) => g._id === value);
+
+  const isRejected = value === undefined;
+  const dotColor = value ? (selectedGroup?.color ?? "#9ca3af") : isRejected ? "#ef4444" : "#d1d5db";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          disabled={isLoading}
+          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition cursor-pointer hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 border-gray-200"
+        >
+          {isLoading ? (
+            <Loader2 className="inline h-3 w-3 animate-spin" />
+          ) : (
+            <>
+              {value !== null && (
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: dotColor }}
+                  aria-hidden="true"
+                />
+              )}
+              {isRejected ? "Reject" : (selectedGroup?.name ?? "Select")}
+              <ChevronDown className="inline h-3 w-3 ml-1 -mr-0.5" />
+            </>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          Assign group
+        </DropdownMenuLabel>
+        {groups?.map((group) => (
+          <DropdownMenuItem
+            key={group._id}
+            onClick={() => {
+              saveScore.mutate({
+                regId,
+                edits: { coach_recommendation: group._id } as Partial<Registration>,
+              });
+            }}
+            className={`cursor-pointer flex items-center gap-2 ${value === group._id ? "font-bold" : ""}`}
+          >
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: group.color || "#e5e7eb" }}
+              aria-hidden="true"
+            />
+            {group.name}
+          </DropdownMenuItem>
+        ))}
+        {groups && groups.length > 0 && <DropdownMenuSeparator />}
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          No group recommended
+        </DropdownMenuLabel>
+        <DropdownMenuItem
+          onClick={() => {
+            saveScore.mutate({
+              regId,
+              edits: { coach_recommendation: REJECTED_VALUE } as Partial<Registration>,
+            });
+          }}
+          className={`cursor-pointer flex items-center gap-2 ${isRejected ? "font-bold" : ""}`}
+        >
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: "#ef4444" }}
+            aria-hidden="true"
+          />
+          Reject
+        </DropdownMenuItem>
+        {(value !== null || isRejected) && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => {
+                saveScore.mutate({
+                  regId,
+                  edits: { coach_recommendation: null } as Partial<Registration>,
+                });
+              }}
+              className="cursor-pointer text-gray-400"
+            >
+              Clear
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

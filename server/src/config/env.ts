@@ -18,20 +18,11 @@ const envSchema = z.object({
     .default("7d"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   CORS_ORIGIN: z.string().min(1, "CORS_ORIGIN is required").default("http://localhost:3000"),
-  SMTP_HOST: z.string().default("smtp.mailtrap.io"),
-  SMTP_PORT: z
-    .string()
-    .default("587")
-    .transform((v) => parseInt(v, 10))
-    .pipe(z.number().positive()),
-  SMTP_SECURE: z
-    .string()
-    .default("false")
-    .transform((v) => v === "true"),
-  SMTP_USERNAME: z.string().default(""),
-  SMTP_PASSWORD: z.string().default(""),
-  SMTP_FROM_NAME: z.string().default("Swimming App"),
-  SMTP_FROM_EMAIL: z.string().email().default("noreply@swimmingapp.com"),
+  AWS_REGION: z.string().default("us-east-1"),
+  AWS_ACCESS_KEY_ID: z.string().min(1, "AWS_ACCESS_KEY_ID is required"),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY is required"),
+  SES_FROM_NAME: z.string().default("Swimming App"),
+  SES_FROM_EMAIL: z.string().email().default("support.swimtryout@mail.feteboard.ai"),
   APP_BASE_URL: z.string().url("APP_BASE_URL must be a valid URL").default("http://localhost:3001"),
   CLIENT_BASE_URL: z.string().url("CLIENT_BASE_URL must be a valid URL").default("http://localhost:5002"),
   LANDING_BASE_URL: z.string().url("LANDING_BASE_URL must be a valid URL").default("http://localhost:5001"),
