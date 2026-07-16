@@ -5,6 +5,7 @@ import { ConflictError, NotFoundError, BadRequestError } from "../../shared/erro
 import { sendWaitlistConfirmationEmail, sendSlotAvailableEmail } from "../../shared/utils/mailer";
 import { config } from "../../config/env";
 import { UserModel } from "../../models/user.model";
+import { ClubModel } from "../../models/club.model";
 import logger from "../../shared/utils/logger";
 
 export class WaitlistService {
@@ -58,12 +59,20 @@ export class WaitlistService {
       }
     }
 
-    // 5. Send confirmation email (fire-and-forget)
+    // 5. Fetch club name
+    let clubName = "";
+    if (tryout.clubId) {
+      const club = await ClubModel.findById(tryout.clubId).lean().exec();
+      if (club) clubName = club.name;
+    }
+
+    // 6. Send confirmation email (fire-and-forget)
     sendWaitlistConfirmationEmail({
       to: parentEmail,
       parentName,
       swimmerName: `${swimmerFirstName} ${swimmerLastName}`.trim(),
       tryoutName: tryout.name ?? "",
+      clubName,
     }).catch((err: unknown) => logger.error({ err }, "waitlist.confirmation.email.failed"));
 
     logger.info({ tryoutId, parentEmail, waitlistPosition }, "waitlist.joined");
@@ -106,6 +115,13 @@ export class WaitlistService {
     const tryoutName = tryout?.name ?? "";
     const signupLink = `${config.LANDING_BASE_URL}/tryouts/${tryoutId}`;
 
+    // Fetch club name
+    let clubName = "";
+    if (tryout?.clubId) {
+      const club = await ClubModel.findById(tryout.clubId).lean().exec();
+      if (club) clubName = club.name;
+    }
+
     console.info("entries => ", entries);
 
     const notifiedAt = new Date();
@@ -127,6 +143,7 @@ export class WaitlistService {
           swimmerName: `${entry.swimmerFirstName} ${entry.swimmerLastName}`.trim(),
           tryoutName,
           signupLink: `${signupLink}?q=${entry._id}`,
+          clubName,
         }).catch((err) => logger.error({ err: err as Error, to: parentEmail }, "waitlist.slot.available.email.failed"));
       }),
     );

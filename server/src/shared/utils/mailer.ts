@@ -997,6 +997,7 @@ export async function sendWaitlistConfirmationEmail(opts: {
   parentName: string;
   swimmerName: string;
   tryoutName: string;
+  clubName: string;
 }): Promise<void> {
   const html = `
   <!DOCTYPE html>
@@ -1046,7 +1047,7 @@ export async function sendWaitlistConfirmationEmail(opts: {
 
                   <p style="font-size:16px;line-height:24px;margin-bottom:0;">
                     Best,<br/>
-                    <strong>SwimTryout Team</strong>
+                    ${opts.clubName}
                   </p>
                 </td>
               </tr>
@@ -1082,6 +1083,7 @@ export async function sendSlotAvailableEmail(opts: {
   swimmerName: string;
   tryoutName: string;
   signupLink: string;
+  clubName: string;
 }): Promise<void> {
   const html = `
   <!DOCTYPE html>
@@ -1153,7 +1155,7 @@ export async function sendSlotAvailableEmail(opts: {
 
                   <p style="font-size:16px;line-height:24px;margin-bottom:0;">
                     Best,<br/>
-                    <strong>SwimTryout Team</strong>
+                    ${opts.clubName}
                   </p>
                 </td>
               </tr>
