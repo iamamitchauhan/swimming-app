@@ -778,7 +778,33 @@ export async function sendRegistrationOffer(opts: {
   await sendMail({
     to: opts.to,
     subject: `Congratulations — Team Spot Offered`,
-    html: `<div style=" margin:30px 0; padding:24px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; text-align:center; " > <p style="margin:0;font-size:14px;color:#6b7280;"> Accepted Swimmer </p> <p style=" margin:10px 0 0; font-size:24px; font-weight:700; color:#15803d; " > ${opts.swimmerName} </p> </div> <p style="font-size:15px;line-height:24px;"> Dear ${opts.parentName}, </p> <p style="font-size:15px;line-height:24px;"> We are excited to share that <strong>${opts.swimmerName}</strong> has been offered a spot on our swim team following their tryout evaluation. </p> <p style="font-size:15px;line-height:24px;"> Our coaching team was impressed by <strong>${opts.swimmerName}</strong>'s skills, effort, and potential, and we look forward to welcoming them to the team. </p> <!-- Tryout Details --> <div style=" margin:32px 0; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; overflow:hidden; " > <div style=" background:#dbeafe; padding:14px 20px; font-size:18px; font-weight:700; color:#1e40af; " > 📋 Tryout Details </div> <table width="100%" cellpadding="0" cellspacing="0"> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; width:35%; " > Swimmer </td> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; " > ${opts.swimmerName} </td> </tr> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; " > Tryout </td> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; " > ${opts.tryoutName} </td> </tr> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; " > Date </td> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; " > ${opts.sessionDate} </td> </tr> <tr> <td style=" padding:14px 20px; font-weight:600; " > Location </td> <td style=" padding:14px 20px; " > ${opts.location} </td> </tr> </table> </div> <!-- Next Steps --> <div style=" margin:24px 0; padding:20px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; " > <p style="margin:0 0 12px;font-weight:700;color:#1d4ed8;"> What's Next? </p> <p style="margin:0;font-size:14px;line-height:22px;"> You will receive another email shortly with a link to complete the team registration process. </p> <p style="margin:12px 0 0;font-size:14px;line-height:22px;"> That email will include important details such as practice schedule, start date, team information, and next steps to get started. </p> </div> <p style="font-size:15px;line-height:24px;"> We are excited to support <strong>${opts.swimmerName}</strong>'s continued growth, confidence, and success in swimming. </p> <p style=" font-size:18px; line-height:28px; font-weight:700; color:#15803d; text-align:center; margin:30px 0; " > Welcome to the team! </p> <p style="font-size:15px;line-height:24px;margin-top:30px;"> Best regards,<br /> ${opts.clubName} </p>`,
+    html: `<p style="font-size:15px;line-height:24px;"> Hi ${opts.parentName}, </p>
+<p style="font-size:15px;line-height:24px;"> We are excited to share that <strong>${opts.swimmerName}</strong> has been offered a spot on our swim team following their tryout evaluation. </p>
+<p style="font-size:15px;line-height:24px;"> Our coaching team was impressed by <strong>${opts.swimmerName}</strong>'s skills, effort, and potential, and we look forward to welcoming them to the team. </p> <!-- Tryout Details -->
+<div style=" margin:32px 0; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; overflow:hidden; ">
+    <div style=" background:#dbeafe; padding:14px 20px; font-size:18px; font-weight:700; color:#1e40af; "> 📋 Tryout Details </div>
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; "> Tryout </td>
+            <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; "> ${opts.tryoutName} </td>
+        </tr>
+        <tr>
+            <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; "> Date </td>
+            <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; "> ${opts.sessionDate} </td>
+        </tr>
+        <tr>
+            <td style=" padding:14px 20px; font-weight:600; "> Location </td>
+            <td style=" padding:14px 20px; "> ${opts.location} </td>
+        </tr>
+    </table>
+</div> <!-- Next Steps -->
+<div style=" margin:24px 0; padding:20px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; ">
+    <p style="margin:0 0 12px;font-weight:700;color:#1d4ed8;"> What's Next? </p>
+    <p style="margin:0;font-size:14px;line-height:22px;"> You will receive another email shortly with a link to complete the team registration process. </p>
+    <p style="margin:12px 0 0;font-size:14px;line-height:22px;"> That email will include important details such as practice schedule, start date, team information, and next steps to get started. </p>
+</div>
+<p style="font-size:15px;line-height:24px;"> We are excited to support <strong>${opts.swimmerName}</strong>'s continued growth, confidence, and success in swimming. </p>
+<p style="font-size:15px;line-height:24px;margin-top:30px;"> Best regards,<br /> ${opts.clubName} </p>`,
   });
 }
 
@@ -793,7 +819,7 @@ export async function sendRegistrationReject(opts: {
   await sendMail({
     to: opts.to,
     subject: `Tryout Result for ${opts.swimmerName} | ${config.SES_FROM_NAME}`,
-    html: `<div style="text-align:center;margin-bottom:24px;"> <div style="font-size:56px;">📋</div> </div> <h2 style="margin-top:0;text-align:center;color:#111827;"> Tryout Evaluation Update </h2> <p style="font-size:15px;line-height:24px;"> Dear ${opts.parentName}, </p> <div style=" margin:30px 0; padding:24px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; text-align:center; " > <p style="margin:0;font-size:14px;color:#6b7280;"> Swimmer </p> <p style=" margin:10px 0 0; font-size:24px; font-weight:700; color:#b91c1c; " > ${opts.swimmerName} </p> </div> <p style="font-size:15px;line-height:24px;"> Thank you for bringing <strong>${opts.swimmerName}</strong> to our swimming tryout and for giving our coaching team the opportunity to meet them. </p> <p style="font-size:15px;line-height:24px;"> After reviewing the tryout evaluation, we have decided not to offer a team spot at this time. </p> <p style="font-size:15px;line-height:24px;"> We appreciate the effort and enthusiasm <strong>${opts.swimmerName}</strong> showed during the evaluation. Swimming development takes time, and we encourage <strong>${opts.swimmerName}</strong> to continue practicing and building their skills. </p> <!-- Tryout Details --> <div style=" margin:32px 0; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; " > <div style=" background:#f3f4f6; padding:14px 20px; font-size:18px; font-weight:700; color:#111827; " > 📋 Tryout Details </div> <table width="100%" cellpadding="0" cellspacing="0"> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; font-weight:600; width:35%; " > Swimmer </td> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; " > ${opts.swimmerName} </td> </tr> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; font-weight:600; " > Tryout </td> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; " > ${opts.tryoutName} </td> </tr> <tr> <td style=" padding:14px 20px; font-weight:600; " > Date </td> <td style=" padding:14px 20px; " > ${opts.sessionDate} </td> </tr> </table> </div> <div style=" margin:24px 0; padding:18px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; " > <p style="margin:0;font-size:14px;line-height:22px;"> We wish <strong>${opts.swimmerName}</strong> continued success in their swimming journey and hope to see them again in the future. </p> </div> <p style="font-size:15px;line-height:24px;margin-top:30px;"> Best regards,<br /> ${opts.clubName} </p>`,
+    html: `<div style="text-align:center;margin-bottom:24px;"> <div style="font-size:56px;">📋</div> </div> <h2 style="margin-top:0;text-align:center;color:#111827;"> Tryout Evaluation Update </h2> <p style="font-size:15px;line-height:24px;"> Hi ${opts.parentName}, </p> <div style=" margin:30px 0; padding:24px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; text-align:center; " > <p style="margin:0;font-size:14px;color:#6b7280;"> Swimmer </p> <p style=" margin:10px 0 0; font-size:24px; font-weight:700; color:#b91c1c; " > ${opts.swimmerName} </p> </div> <p style="font-size:15px;line-height:24px;"> Thank you for bringing <strong>${opts.swimmerName}</strong> to our swimming tryout and for giving our coaching team the opportunity to meet them. </p> <p style="font-size:15px;line-height:24px;"> After reviewing the tryout evaluation, we have decided not to offer a team spot at this time. </p> <p style="font-size:15px;line-height:24px;"> We appreciate the effort and enthusiasm <strong>${opts.swimmerName}</strong> showed during the evaluation. Swimming development takes time, and we encourage <strong>${opts.swimmerName}</strong> to continue practicing and building their skills. </p> <!-- Tryout Details --> <div style=" margin:32px 0; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; " > <div style=" background:#f3f4f6; padding:14px 20px; font-size:18px; font-weight:700; color:#111827; " > 📋 Tryout Details </div> <table width="100%" cellpadding="0" cellspacing="0"> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; font-weight:600; width:35%; " > Swimmer </td> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; " > ${opts.swimmerName} </td> </tr> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; font-weight:600; " > Tryout </td> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; " > ${opts.tryoutName} </td> </tr> <tr> <td style=" padding:14px 20px; font-weight:600; " > Date </td> <td style=" padding:14px 20px; " > ${opts.sessionDate} </td> </tr> </table> </div> <div style=" margin:24px 0; padding:18px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; " > <p style="margin:0;font-size:14px;line-height:22px;"> We wish <strong>${opts.swimmerName}</strong> continued success in their swimming journey and hope to see them again in the future. </p> </div> <p style="font-size:15px;line-height:24px;margin-top:30px;"> Best regards,<br /> ${opts.clubName} </p>`,
   });
 }
 
@@ -933,7 +959,7 @@ export async function sendRegistrationReceivedEmail(opts: {
 
       <p style="margin-top:28px;font-size:15px;line-height:24px;">
         Best regards,<br>
-        <strong>${opts.clubName}</strong>
+        ${opts.clubName}
       </p>
 
     </td>
@@ -966,7 +992,12 @@ export async function sendRegistrationReceivedEmail(opts: {
 
 // ─── Waitlist confirmation email ─────────────────────────────────────────────
 
-export async function sendWaitlistConfirmationEmail(opts: { to: string; swimmerName: string; tryoutName: string }): Promise<void> {
+export async function sendWaitlistConfirmationEmail(opts: {
+  to: string;
+  parentName: string;
+  swimmerName: string;
+  tryoutName: string;
+}): Promise<void> {
   const html = `
   <!DOCTYPE html>
   <html>
@@ -992,7 +1023,7 @@ export async function sendWaitlistConfirmationEmail(opts: { to: string; swimmerN
                 <td style="padding:40px 30px;color:#374151;">
                   <h2 style="margin-top:0;color:#111827;">You're on the Waitlist!</h2>
 
-                  <p style="font-size:16px;line-height:24px;">Hello Parent/Guardian,</p>
+                  <p style="font-size:16px;line-height:24px;">Hi ${opts.parentName},</p>
 
                   <p style="font-size:16px;line-height:24px;">
                     Thank you for registering for the SwimTryout for your swimmer <strong>${opts.swimmerName}</strong>.
@@ -1045,7 +1076,13 @@ export async function sendWaitlistConfirmationEmail(opts: { to: string; swimmerN
 
 // ─── Slot available email ─────────────────────────────────────────────────────
 
-export async function sendSlotAvailableEmail(opts: { to: string; swimmerName: string; tryoutName: string; signupLink: string }): Promise<void> {
+export async function sendSlotAvailableEmail(opts: {
+  to: string;
+  parentName: string;
+  swimmerName: string;
+  tryoutName: string;
+  signupLink: string;
+}): Promise<void> {
   const html = `
   <!DOCTYPE html>
   <html>
@@ -1071,7 +1108,7 @@ export async function sendSlotAvailableEmail(opts: { to: string; swimmerName: st
                 <td style="padding:40px 30px;color:#374151;">
                   <h2 style="margin-top:0;color:#111827;">A Spot is Available!</h2>
 
-                  <p style="font-size:16px;line-height:24px;">Hello Parent/Guardian,</p>
+                  <p style="font-size:16px;line-height:24px;">Hi ${opts.parentName},</p>
 
                   <p style="font-size:16px;line-height:24px;">
                     Good news! A spot has become available for your swimmer <strong>${opts.swimmerName}</strong>'s
