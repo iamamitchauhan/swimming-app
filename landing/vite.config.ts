@@ -9,6 +9,21 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
+  css: {
+    transformer: "lightningcss",
+    lightningcss: {
+      targets: {
+        safari: (15 << 16) | (0 << 8),
+        chrome: 100 << 16,
+        firefox: 100 << 16,
+        ios: (15 << 16) | (0 << 8),
+      },
+    },
+  },
+  build: {
+    target: "es2020",
+    cssMinify: "lightningcss",
+  },
   server: {
     host: "::",
     port: 5001,
