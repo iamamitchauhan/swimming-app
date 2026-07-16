@@ -16,7 +16,7 @@ export default defineConfig({
         safari: (15 << 16) | (0 << 8),
         chrome: 100 << 16,
         firefox: 100 << 16,
-        ios: (15 << 16) | (0 << 8),
+        ios_saf: (15 << 16) | (0 << 8),
       },
     },
   },
