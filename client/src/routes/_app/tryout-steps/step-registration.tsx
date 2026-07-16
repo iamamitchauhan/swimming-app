@@ -345,9 +345,9 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-352px)] overflow-hidden">
+    <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-352px)] overflow-visible lg:overflow-hidden">
       {/* ── Left: Question Library ─────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col overflow-visible lg:overflow-hidden">
         <div className="shrink-0 pb-4">
           <h3 className="text-sm font-semibold text-foreground">Question Library</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -371,7 +371,7 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
         )}
 
         {!isLoading && !isError && categories && (
-          <div className="flex-1 overflow-auto min-h-0 space-y-3 pr-1">
+          <div className="flex-1 overflow-visible lg:overflow-auto min-h-0 space-y-3 pr-1">
             {categories.length === 0 ? (
               <div className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
                 <BookOpen className="h-7 w-7 opacity-40" />
@@ -393,10 +393,10 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
       </div>
 
       {/* ── Divider ────────────────────────────────────────────────────────── */}
-      <div className="w-px bg-border shrink-0" />
+      <div className="hidden lg:block w-px bg-border shrink-0" />
 
       {/* ── Right: Form Preview ────────────────────────────────────────────── */}
-      <div className="w-[550px] shrink-0 flex flex-col overflow-hidden">
+      <div className="w-full lg:w-[550px] shrink-0 flex flex-col overflow-visible lg:overflow-hidden">
         <div className="shrink-0 flex items-center gap-2 pb-4">
           <Eye className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold text-foreground">Form Preview</h3>
@@ -407,7 +407,7 @@ export function StepRegistration({ selectedQuestions, onChange }: Props) {
           )}
         </div>
 
-        <div className="flex-1 overflow-auto min-h-0 space-y-4">
+        <div className="flex-1 overflow-visible lg:overflow-auto min-h-0 space-y-4">
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
               Registration Form

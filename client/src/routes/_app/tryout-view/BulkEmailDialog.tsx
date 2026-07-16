@@ -54,8 +54,8 @@ export function BulkEmailDialog({ open, action, count, onClose, onSend }: BulkEm
       );
       setBody(
         action === "offered"
-          ? "Dear {{parent_name}},\n\nCongratulations! We are pleased to offer {{swimmer_name}} a spot in the tryout at {{club_name}}.\n\nPlease reply to confirm your acceptance.\n\nBest regards,\nThe Team"
-          : "Dear {{parent_name}},\n\nThank you for having {{swimmer_name}} participate. After careful review, we are unable to offer a spot at this time.\n\nBest regards,\nThe Team",
+          ? "Hi {{parent_name}},\n\nCongratulations! We are pleased to offer {{swimmer_name}} a spot in the tryout at {{club_name}}.\n\nPlease reply to confirm your acceptance.\n\nBest regards,\nThe Team"
+          : "Hi {{parent_name}},\n\nThank you for having {{swimmer_name}} participate. After careful review, we are unable to offer a spot at this time.\n\nBest regards,\nThe Team",
       );
     }
   }, [open, action]);

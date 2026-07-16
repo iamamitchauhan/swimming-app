@@ -346,7 +346,7 @@ const options: swaggerJsdoc.Options = {
             subject: { type: "string", example: "🎉 You've been offered a spot!" },
             body: {
               type: "string",
-              example: "Dear {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!",
+              example: "Hi {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!",
             },
             createdBy: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
             updatedBy: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
@@ -369,7 +369,7 @@ const options: swaggerJsdoc.Options = {
                   subject: { type: "string", example: "🎉 You've been offered a spot!" },
                   body: {
                     type: "string",
-                    example: "Dear {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!",
+                    example: "Hi {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!",
                   },
                 },
               },

@@ -4,6 +4,7 @@ import { JoinWaitlistInput } from "./waitlist.validation";
 import { ConflictError, NotFoundError, BadRequestError } from "../../shared/errors/domain.errors";
 import { sendWaitlistConfirmationEmail, sendSlotAvailableEmail } from "../../shared/utils/mailer";
 import { config } from "../../config/env";
+import { UserModel } from "../../models/user.model";
 import logger from "../../shared/utils/logger";
 
 export class WaitlistService {
@@ -46,14 +47,26 @@ export class WaitlistService {
       joinedAt: new Date(),
     });
 
-    // 4. Send confirmation email (fire-and-forget)
+    // 4. Fetch parent details from User model
+    let parentEmail = guardianEmail;
+    let parentName = guardianName;
+    if (parentId) {
+      const parent = await UserModel.findById(parentId).lean().exec();
+      if (parent) {
+        parentEmail = parent.email;
+        parentName = `${parent.firstName} ${parent.lastName}`.trim();
+      }
+    }
+
+    // 5. Send confirmation email (fire-and-forget)
     sendWaitlistConfirmationEmail({
-      to: guardianEmail,
+      to: parentEmail,
+      parentName,
       swimmerName: `${swimmerFirstName} ${swimmerLastName}`.trim(),
       tryoutName: tryout.name ?? "",
     }).catch((err: unknown) => logger.error({ err }, "waitlist.confirmation.email.failed"));
 
-    logger.info({ tryoutId, guardianEmail, waitlistPosition }, "waitlist.joined");
+    logger.info({ tryoutId, parentEmail, waitlistPosition }, "waitlist.joined");
 
     return entry;
   }
@@ -98,14 +111,24 @@ export class WaitlistService {
     const notifiedAt = new Date();
 
     await Promise.allSettled(
-      entries.map((entry) =>
-        sendSlotAvailableEmail({
-          to: entry.guardianEmail,
+      entries.map(async (entry) => {
+        let parentEmail = entry.guardianEmail;
+        let parentName = entry.guardianName;
+        if (entry.parentId) {
+          const parent = await UserModel.findById(entry.parentId).lean().exec();
+          if (parent) {
+            parentEmail = parent.email;
+            parentName = `${parent.firstName} ${parent.lastName}`.trim();
+          }
+        }
+        return sendSlotAvailableEmail({
+          to: parentEmail,
+          parentName,
           swimmerName: `${entry.swimmerFirstName} ${entry.swimmerLastName}`.trim(),
           tryoutName,
           signupLink: `${signupLink}?q=${entry._id}`,
-        }).catch((err) => logger.error({ err: err as Error, to: entry.guardianEmail }, "waitlist.slot.available.email.failed")),
-      ),
+        }).catch((err) => logger.error({ err: err as Error, to: parentEmail }, "waitlist.slot.available.email.failed"));
+      }),
     );
 
     await this.repo.markAllNotified(tryoutId, notifiedAt);

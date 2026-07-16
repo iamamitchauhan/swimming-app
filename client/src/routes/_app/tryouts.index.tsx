@@ -395,7 +395,7 @@ export default function TryoutsList() {
               <Table>
                 <TableHeader className="bg-gray-900 text-xs uppercase tracking-wide">
                   <TableRow>
-                    <TableHead className="sticky left-0 bg-gray-900 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.2)]">
+                    <TableHead className="sticky left-0 bg-gray-900 z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.2)] min-w-[250px]">
                       <div className="flex items-center " onClick={() => handleSortField("name")}>
                         Title <SortIcon field="name" />
                       </div>
@@ -429,7 +429,7 @@ export default function TryoutsList() {
                   ) : (
                     tryouts.map((t) => (
                       <TableRow key={t._id}>
-                        <TableCell className="sticky left-0 bg-white z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                        <TableCell className="sticky left-0 bg-white z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] min-w-[250px]">
                           <Link
                             to={`/tryouts/view/${t._id}`}
                             className="font-medium hover:text-primary"

@@ -18,19 +18,19 @@ const COMM_TEMPLATES: Record<
     label: "Offered",
     sub: "Send an offer",
     subject: "🎉 You've been offered a spot!",
-    body: "Dear {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!\n\nPlease confirm your acceptance within 48 hours.\n\nBest,\nThe Coaching Team",
+    body: "Hi {{parent_name}},\n\nWe are thrilled to offer {{swimmer_name}} a spot on our team!\n\nPlease confirm your acceptance within 48 hours.\n\nBest,\nThe Coaching Team",
   },
   rejected: {
     label: "Rejected",
     sub: "Decline politely",
     subject: "Tryout Result for {{swimmer_name}}",
-    body: "Dear {{parent_name}},\n\nThank you for participating in our tryout. After careful evaluation, we are unable to offer {{swimmer_name}} a spot at this time.\n\nWe encourage you to try again next season.\n\nBest regards,\nThe Coaching Team",
+    body: "Hi {{parent_name}},\n\nThank you for participating in our tryout. After careful evaluation, we are unable to offer {{swimmer_name}} a spot at this time.\n\nWe encourage you to try again next season.\n\nBest regards,\nThe Coaching Team",
   },
   // reminder: {
   //   label: "Reminder",
   //   sub: "Upcoming tryout",
   //   subject: "Reminder: Tryout coming up!",
-  //   body: "Dear {parent_name},\n\nThis is a friendly reminder that {swimmer_name}'s tryout is coming up soon.\n\nPlease make sure to arrive 15 minutes early.\n\nSee you there!\nThe Coaching Team",
+  //   body: "Hi {parent_name},\n\nThis is a friendly reminder that {swimmer_name}'s tryout is coming up soon.\n\nPlease make sure to arrive 15 minutes early.\n\nSee you there!\nThe Coaching Team",
   // },
   // general: {
   //   label: "General",

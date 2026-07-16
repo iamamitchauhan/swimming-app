@@ -994,7 +994,7 @@ paths:
                 body:
                   type: string
                   description: Email body template
-                  example: "Dear {{parent_name}}, we are pleased to offer {{swimmer_name}} a spot in the {{group_name}} group."
+                  example: "Hi {{parent_name}}, we are pleased to offer {{swimmer_name}} a spot in the {{group_name}} group."
                 action:
                   type: string
                   enum: [offered, rejected]

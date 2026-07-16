@@ -26,26 +26,25 @@ export function StepSegments({ register, control, errors, segmentsField }: Props
   return (
     <div className="space-y-6">
       {segmentsField.fields.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center py-10 gap-3 text-muted-foreground">
+        <div className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center py-10 gap-3 text-muted-foreground px-4">
           <Users2 className="h-8 w-8 opacity-40" />
           <p className="text-sm">No segments yet. Add one to get started.</p>
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                segmentsField.append({
-                  name: "",
-                  minAge: "5" as unknown as number,
-                  maxAge: "10" as unknown as number,
-                  level: LEVELS[0],
-                })
-              }
-            >
-              <Plus className="h-4 w-4 mr-1.5" /> Add segment
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={() =>
+              segmentsField.append({
+                name: "",
+                minAge: "5" as unknown as number,
+                maxAge: "10" as unknown as number,
+                level: LEVELS[0],
+              })
+            }
+          >
+            <Plus className="h-4 w-4 mr-1.5" /> Add segment
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -54,6 +53,7 @@ export function StepSegments({ register, control, errors, segmentsField }: Props
               type="button"
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
               onClick={() =>
                 segmentsField.append({
                   name: "",
@@ -83,7 +83,7 @@ export function StepSegments({ register, control, errors, segmentsField }: Props
                   </Button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-4">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                   <FieldGroup label="Segment Name" required error={segErr?.name?.message}>
                     <Input
                       placeholder="e.g. U12 Competitive"
