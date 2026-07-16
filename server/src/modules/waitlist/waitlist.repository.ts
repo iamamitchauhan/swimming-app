@@ -1,4 +1,5 @@
 import { WaitlistModel } from "../../models/waitlist.model";
+import { ConflictError } from "../../shared/errors/domain.errors";
 
 // ─── Plain domain type ────────────────────────────────────────────────────────
 
@@ -51,8 +52,15 @@ export class WaitlistRepository {
   }
 
   async create(data: Omit<PlainWaitlistEntry, "_id" | "createdAt" | "updatedAt">): Promise<PlainWaitlistEntry> {
-    const doc = await new WaitlistModel(data).save();
-    return doc.toObject() as unknown as PlainWaitlistEntry;
+    try {
+      const doc = await new WaitlistModel(data).save();
+      return doc.toObject() as unknown as PlainWaitlistEntry;
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "code" in err && (err as { code: number }).code === 11000) {
+        throw new ConflictError("This email is already on the waitlist for this tryout.");
+      }
+      throw err;
+    }
   }
 
   async findByTryout(tryoutId: string): Promise<PlainWaitlistEntry[]> {

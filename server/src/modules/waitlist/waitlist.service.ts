@@ -25,15 +25,15 @@ export class WaitlistService {
     if (!tryout) throw new NotFoundError("Tryout not found");
     if (tryout.status !== "open") throw new BadRequestError("Tryout is not open for registration");
 
-    // // 2. Prevent duplicate waitlist entries
-    // const existing = await this.repo.findByTryoutAndEmail(tryoutId, guardianEmail);
-    // if (existing) throw new ConflictError("This email is already on the waitlist for this tryout.");
+    // 2. Prevent duplicate waitlist entries
+    const existing = await this.repo.findByTryoutAndEmail(tryoutId, guardianEmail);
+    if (existing) throw new ConflictError("This email is already on the waitlist for this tryout.");
 
-    // 2. Auto-assign position
+    // 3. Auto-assign position
     const maxPosition = await this.repo.getMaxPosition(tryoutId);
     const waitlistPosition = maxPosition + 1;
 
-    // 3. Save entry
+    // 4. Save entry
     const entry = await this.repo.create({
       tryoutId,
       parentId: parentId ?? undefined,
