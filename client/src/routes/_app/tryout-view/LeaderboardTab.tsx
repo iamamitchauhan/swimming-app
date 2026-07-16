@@ -205,11 +205,7 @@ export function LeaderboardTab({ tryoutId }: Props) {
                   <div key={l.registration_id} className="px-4 py-3 space-y-2">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <span
-                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                            RANK_COLORS[i] || "bg-gray-100 text-gray-500"
-                          }`}
-                        >
+                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-gray-100 text-gray-500">
                           {i + 1}
                         </span>
                         <div className="min-w-0">
@@ -223,7 +219,7 @@ export function LeaderboardTab({ tryoutId }: Props) {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-xl font-bold text-gray-900">
+                        <div className="text-[16px] font-bold text-gray-900">
                           {calculateDetailedScoreTotal(l.detailed_scores) ?? "—"}
                         </div>
                         <div className="text-[10px] text-gray-400 uppercase tracking-wider">
@@ -280,11 +276,7 @@ export function LeaderboardTab({ tryoutId }: Props) {
                     {group.map((l, i) => (
                       <TableRow key={l.registration_id} className="hover:bg-gray-50 transition">
                         <TableCell className="text-center px-4 py-3 w-12">
-                          <span
-                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mx-auto ${
-                              RANK_COLORS[i] || "bg-gray-100 text-gray-500"
-                            }`}
-                          >
+                          <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mx-auto bg-gray-100 text-gray-500">
                             {i + 1}
                           </span>
                         </TableCell>
@@ -299,7 +291,7 @@ export function LeaderboardTab({ tryoutId }: Props) {
                           <YesNoBadge l={l} />
                         </TableCell>
                         <TableCell className="text-center px-4 py-3 w-20 max-w-20">
-                          <div className="text-xl font-bold text-gray-900">
+                          <div className="text-[16px] font-bold text-gray-900">
                             {calculateDetailedScoreTotal(l.detailed_scores) ?? "—"}
                           </div>
                         </TableCell>

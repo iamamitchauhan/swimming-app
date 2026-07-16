@@ -15,6 +15,9 @@ import {
   CircleAlert,
   LucideClockFading,
   Clock10,
+  User,
+  UserCog,
+  WatchIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -309,13 +312,48 @@ function AdminDash() {
 
   return (
     <div className="space-y-6">
+      {/* Club info */}
+      <Card title="Club Information">
+        {stateLoading || !clubState ? (
+          <div className="flex items-center justify-center h-24">
+            <Clock10 className="animate-spin h-5 w-5 text-muted-foreground" />
+          </div>
+        ) : (
+          <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+            <div>
+              <dt className="text-muted-foreground">Club name</dt>
+              <dd className="font-medium mt-0.5">{clubState.club.name || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Region</dt>
+              <dd className="font-medium mt-0.5">{clubState.club.region || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Address</dt>
+              <dd className="font-medium mt-0.5">{clubState.club.address || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Phone</dt>
+              <dd className="font-medium mt-0.5">{clubState.club.phone || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Club size</dt>
+              <dd className="font-medium mt-0.5 capitalize">{clubState.club.clubSize || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Registered At</dt>
+              <dd className="font-medium mt-0.5">
+                {clubState.club.createdAt
+                  ? format(new Date(clubState.club.createdAt), "MMM d, yyyy")
+                  : "—"}
+              </dd>
+            </div>
+          </dl>
+        )}
+      </Card>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Active Members"
-          value={clubState?.memberCount || 0}
-          hint={`${clubState?.coachCount || 0} coaches`}
-          icon={Users}
-        />
+        <StatCard label="Active Members" value={clubState?.memberCount || 0} icon={Users} />
         <StatCard
           label="Active Tryouts"
           value={clubState?.activeTryoutCount || 0}
@@ -323,76 +361,23 @@ function AdminDash() {
           accent="aqua"
         />
         <StatCard
-          label="Total Tryouts"
-          value={clubState?.tryoutCount || 0}
-          icon={Trophy}
+          label="Total Registration"
+          value={clubState?.registeredSwimmerCount || 0}
+          icon={User}
           accent="success"
         />
         <StatCard
-          label="Registered Swimmers"
-          value={clubState?.registeredSwimmerCount || 0}
-          hint={`${clubState?.waitlistCount || 0} on waitlist`}
-          icon={GraduationCap}
+          label="Total Waitlist"
+          value={clubState?.waitlistCount || 0}
           accent="warning"
+          icon={Clock10}
         />
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card title="Club Summary">
-          {stateLoading || !clubState ? (
-            <div className="flex items-center justify-center h-24">
-              <Clock10 className="animate-spin h-5 w-5 text-muted-foreground" />
-            </div>
-          ) : (
-            <dl className="space-y-3 text-sm">
-              {[
-                ["Club name", clubState.club.name || "—"],
-                ["Active members", `${clubState.memberCount} users`],
-                ["Coaches", String(clubState.coachCount)],
-                ["Total tryouts", String(clubState.tryoutCount)],
-                ["Active tryouts", String(clubState.activeTryoutCount)],
-                ["Registered swimmers", String(clubState.registeredSwimmerCount)],
-                ["Waitlist count", String(clubState.waitlistCount)],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between">
-                  <dt className="text-muted-foreground">{k}</dt>
-                  <dd className="font-medium">{v}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-        </Card>
-        <Card
-          title="Recent 3 Users"
-          // action={
-          //   isAdmin ? (
-          //     <Button
-          //       variant="link"
-          //       size="sm"
-          //       className="h-auto p-0 text-xs font-medium text-primary"
-          //       onClick={() => navigate("/users")}
-          //     >
-          //       View all →
-          //     </Button>
-          //   ) : undefined
-          // }
-        >
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card title="Recent 3 Users">
           <RecentUsers />
         </Card>
-        <Card
-          title="Upcoming Tryouts"
-          // action={
-          //   isAdmin ? (
-          //     <Button
-          //       variant="link"
-          //       size="sm"
-          //       className="h-auto p-0 text-xs font-medium text-primary"
-          //       onClick={() => navigate("/tryouts")}
-          //     >
-          //       View all →
-          //     </Button>
-          //   ) : undefined
-          // }
-        >
+        <Card title="Upcoming Tryouts">
           <TryoutList />
         </Card>
       </div>
