@@ -24,7 +24,7 @@ const COMM_TEMPLATES: Record<
     label: "Rejected",
     sub: "Decline politely",
     subject: "Tryout Result for {{swimmer_name}}",
-    body: "Hi {{parent_name}},\n\nThank you for participating in our tryout. After careful evaluation, we are unable to offer {{swimmer_name}} a spot at this time.\n\nWe encourage you to try again next season.\n\nBest regards,\nThe Coaching Team",
+    body: "Hi {{parent_name}},\n\nThank you for participating in our tryout. After careful evaluation, we are unable to offer {{swimmer_name}} a spot at this time.\n\nWe encourage you to try again next season.\n\nBest regards,\nJustin Bilgri\nBilgrij@friscoisd.org\n{{club_name}}",
   },
   // reminder: {
   //   label: "Reminder",

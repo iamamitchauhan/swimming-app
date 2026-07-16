@@ -13,6 +13,8 @@ We are thrilled to have {{swimmer_name}} join {{club_name}}! I will be sending a
 Congratulations again—we look forward to seeing {{swimmer_name}} on deck!
 
 Best regards,
+Justin Bilgri
+Bilgrij@friscoisd.org
 {{club_name}}`,
   },
 } as const;
