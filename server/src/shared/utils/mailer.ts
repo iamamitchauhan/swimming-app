@@ -1049,6 +1049,8 @@ export async function sendWaitlistConfirmationEmail(opts: {
 
                   <p style="font-size:16px;line-height:24px;margin-bottom:0;">
                     Best,<br/>
+                    Justin Bilgri<br/>
+                    Bilgrij@friscoisd.org<br/>
                     ${opts.clubName}
                   </p>
                 </td>
@@ -1157,6 +1159,8 @@ export async function sendSlotAvailableEmail(opts: {
 
                   <p style="font-size:16px;line-height:24px;margin-bottom:0;">
                     Best,<br/>
+                    Justin Bilgri<br/>
+                    Bilgrij@friscoisd.org<br/>
                     ${opts.clubName}
                   </p>
                 </td>
