@@ -175,6 +175,20 @@ export class TryoutController {
   constructor(private readonly service: TryoutService) {}
 
   /**
+   * Returns the segment IDs assigned to a coach, or null if the user is not a coach
+   * or has no assignment for this tryout.
+   * Admin/super_admin always get null (meaning: no filtering).
+   */
+  private getCoachSegmentIds(tryout: any, user: { id: string; role: string } | undefined): string[] | null {
+    if (!user) return null;
+    if (user.role === "admin" || user.role === "super_admin") return null;
+    if (user.role !== "coach") return null;
+    const assignment = (tryout.coachAssignments || []).find((a: any) => a.coachId === user.id);
+    if (!assignment) return [];
+    return assignment.segmentIds || [];
+  }
+
+  /**
    * GET /tryouts
    * Lists tryouts for the authenticated user's club with pagination, filters, and sort.
    */
@@ -582,6 +596,88 @@ export class TryoutController {
 
       // ── Enrich with session/slot/segment data ─────────────────────────────
       const tryout = await this.service.getById(id, req.user?.clubId ?? "");
+
+      // ── Coach segment scoping ───────────────────────────────────────────
+      const coachSegmentIds = this.getCoachSegmentIds(tryout, req.user);
+      if (coachSegmentIds !== null) {
+        if (coachSegmentIds.length === 0) {
+          sendSuccess(res, { registrations: [], total: 0, page, limit, totalPages: 0 }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+          return;
+        }
+        // If the coach selected a specific segment, verify it's within their assigned segments
+        if (segmentIdFilter && !coachSegmentIds.includes(segmentIdFilter)) {
+          sendSuccess(res, { registrations: [], total: 0, page, limit, totalPages: 0 }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+          return;
+        }
+        // Only apply $in filter when no specific segment is selected
+        if (!segmentIdFilter) {
+          mongoFilter["segmentId"] = { $in: coachSegmentIds };
+        }
+        // Re-count with the updated filter
+        const scopedTotal = await RegistrationModel.countDocuments(mongoFilter);
+        const scopedRegistrations = await RegistrationModel.find(mongoFilter)
+          .sort(mongoSort)
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .populate("swimmerId", "firstName lastName birthDate")
+          .populate("parentId", "firstName lastName email")
+          .populate("slotId", "startTime endTime")
+          .lean()
+          .exec();
+        const sessions = await sessionRepo.findByTryout(id);
+        const slots = await slotRepo.findByTryout(id);
+        const segmentMap = new Map((tryout.segments || []).map((s: any) => [s.id || s.name, s.name]));
+        const sessionMap = new Map(sessions.map((s) => [s._id.toString(), s]));
+        const slotMap = new Map(slots.map((s) => [s._id.toString(), s]));
+        const scopedData = scopedRegistrations.map((r: any) => {
+          const swimmer = r.swimmerId as any;
+          const parent = r.parentId as any;
+          const swimmerSlot = r.slotId as any;
+          const session = sessionMap.get(r.sessionId?.toString?.() ?? r.sessionId);
+          const slot = slotMap.get(r.slotId?.toString?.() ?? r.slotId);
+          const scores = r.scores || {};
+          return {
+            id: r._id.toString(),
+            swimmer_name: swimmer ? `${swimmer.firstName} ${swimmer.lastName}` : "Unknown",
+            swimmer_age: r.swimmerDetails?.ageOnTryoutDay ?? 0,
+            segment_name: segmentMap.get(r.segmentId) || r.segmentId,
+            segment_id: r.segmentId,
+            session_date: session?.date,
+            slot_start: slot?.startTime,
+            slot_end: slot?.endTime,
+            slot_id: r.slotId,
+            startTime: swimmerSlot?.startTime,
+            endTime: swimmerSlot?.endTime,
+            usa_membership_id: r.swimmerDetails?.usaMembershipId || null,
+            usa_verification_status: r.usaVerificationStatus || "pending",
+            club_name: r.swimmerDetails?.clubName || null,
+            guardian_name: r.swimmerDetails?.guardianName || null,
+            guardian_email: r.swimmerDetails?.guardianEmail || null,
+            parent_name: parent ? `${parent.firstName} ${parent.lastName}` : null,
+            parent_email: parent?.email || null,
+            status: r.status,
+            notes: r.notes || null,
+            waitlist_position: r.waitlistPosition,
+            safety_entry_exit: scores.safetyEntryExit ?? null,
+            safety_float: scores.safetyFloat ?? null,
+            freestyle: scores.freestyle ?? null,
+            backstroke: scores.backstroke ?? null,
+            breaststroke: scores.breaststroke ?? null,
+            butterfly: scores.butterfly ?? null,
+            total_score: scores.totalScore ?? null,
+            detailed_scores: r.detailedScores || {},
+            coach_recommendation: r.coachRecommendation || null,
+          };
+        });
+        sendSuccess(
+          res,
+          { registrations: scopedData, total: scopedTotal, page, limit, totalPages: Math.ceil(scopedTotal / limit) },
+          MESSAGES.SUCCESS,
+          HTTP_STATUS.OK,
+        );
+        return;
+      }
+
       const sessions = await sessionRepo.findByTryout(id);
       const slots = await slotRepo.findByTryout(id);
 
@@ -665,9 +761,21 @@ export class TryoutController {
         .exec();
 
       const tryout = await this.service.getById(id, req.user?.clubId ?? "");
+
+      // ── Coach segment scoping ───────────────────────────────────────────
+      const coachSegmentIds = this.getCoachSegmentIds(tryout, req.user);
+      let scopedRegistrations = registrations;
+      if (coachSegmentIds !== null) {
+        if (coachSegmentIds.length === 0) {
+          sendSuccess(res, [], MESSAGES.SUCCESS, HTTP_STATUS.OK);
+          return;
+        }
+        scopedRegistrations = registrations.filter((r: any) => coachSegmentIds.includes(r.segmentId));
+      }
+
       const segmentMap = new Map((tryout.segments || []).map((s: any) => [s.id || s.name, s.name]));
 
-      const groupIds = registrations
+      const groupIds = scopedRegistrations
         .map((r: any) => r.coachRecommendation)
         .filter((gid: any) => gid && String(gid).trim() && mongoose.Types.ObjectId.isValid(gid));
       const groups =
@@ -678,7 +786,7 @@ export class TryoutController {
           : [];
       const groupNameMap = new Map<string, string>(groups.map((g) => [g._id.toString(), g.name]));
 
-      const data = registrations.map((r: any) => {
+      const data = scopedRegistrations.map((r: any) => {
         const swimmer = r.swimmerId as any;
         const groupId = r.coachRecommendation ? String(r.coachRecommendation) : "";
         return {
@@ -1114,7 +1222,7 @@ export class TryoutController {
       if (!clubId) return next(new ForbiddenError("No club associated with user"));
 
       // Verify tryout belongs to user's club
-      await this.service.getById(id, clubId);
+      const tryout = await this.service.getById(id, clubId);
 
       const registration = await RegistrationModel.findOne({ _id: regId, tryoutId: id })
         .populate("swimmerId", "firstName lastName birthDate")
@@ -1123,6 +1231,12 @@ export class TryoutController {
         .exec();
 
       if (!registration) throw new NotFoundError("Registration not found");
+
+      // ── Coach segment scoping ───────────────────────────────────────────
+      const coachSegmentIds = this.getCoachSegmentIds(tryout, req.user);
+      if (coachSegmentIds !== null && !coachSegmentIds.includes(registration.segmentId)) {
+        throw new ForbiddenError("You do not have access to this registration");
+      }
 
       sendSuccess(res, { registration }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
