@@ -129,6 +129,7 @@ paths:
       description: |
         Approves a club that is in `pending_review` status.
         Sends an approval notification email to the club owner.
+        Creates a default "rejected" email template (groupId: null) for tryout results.
         **super_admin only.**
       operationId: approveClub
       security:

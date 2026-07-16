@@ -8,6 +8,8 @@ import { RegistrationModel } from "../../models/registration.model";
 import { WaitlistModel } from "../../models/waitlist.model";
 import { USER_ROLES } from "../../shared/constants/roles";
 import { sendClubApproved, sendClubRejected } from "../../shared/utils/mailer";
+import { EmailTemplateModel } from "../../models/email-template.model";
+import { DEFAULT_EMAIL_TEMPLATES } from "../../shared/constants/email-templates";
 import logger from "../../shared/utils/logger";
 
 export class ClubService {
@@ -66,6 +68,26 @@ export class ClubService {
     if (owner?.email) {
       await sendClubApproved({ to: owner.email, clubName: club.name });
     }
+
+    await EmailTemplateModel.findOneAndUpdate(
+      { clubId: new mongoose.Types.ObjectId(clubId), groupId: null, type: "rejected" },
+      {
+        $set: {
+          subject: DEFAULT_EMAIL_TEMPLATES.rejected.subject,
+          body: DEFAULT_EMAIL_TEMPLATES.rejected.body,
+          updatedBy: new mongoose.Types.ObjectId(club.ownerId.toString()),
+        },
+        $setOnInsert: {
+          clubId: new mongoose.Types.ObjectId(clubId),
+          groupId: null,
+          type: "rejected",
+          createdBy: new mongoose.Types.ObjectId(club.ownerId.toString()),
+        },
+      },
+      { upsert: true, new: true },
+    )
+      .lean()
+      .exec();
 
     logger.info({ clubId, ownerId: club.ownerId }, "club.approved");
     return approved;

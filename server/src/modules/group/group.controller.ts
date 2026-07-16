@@ -5,17 +5,7 @@ import { MESSAGES } from "../../shared/constants/messages";
 import { sendSuccess } from "../../shared/utils/response";
 import { BadRequestError } from "../../shared/errors/domain.errors";
 import { EmailTemplateService } from "../email-template/email-template.service";
-
-const subject = `Congratulations – Team Offer for {{swimmer_name}}`;
-const body = `
-      Dear {{parent_name}},
-      
-I am pleased to officially offer {{swimmer_name}} a spot on the {{group_name}} following a great performance at the {{tryout_name}} tryout.
-We are thrilled to have {{swimmer_name}} join {{club_name}}! I will be sending a separate email shortly with all the registration details, practice schedules, and next steps.
-Congratulations again—we look forward to seeing {{swimmer_name}} on deck!
-
-Best regards,
-{{club_name}}`;
+import { DEFAULT_EMAIL_TEMPLATES } from "../../shared/constants/email-templates";
 
 export class GroupController {
   constructor(
@@ -64,8 +54,8 @@ export class GroupController {
       await this.emailTemplateService.create({
         clubId,
         userId,
-        subject,
-        body,
+        subject: DEFAULT_EMAIL_TEMPLATES.offered.subject,
+        body: DEFAULT_EMAIL_TEMPLATES.offered.body,
         groupId: data._id.toString(),
         type: "offered",
         createdBy: userId,
@@ -91,8 +81,8 @@ export class GroupController {
         await this.emailTemplateService.create({
           clubId,
           userId,
-          subject,
-          body,
+          subject: DEFAULT_EMAIL_TEMPLATES.offered.subject,
+          body: DEFAULT_EMAIL_TEMPLATES.offered.body,
           groupId,
           type: "offered",
           createdBy: userId,

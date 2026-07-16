@@ -9,7 +9,7 @@ const options: swaggerJsdoc.Options = {
       version: "1.0.0",
       description:
         "REST API for the Swimming Club Management Platform. Covers authentication (email-verify + OTP), club onboarding, approval workflow, invitation system, and user management.",
-      contact: { name: "Swimming App Team" },
+      contact: { name: "Swimtryout Team" },
     },
     servers: [
       {
