@@ -249,6 +249,28 @@ export function RosterTab({ tryoutId }: Props) {
     }
   }
 
+  // ── Coach segment scoping ──────────────────────────────────────────────────
+  const isCoach = user?.role === "coach";
+  const coachAssignment = isCoach
+    ? tryout?.coachAssignments?.find((a) => a.coachId === user?.id)
+    : undefined;
+  const visibleSegments = isCoach
+    ? (tryout?.segments ?? []).filter((seg) =>
+        (coachAssignment?.segmentIds ?? []).includes((seg as any).id ?? seg.name),
+      )
+    : (tryout?.segments ?? []);
+
+  // Auto-select the single assigned segment for coaches
+  useEffect(() => {
+    if (isCoach && tryout && coachAssignment && !rosterParams.segmentId) {
+      if (visibleSegments.length === 1) {
+        const seg = visibleSegments[0];
+        onParamsChange({ segmentId: (seg as any).id ?? seg.name, page: 1 });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCoach, tryout, coachAssignment]);
+
   const segmentLabel = !rosterParams.segmentId
     ? "All segments"
     : (tryout?.segments?.find(
@@ -280,10 +302,12 @@ export function RosterTab({ tryoutId }: Props) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => onParamsChange({ segmentId: undefined, page: 1 })}>
-              All segments
-            </DropdownMenuItem>
-            {tryout?.segments?.map((seg, i) => (
+            {(!isCoach || visibleSegments.length > 1) && (
+              <DropdownMenuItem onClick={() => onParamsChange({ segmentId: undefined, page: 1 })}>
+                All segments
+              </DropdownMenuItem>
+            )}
+            {visibleSegments.map((seg, i) => (
               <DropdownMenuItem
                 key={i}
                 onClick={() => onParamsChange({ segmentId: (seg as any).id ?? seg.name, page: 1 })}

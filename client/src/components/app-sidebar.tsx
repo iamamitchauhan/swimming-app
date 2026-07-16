@@ -77,7 +77,7 @@ export function AppSidebar() {
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "—";
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarHeader className="border-b border-sidebar-border h-16 px-4 flex items-center justify-center">
         {collapsed ? (
           <div className="h-9 w-9 rounded-xl bg-linear-to-br from-primary to-aqua flex items-center justify-center">

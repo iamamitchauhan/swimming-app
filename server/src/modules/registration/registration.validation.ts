@@ -19,7 +19,7 @@ export const createRegistrationSchema = z.object({
   swimmerFirstName: z.string().min(1, "First name is required"),
   swimmerLastName: z.string().min(1, "Last name is required"),
   swimmerDob: z.string().min(1, "Date of birth is required").optional(),
-  ageOnTryoutDay: z.coerce.number().int().min(1).max(30),
+  ageOnTryoutDay: z.coerce.number().int().min(1).max(100),
 
   hasUsaMembership: z.boolean().default(false),
   usaMembershipId: z.string().optional().default(""),

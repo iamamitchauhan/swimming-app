@@ -21,9 +21,7 @@ export function ClubUnderReview({ clubName }: { clubName?: string }) {
 
         <div className="space-y-2">
           <h1 className="text-xl font-bold tracking-tight">Club Under Review</h1>
-          {clubName && (
-            <p className="text-sm font-medium text-muted-foreground">{clubName}</p>
-          )}
+          {clubName && <p className="text-sm font-medium text-muted-foreground">{clubName}</p>}
           <p className="text-sm text-muted-foreground leading-relaxed">
             Your club application has been submitted and is currently being reviewed by our team.
             You'll receive an email once it's approved — usually within 1–2 business days.
@@ -31,10 +29,13 @@ export function ClubUnderReview({ clubName }: { clubName?: string }) {
         </div>
 
         <div className="bg-muted/50 rounded-xl p-4 text-left space-y-2">
-          <p className="text-xs font-semibold text-foreground uppercase tracking-wider">What happens next?</p>
+          <p className="text-xs font-semibold text-foreground uppercase tracking-wider">
+            What happens next?
+          </p>
           <ul className="text-xs text-muted-foreground space-y-1.5">
             <li>• Our super admin reviews your club details</li>
-            <li>• You'll get an approval email to {" "}
+            <li>
+              • You'll get an approval email to{" "}
               <span className="font-medium text-foreground">your registered address</span>
             </li>
             <li>• Once approved, you'll have full access to your dashboard</li>
@@ -54,8 +55,11 @@ export function ClubUnderReview({ clubName }: { clubName?: string }) {
 
       <p className="mt-6 text-xs text-muted-foreground">
         Need help? Contact{" "}
-        <a href="mailto:support@swimmingapp.com" className="underline hover:text-foreground">
-          support@swimmingapp.com
+        <a
+          href="mailto:support.swimtryout@mail.feteboard.ai"
+          className="underline hover:text-foreground"
+        >
+          support.swimtryout@mail.feteboard.ai
         </a>
       </p>
     </div>

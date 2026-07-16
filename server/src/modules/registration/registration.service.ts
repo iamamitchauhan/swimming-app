@@ -9,6 +9,7 @@ import logger from "../../shared/utils/logger";
 import { sendRegistrationReceivedEmail } from "../../shared/utils/mailer";
 import { UserModel } from "../auth/auth.schema";
 import { WaitlistService } from "../waitlist/waitlist.service";
+import { ClubModel } from "../../models/club.model";
 
 function formatTimeWithAmPm(time: string): string {
   const [hourStr, minuteStr = "00"] = time.trim().split(":");
@@ -277,6 +278,10 @@ export class RegistrationService {
     if (!parentDetail) {
       logger.warn({ parentId, registrationId: created._id, tryoutId }, "registration.parent.not_found — email not sent; user record missing in DB");
     } else {
+      // fetch club name for dynamic email branding
+      const club = tryout.clubId ? await ClubModel.findById(tryout.clubId).lean().exec() : null;
+      const clubName = club?.name ?? "";
+
       sendRegistrationReceivedEmail({
         to: parentDetail.email,
         parentName: `${parentDetail.firstName} ${parentDetail.lastName}`.trim(),
@@ -284,6 +289,7 @@ export class RegistrationService {
         tryoutName: tryout?.name || "",
         location: tryout.location || "",
         slotLabel: `${slot.sessionDate} · ${formatTimeWithAmPm(slot.startTime)} – ${formatTimeWithAmPm(slot.endTime)}`,
+        clubName,
       });
     }
 

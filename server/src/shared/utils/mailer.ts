@@ -59,7 +59,7 @@ export async function sendMail(options: MailOptions): Promise<void> {
 export async function sendEmailVerification(opts: { to: string; verifyUrl: string }): Promise<void> {
   await sendMail({
     to: opts.to,
-    subject: "Verify Your Email Address | Swimming App",
+    subject: `Verify Your Email Address | ${config.SES_FROM_NAME}`,
     html: `
     <!DOCTYPE html>
     <html>
@@ -77,7 +77,7 @@ export async function sendEmailVerification(opts: { to: string; verifyUrl: strin
                 <tr>
                   <td align="center" style="background:#2563eb;padding:30px;">
                     <h1 style="margin:0;color:#ffffff;font-size:28px;">
-                      Swimming App
+                      ${config.SES_FROM_NAME}
                     </h1>
                   </td>
                 </tr>
@@ -86,11 +86,11 @@ export async function sendEmailVerification(opts: { to: string; verifyUrl: strin
                 <tr>
                   <td style="padding:40px 30px;color:#374151;">
                     <h2 style="margin-top:0;color:#111827;">
-                      Welcome to Swimming App!
+                      Welcome to ${config.SES_FROM_NAME}!
                     </h2>
 
                     <p style="font-size:16px;line-height:24px;">
-                      Thank you for creating an account. To complete your registration and start using Swimming App, please verify your email address.
+                      Thank you for creating an account. To complete your registration and start using ${config.SES_FROM_NAME}, please verify your email address.
                     </p>
 
                     <div style="text-align:center;margin:36px 0;">
@@ -132,7 +132,7 @@ export async function sendEmailVerification(opts: { to: string; verifyUrl: strin
                     </p>
 
                     <p style="font-size:15px;line-height:24px;margin-top:30px;">
-                      If you did not create an account with Swimming App, you can safely ignore this email.
+                      If you did not create an account with ${config.SES_FROM_NAME}, you can safely ignore this email.
                     </p>
                   </td>
                 </tr>
@@ -141,7 +141,7 @@ export async function sendEmailVerification(opts: { to: string; verifyUrl: strin
                 <tr>
                   <td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
                     <p style="margin:0;font-size:13px;color:#6b7280;">
-                      © ${new Date().getFullYear()} Swimming App. All rights reserved.
+                      © ${new Date().getFullYear()} ${config.SES_FROM_NAME}. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -159,7 +159,7 @@ export async function sendEmailVerification(opts: { to: string; verifyUrl: strin
 export async function sendOtp(opts: { to: string; otp: string }): Promise<void> {
   await sendMail({
     to: opts.to,
-    subject: `Your Login OTP: ${opts.otp} | Swimming App`,
+    subject: `Your Login OTP: ${opts.otp} | ${config.SES_FROM_NAME}`,
     html: `
     <!DOCTYPE html>
     <html>
@@ -177,7 +177,7 @@ export async function sendOtp(opts: { to: string; otp: string }): Promise<void> 
                 <tr>
                   <td align="center" style="background:#2563eb;padding:30px;">
                     <h1 style="margin:0;color:#ffffff;font-size:28px;">
-                      Swimming App
+                      ${config.SES_FROM_NAME}
                     </h1>
                   </td>
                 </tr>
@@ -227,7 +227,7 @@ export async function sendOtp(opts: { to: string; otp: string }): Promise<void> 
                 <tr>
                   <td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
                     <p style="margin:0;font-size:13px;color:#6b7280;">
-                      © ${new Date().getFullYear()} Swimming App. All rights reserved.
+                      © ${new Date().getFullYear()} ${config.SES_FROM_NAME}. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -245,7 +245,7 @@ export async function sendOtp(opts: { to: string; otp: string }): Promise<void> 
 export async function sendClubSubmittedNotification(opts: { to: string; clubName: string; dashboardUrl?: string }): Promise<void> {
   await sendMail({
     to: opts.to,
-    subject: `New Club Application: ${opts.clubName} | Swimming App`,
+    subject: `New Club Application: ${opts.clubName} | ${config.SES_FROM_NAME}`,
     html: `
     <!DOCTYPE html>
     <html>
@@ -263,7 +263,7 @@ export async function sendClubSubmittedNotification(opts: { to: string; clubName
                 <tr>
                   <td align="center" style="background:#2563eb;padding:30px;">
                     <h1 style="margin:0;color:#ffffff;font-size:28px;">
-                      Swimming App
+                      ${config.SES_FROM_NAME}
                     </h1>
                   </td>
                 </tr>
@@ -336,10 +336,10 @@ export async function sendClubSubmittedNotification(opts: { to: string; clubName
                 <tr>
                   <td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
                     <p style="margin:0;font-size:13px;color:#6b7280;">
-                      This is an automated notification from Swimming App.
+                      This is an automated notification from ${config.SES_FROM_NAME}.
                     </p>
                     <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">
-                      © ${new Date().getFullYear()} Swimming App. All rights reserved.
+                      © ${new Date().getFullYear()} ${config.SES_FROM_NAME}. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -357,7 +357,7 @@ export async function sendClubSubmittedNotification(opts: { to: string; clubName
 export async function sendClubApproved(opts: { to: string; clubName: string; loginUrl?: string }): Promise<void> {
   await sendMail({
     to: opts.to,
-    subject: `🎉 Club Approved: ${opts.clubName} | Swimming App`,
+    subject: `🎉 Club Approved: ${opts.clubName} | ${config.SES_FROM_NAME}`,
     html: `
     <!DOCTYPE html>
     <html>
@@ -375,7 +375,7 @@ export async function sendClubApproved(opts: { to: string; clubName: string; log
                 <tr>
                   <td align="center" style="background:#16a34a;padding:30px;">
                     <h1 style="margin:0;color:#ffffff;font-size:28px;">
-                      Swimming App
+                      ${config.SES_FROM_NAME}
                     </h1>
                   </td>
                 </tr>
@@ -418,7 +418,7 @@ export async function sendClubApproved(opts: { to: string; clubName: string; log
                     </div>
 
                     <p style="font-size:15px;line-height:24px;">
-                      Your club is now active on Swimming App and ready to use.
+                      Your club is now active on ${config.SES_FROM_NAME} and ready to use.
                     </p>
 
                     <p style="font-size:15px;line-height:24px;">
@@ -450,7 +450,7 @@ export async function sendClubApproved(opts: { to: string; clubName: string; log
                     }
 
                     <p style="font-size:15px;line-height:24px;margin-top:30px;">
-                      Thank you for joining Swimming App. We're excited to have your club as part of our community.
+                      Thank you for joining ${config.SES_FROM_NAME}. We're excited to have your club as part of our community.
                     </p>
                   </td>
                 </tr>
@@ -459,7 +459,7 @@ export async function sendClubApproved(opts: { to: string; clubName: string; log
                 <tr>
                   <td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
                     <p style="margin:0;font-size:13px;color:#6b7280;">
-                      © ${new Date().getFullYear()} Swimming App. All rights reserved.
+                      © ${new Date().getFullYear()} ${config.SES_FROM_NAME}. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -477,7 +477,7 @@ export async function sendClubApproved(opts: { to: string; clubName: string; log
 export async function sendClubRejected(opts: { to: string; clubName: string; reason: string; supportEmail?: string }): Promise<void> {
   await sendMail({
     to: opts.to,
-    subject: `Club Application Update: ${opts.clubName} | Swimming App`,
+    subject: `Club Application Update: ${opts.clubName} | ${config.SES_FROM_NAME}`,
     html: `
     <!DOCTYPE html>
     <html>
@@ -495,7 +495,7 @@ export async function sendClubRejected(opts: { to: string; clubName: string; rea
                 <tr>
                   <td align="center" style="background:#dc2626;padding:30px;">
                     <h1 style="margin:0;color:#ffffff;font-size:28px;">
-                      Swimming App
+                      ${config.SES_FROM_NAME}
                     </h1>
                   </td>
                 </tr>
@@ -513,7 +513,7 @@ export async function sendClubRejected(opts: { to: string; clubName: string; rea
                     </h2>
 
                     <p style="font-size:16px;line-height:24px;text-align:center;">
-                      Thank you for your interest in joining Swimming App.
+                      Thank you for your interest in joining ${config.SES_FROM_NAME}.
                     </p>
 
                     <p style="font-size:16px;line-height:24px;">
@@ -586,7 +586,7 @@ export async function sendClubRejected(opts: { to: string; clubName: string; rea
                     }
 
                     <p style="font-size:15px;line-height:24px;margin-top:30px;">
-                      We appreciate your interest in Swimming App and encourage you to apply again after addressing the concerns noted above.
+                      We appreciate your interest in ${config.SES_FROM_NAME} and encourage you to apply again after addressing the concerns noted above.
                     </p>
 
                   </td>
@@ -596,7 +596,7 @@ export async function sendClubRejected(opts: { to: string; clubName: string; rea
                 <tr>
                   <td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
                     <p style="margin:0;font-size:13px;color:#6b7280;">
-                      © ${new Date().getFullYear()} Swimming App. All rights reserved.
+                      © ${new Date().getFullYear()} ${config.SES_FROM_NAME}. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -614,7 +614,7 @@ export async function sendClubRejected(opts: { to: string; clubName: string; rea
 export async function sendInvitation(opts: { to: string; inviterName: string; clubName: string; role: string; acceptUrl: string }): Promise<void> {
   await sendMail({
     to: opts.to,
-    subject: `Invitation to Join ${opts.clubName} as ${opts.role} | Swimming App`,
+    subject: `Invitation to Join ${opts.clubName} as ${opts.role} | ${config.SES_FROM_NAME}`,
     html: `
     <!DOCTYPE html>
     <html>
@@ -632,7 +632,7 @@ export async function sendInvitation(opts: { to: string; inviterName: string; cl
                 <tr>
                   <td align="center" style="background:#2563eb;padding:30px;">
                     <h1 style="margin:0;color:#ffffff;font-size:28px;">
-                      Swimming App
+                      ${config.SES_FROM_NAME}
                     </h1>
                   </td>
                 </tr>
@@ -650,7 +650,7 @@ export async function sendInvitation(opts: { to: string; inviterName: string; cl
                     </h2>
 
                     <p style="font-size:16px;line-height:24px;text-align:center;">
-                      You have received an invitation to join a club on Swimming App.
+                      You have received an invitation to join a club on ${config.SES_FROM_NAME}.
                     </p>
 
                     <div style="
@@ -749,7 +749,7 @@ export async function sendInvitation(opts: { to: string; inviterName: string; cl
                 <tr>
                   <td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
                     <p style="margin:0;font-size:13px;color:#6b7280;">
-                      © ${new Date().getFullYear()} Swimming App. All rights reserved.
+                      © ${new Date().getFullYear()} ${config.SES_FROM_NAME}. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -773,123 +773,27 @@ export async function sendRegistrationOffer(opts: {
   sessionDate: string;
   startTime: string;
   endTime: string;
+  clubName: string;
 }) {
   await sendMail({
     to: opts.to,
     subject: `Congratulations — Team Spot Offered`,
-    html: `<div style=" margin:30px 0; padding:24px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; text-align:center; " > <p style="margin:0;font-size:14px;color:#6b7280;"> Accepted Swimmer </p> <p style=" margin:10px 0 0; font-size:24px; font-weight:700; color:#15803d; " > ${opts.swimmerName} </p> </div> <p style="font-size:15px;line-height:24px;"> Dear ${opts.parentName}, </p> <p style="font-size:15px;line-height:24px;"> We are excited to share that <strong>${opts.swimmerName}</strong> has been offered a spot on our swim team following their tryout evaluation. </p> <p style="font-size:15px;line-height:24px;"> Our coaching team was impressed by <strong>${opts.swimmerName}</strong>'s skills, effort, and potential, and we look forward to welcoming them to the team. </p> <!-- Tryout Details --> <div style=" margin:32px 0; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; overflow:hidden; " > <div style=" background:#dbeafe; padding:14px 20px; font-size:18px; font-weight:700; color:#1e40af; " > 📋 Tryout Details </div> <table width="100%" cellpadding="0" cellspacing="0"> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; width:35%; " > Swimmer </td> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; " > ${opts.swimmerName} </td> </tr> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; " > Tryout </td> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; " > ${opts.tryoutName} </td> </tr> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; " > Date </td> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; " > ${opts.sessionDate} </td> </tr> <tr> <td style=" padding:14px 20px; font-weight:600; " > Location </td> <td style=" padding:14px 20px; " > ${opts.location} </td> </tr> </table> </div> <!-- Next Steps --> <div style=" margin:24px 0; padding:20px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; " > <p style="margin:0 0 12px;font-weight:700;color:#1d4ed8;"> What's Next? </p> <p style="margin:0;font-size:14px;line-height:22px;"> You will receive another email shortly with a link to complete the team registration process. </p> <p style="margin:12px 0 0;font-size:14px;line-height:22px;"> That email will include important details such as practice schedule, start date, team information, and next steps to get started. </p> </div> <p style="font-size:15px;line-height:24px;"> We are excited to support <strong>${opts.swimmerName}</strong>'s continued growth, confidence, and success in swimming. </p> <p style=" font-size:18px; line-height:28px; font-weight:700; color:#15803d; text-align:center; margin:30px 0; " > Welcome to the team! </p> <p style="font-size:15px;line-height:24px;margin-top:30px;"> Best regards,<br /> The Coaching Team </p>`,
+    html: `<div style=" margin:30px 0; padding:24px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; text-align:center; " > <p style="margin:0;font-size:14px;color:#6b7280;"> Accepted Swimmer </p> <p style=" margin:10px 0 0; font-size:24px; font-weight:700; color:#15803d; " > ${opts.swimmerName} </p> </div> <p style="font-size:15px;line-height:24px;"> Dear ${opts.parentName}, </p> <p style="font-size:15px;line-height:24px;"> We are excited to share that <strong>${opts.swimmerName}</strong> has been offered a spot on our swim team following their tryout evaluation. </p> <p style="font-size:15px;line-height:24px;"> Our coaching team was impressed by <strong>${opts.swimmerName}</strong>'s skills, effort, and potential, and we look forward to welcoming them to the team. </p> <!-- Tryout Details --> <div style=" margin:32px 0; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; overflow:hidden; " > <div style=" background:#dbeafe; padding:14px 20px; font-size:18px; font-weight:700; color:#1e40af; " > 📋 Tryout Details </div> <table width="100%" cellpadding="0" cellspacing="0"> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; width:35%; " > Swimmer </td> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; " > ${opts.swimmerName} </td> </tr> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; " > Tryout </td> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; " > ${opts.tryoutName} </td> </tr> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; font-weight:600; " > Date </td> <td style=" padding:14px 20px; border-bottom:1px solid #dbeafe; " > ${opts.sessionDate} </td> </tr> <tr> <td style=" padding:14px 20px; font-weight:600; " > Location </td> <td style=" padding:14px 20px; " > ${opts.location} </td> </tr> </table> </div> <!-- Next Steps --> <div style=" margin:24px 0; padding:20px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; " > <p style="margin:0 0 12px;font-weight:700;color:#1d4ed8;"> What's Next? </p> <p style="margin:0;font-size:14px;line-height:22px;"> You will receive another email shortly with a link to complete the team registration process. </p> <p style="margin:12px 0 0;font-size:14px;line-height:22px;"> That email will include important details such as practice schedule, start date, team information, and next steps to get started. </p> </div> <p style="font-size:15px;line-height:24px;"> We are excited to support <strong>${opts.swimmerName}</strong>'s continued growth, confidence, and success in swimming. </p> <p style=" font-size:18px; line-height:28px; font-weight:700; color:#15803d; text-align:center; margin:30px 0; " > Welcome to the team! </p> <p style="font-size:15px;line-height:24px;margin-top:30px;"> Best regards,<br /> ${opts.clubName} </p>`,
   });
-
-  //  await sendMail({
-  //   to: opts.to,
-  //   subject: `🎉 Registration Accepted: ${opts.swimmerName} | Swimming App`,
-  //   html: `
-  //     <!DOCTYPE html>
-  //     <html>
-  //       <head>
-  //         <meta charset="UTF-8" />
-  //         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  //       </head>
-  //       <body style="margin:0;padding:0;background-color:#f4f7fb;font-family:Arial,Helvetica,sans-serif;">
-  //         <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f7fb;padding:40px 20px;">
-  //           <tr>
-  //             <td align="center">
-  //               <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-
-  //                 <!-- Header -->
-  //                 <tr>
-  //                   <td align="center" style="background:#16a34a;padding:30px;">
-  //                     <h1 style="margin:0;color:#ffffff;font-size:28px;">
-  //                       Swimming App
-  //                     </h1>
-  //                   </td>
-  //                 </tr>
-
-  //                 <!-- Content -->
-  //                 <tr>
-  //                   <td style="padding:40px 30px;color:#374151;">
-  //                     <div style="text-align:center;margin-bottom:24px;">
-  //                       <div style="font-size:56px;">🎉</div>
-  //                     </div>
-
-  //                     <h2 style="margin-top:0;text-align:center;color:#111827;">
-  //                       Congratulations!
-  //                     </h2>
-
-  //                     <p style="font-size:16px;line-height:24px;text-align:center;">
-  //                       We are excited to share some great news.
-  //                     </p>
-
-  //                     <div style="
-  //                       margin:30px 0;
-  //                       padding:24px;
-  //                       background:#f0fdf4;
-  //                       border:1px solid #bbf7d0;
-  //                       border-radius:10px;
-  //                       text-align:center;
-  //                     ">
-  //                       <p style="margin:0;font-size:14px;color:#6b7280;">
-  //                         Accepted Swimmer
-  //                       </p>
-
-  //                       <p style="
-  //                         margin:10px 0 0;
-  //                         font-size:24px;
-  //                         font-weight:700;
-  //                         color:#15803d;
-  //                       ">
-  //                         ${opts.swimmerName}
-  //                       </p>
-  //                     </div>
-
-  //                     <p style="font-size:15px;line-height:24px;">
-  //                       Dear ${opts.parentName},
-  //                     </p>
-
-  //                     <p style="font-size:15px;line-height:24px;">
-  //                       We are pleased to inform you that
-  //                       <strong>${opts.swimmerName}</strong> has been selected and offered a spot on our swimming team.
-  //                     </p>
-
-  //                     <p style="font-size:15px;line-height:24px;">
-  //                       This achievement reflects the effort, dedication, and potential demonstrated throughout the registration and evaluation process.
-  //                     </p>
-
-  //                     <p style="font-size:15px;line-height:24px;">
-  //                       We look forward to welcoming your family to the club and supporting ${opts.swimmerName}'s continued growth and success in swimming.
-  //                     </p>
-
-  //                     <p style="font-size:15px;line-height:24px;margin-top:30px;">
-  //                       Best regards,<br />
-  //                       The Coaching Team
-  //                     </p>
-  //                   </td>
-  //                 </tr>
-
-  //                 <!-- Footer -->
-  //                 <tr>
-  //                   <td style="padding:20px 30px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
-  //                     <p style="margin:0;font-size:13px;color:#6b7280;">
-  //                       © ${new Date().getFullYear()} Swimming App. All rights reserved.
-  //                     </p>
-  //                   </td>
-  //                 </tr>
-
-  //               </table>
-  //             </td>
-  //           </tr>
-  //         </table>
-  //       </body>
-  //     </html>
-  //   `,
-  // });
 }
 
-export async function sendRegistrationReject(opts: { to: string; swimmerName: string; parentName: string; tryoutName: string; sessionDate: string }) {
+export async function sendRegistrationReject(opts: {
+  to: string;
+  swimmerName: string;
+  parentName: string;
+  tryoutName: string;
+  sessionDate: string;
+  clubName: string;
+}) {
   await sendMail({
     to: opts.to,
-    subject: `Tryout Result for ${opts.swimmerName} | Swimming App`,
-    html: `<div style="text-align:center;margin-bottom:24px;"> <div style="font-size:56px;">📋</div> </div> <h2 style="margin-top:0;text-align:center;color:#111827;"> Tryout Evaluation Update </h2> <p style="font-size:15px;line-height:24px;"> Dear ${opts.parentName}, </p> <div style=" margin:30px 0; padding:24px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; text-align:center; " > <p style="margin:0;font-size:14px;color:#6b7280;"> Swimmer </p> <p style=" margin:10px 0 0; font-size:24px; font-weight:700; color:#b91c1c; " > ${opts.swimmerName} </p> </div> <p style="font-size:15px;line-height:24px;"> Thank you for bringing <strong>${opts.swimmerName}</strong> to our swimming tryout and for giving our coaching team the opportunity to meet them. </p> <p style="font-size:15px;line-height:24px;"> After reviewing the tryout evaluation, we have decided not to offer a team spot at this time. </p> <p style="font-size:15px;line-height:24px;"> We appreciate the effort and enthusiasm <strong>${opts.swimmerName}</strong> showed during the evaluation. Swimming development takes time, and we encourage <strong>${opts.swimmerName}</strong> to continue practicing and building their skills. </p> <!-- Tryout Details --> <div style=" margin:32px 0; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; " > <div style=" background:#f3f4f6; padding:14px 20px; font-size:18px; font-weight:700; color:#111827; " > 📋 Tryout Details </div> <table width="100%" cellpadding="0" cellspacing="0"> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; font-weight:600; width:35%; " > Swimmer </td> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; " > ${opts.swimmerName} </td> </tr> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; font-weight:600; " > Tryout </td> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; " > ${opts.tryoutName} </td> </tr> <tr> <td style=" padding:14px 20px; font-weight:600; " > Date </td> <td style=" padding:14px 20px; " > ${opts.sessionDate} </td> </tr> </table> </div> <div style=" margin:24px 0; padding:18px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; " > <p style="margin:0;font-size:14px;line-height:22px;"> We wish <strong>${opts.swimmerName}</strong> continued success in their swimming journey and hope to see them again in the future. </p> </div> <p style="font-size:15px;line-height:24px;margin-top:30px;"> Best regards,<br /> The Coaching Team </p>`,
+    subject: `Tryout Result for ${opts.swimmerName} | ${config.SES_FROM_NAME}`,
+    html: `<div style="text-align:center;margin-bottom:24px;"> <div style="font-size:56px;">📋</div> </div> <h2 style="margin-top:0;text-align:center;color:#111827;"> Tryout Evaluation Update </h2> <p style="font-size:15px;line-height:24px;"> Dear ${opts.parentName}, </p> <div style=" margin:30px 0; padding:24px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; text-align:center; " > <p style="margin:0;font-size:14px;color:#6b7280;"> Swimmer </p> <p style=" margin:10px 0 0; font-size:24px; font-weight:700; color:#b91c1c; " > ${opts.swimmerName} </p> </div> <p style="font-size:15px;line-height:24px;"> Thank you for bringing <strong>${opts.swimmerName}</strong> to our swimming tryout and for giving our coaching team the opportunity to meet them. </p> <p style="font-size:15px;line-height:24px;"> After reviewing the tryout evaluation, we have decided not to offer a team spot at this time. </p> <p style="font-size:15px;line-height:24px;"> We appreciate the effort and enthusiasm <strong>${opts.swimmerName}</strong> showed during the evaluation. Swimming development takes time, and we encourage <strong>${opts.swimmerName}</strong> to continue practicing and building their skills. </p> <!-- Tryout Details --> <div style=" margin:32px 0; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; " > <div style=" background:#f3f4f6; padding:14px 20px; font-size:18px; font-weight:700; color:#111827; " > 📋 Tryout Details </div> <table width="100%" cellpadding="0" cellspacing="0"> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; font-weight:600; width:35%; " > Swimmer </td> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; " > ${opts.swimmerName} </td> </tr> <tr> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; font-weight:600; " > Tryout </td> <td style=" padding:14px 20px; border-bottom:1px solid #e5e7eb; " > ${opts.tryoutName} </td> </tr> <tr> <td style=" padding:14px 20px; font-weight:600; " > Date </td> <td style=" padding:14px 20px; " > ${opts.sessionDate} </td> </tr> </table> </div> <div style=" margin:24px 0; padding:18px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; " > <p style="margin:0;font-size:14px;line-height:22px;"> We wish <strong>${opts.swimmerName}</strong> continued success in their swimming journey and hope to see them again in the future. </p> </div> <p style="font-size:15px;line-height:24px;margin-top:30px;"> Best regards,<br /> ${opts.clubName} </p>`,
   });
 }
 
@@ -900,6 +804,7 @@ export async function sendRegistrationReceivedEmail(opts: {
   tryoutName: string;
   location: string;
   slotLabel: string;
+  clubName: string;
 }): Promise<any> {
   const currentYear = new Date().getFullYear();
 
@@ -921,7 +826,7 @@ export async function sendRegistrationReceivedEmail(opts: {
   <tr>
     <td align="center" style="background:#2563eb;padding:28px;">
       <h1 style="margin:0;color:#ffffff;font-size:28px;">
-        Swimming App
+        ${config.SES_FROM_NAME}
       </h1>
     </td>
   </tr>
@@ -1028,7 +933,7 @@ export async function sendRegistrationReceivedEmail(opts: {
 
       <p style="margin-top:28px;font-size:15px;line-height:24px;">
         Best regards,<br>
-        <strong>The Coaching Team</strong>
+        <strong>${opts.clubName}</strong>
       </p>
 
     </td>
@@ -1046,7 +951,7 @@ export async function sendRegistrationReceivedEmail(opts: {
         font-size:13px;
       "
     >
-      © ${currentYear} Swimming App. All rights reserved.
+      © ${currentYear} ${config.SES_FROM_NAME}. All rights reserved.
     </td>
   </tr>
 
@@ -1054,7 +959,7 @@ export async function sendRegistrationReceivedEmail(opts: {
 
   await sendMail({
     to: opts.to,
-    subject: `✅ Registration Received: ${opts.tryoutName} | Swimming App`,
+    subject: `✅ Registration Received: ${opts.tryoutName} | ${config.SES_FROM_NAME}`,
     html,
   });
 }
