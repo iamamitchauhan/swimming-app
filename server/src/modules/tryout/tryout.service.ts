@@ -1,6 +1,6 @@
-import { TryoutRepository, PlainTryout, TryoutListParams, TryoutListResult } from './tryout.repository';
-import { NotFoundError, ForbiddenError } from '../../shared/errors/domain.errors';
-import logger from '../../shared/utils/logger';
+import { TryoutRepository, PlainTryout, TryoutListParams, TryoutListResult } from "./tryout.repository";
+import { NotFoundError, ForbiddenError } from "../../shared/errors/domain.errors";
+import logger from "../../shared/utils/logger";
 
 export class TryoutService {
   constructor(private readonly repo: TryoutRepository) {}
@@ -17,7 +17,7 @@ export class TryoutService {
    */
   async getById(id: string, clubId: string): Promise<PlainTryout> {
     const tryout = await this.repo.findById(id);
-    if (!tryout) throw new NotFoundError('Tryout not found');
+    if (!tryout) throw new NotFoundError("Tryout not found");
     // if (tryout.clubId !== clubId) throw new ForbiddenError('Access denied');
     return tryout;
   }
@@ -25,28 +25,24 @@ export class TryoutService {
   /**
    * Creates a new tryout.
    */
-  async create(data: Omit<PlainTryout, '_id' | 'createdAt' | 'updatedAt'>): Promise<PlainTryout> {
+  async create(data: Omit<PlainTryout, "_id" | "createdAt" | "updatedAt">): Promise<PlainTryout> {
     const created = await this.repo.create(data);
-    logger.info({ tryoutId: created._id, clubId: data.clubId }, 'tryout.created');
+    logger.info({ tryoutId: created._id, clubId: data.clubId }, "tryout.created");
     return created;
   }
 
   /**
    * Updates an existing tryout.
    */
-  async update(
-    id: string,
-    clubId: string,
-    data: Partial<Omit<PlainTryout, '_id' | 'createdAt' | 'updatedAt'>>,
-  ): Promise<PlainTryout> {
+  async update(id: string, clubId: string, data: Partial<Omit<PlainTryout, "_id" | "createdAt" | "updatedAt">>): Promise<PlainTryout> {
     const existing = await this.repo.findById(id);
-    if (!existing) throw new NotFoundError('Tryout not found');
+    if (!existing) throw new NotFoundError("Tryout not found");
     // if (existing.clubId !== clubId) throw new ForbiddenError('Access denied');
 
     const updated = await this.repo.update(id, data);
-    if (!updated) throw new NotFoundError('Tryout not found');
+    if (!updated) throw new NotFoundError("Tryout not found");
 
-    logger.info({ tryoutId: id, clubId }, 'tryout.updated');
+    logger.info({ tryoutId: id, clubId }, "tryout.updated");
     return updated;
   }
 
@@ -55,17 +51,17 @@ export class TryoutService {
    */
   async delete(id: string, clubId: string): Promise<void> {
     const existing = await this.repo.findById(id);
-    if (!existing) throw new NotFoundError('Tryout not found');
+    if (!existing) throw new NotFoundError("Tryout not found");
 
     await this.repo.delete(id);
-    logger.info({ tryoutId: id, clubId }, 'tryout.deleted');
+    logger.info({ tryoutId: id, clubId }, "tryout.deleted");
   }
 
   /**
    * Lists all active tryouts for public landing page (no authentication required).
    */
   async listActive(params: TryoutListParams = {}): Promise<TryoutListResult> {
-    return this.repo.list({ ...params, status: 'open' });
+    return this.repo.list({ ...params, status: "open" });
   }
 
   /**
@@ -73,7 +69,8 @@ export class TryoutService {
    */
   async getPublicById(id: string): Promise<PlainTryout> {
     const tryout = await this.repo.findById(id);
-    if (!tryout) throw new NotFoundError('Tryout not found');
+    if (!tryout) throw new NotFoundError("Tryout not found");
+    if (tryout.status !== "open") throw new NotFoundError("Tryout not available");
     return tryout;
   }
 }
