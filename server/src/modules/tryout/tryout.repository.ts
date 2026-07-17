@@ -46,6 +46,7 @@ export type PlainTryout = {
   }>;
   clubId: string;
   createdBy: string;
+  isTest: boolean;
   createdAt: Date;
   updatedAt: Date;
   startAt?: Date | null;
@@ -72,6 +73,7 @@ export interface TryoutListParams {
   clubId?: string;
   minAge?: number;
   maxAge?: number;
+  isTest?: boolean;
 }
 
 export interface TryoutListResult {
@@ -83,8 +85,15 @@ export interface TryoutListResult {
 }
 
 export class TryoutRepository {
-  async findById(id: string): Promise<PlainTryout | null> {
+  async findById(id: string, isTest?: boolean): Promise<PlainTryout | null> {
     try {
+      const matchStage: any = {
+        _id: new mongoose.Types.ObjectId(id),
+      };
+      if (isTest !== undefined) {
+        matchStage.isTest = isTest ? true : { $ne: true };
+      }
+
       const data = await TryoutModel.aggregate([
         {
           $addFields: {
@@ -98,10 +107,7 @@ export class TryoutRepository {
           },
         },
         {
-          $match: {
-            _id: new mongoose.Types.ObjectId(id),
-            // status: { $ne: "closed" },
-          },
+          $match: matchStage,
         },
         {
           $lookup: {
@@ -137,11 +143,15 @@ export class TryoutRepository {
   }
 
   async findByClub(clubId: string, params: TryoutListParams = {}): Promise<TryoutListResult> {
-    const { page = 1, limit = 10, search, status = "all", dateFrom, dateTo, sortBy = "createdAt", sortOrder = "desc" } = params;
+    const { page = 1, limit = 10, search, status = "all", dateFrom, dateTo, sortBy = "createdAt", sortOrder = "desc", isTest } = params;
 
     const matchStage: any = {
       clubId: new mongoose.Types.ObjectId(clubId),
     };
+
+    if (isTest !== undefined) {
+      matchStage.isTest = isTest ? true : { $ne: true };
+    }
 
     // Search filter
     if (search) {
@@ -234,6 +244,7 @@ export class TryoutRepository {
                 clubId: 1,
                 clubName: { $arrayElemAt: ["$_club.name", 0] },
                 createdBy: 1,
+                isTest: 1,
                 createdAt: 1,
                 updatedAt: 1,
                 startAt: 1,
@@ -279,9 +290,26 @@ export class TryoutRepository {
   }
 
   async list(params: TryoutListParams = {}): Promise<TryoutListResult> {
-    const { page = 1, limit = 10, search, status, dateFrom, dateTo, sortBy = "createdAt", sortOrder = "desc", clubId, minAge, maxAge } = params;
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      status,
+      dateFrom,
+      dateTo,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      clubId,
+      minAge,
+      maxAge,
+      isTest,
+    } = params;
 
     const matchStage: any = {};
+
+    if (isTest !== undefined) {
+      matchStage.isTest = isTest ? true : { $ne: true };
+    }
 
     // Search filter
     if (search) {
@@ -387,6 +415,7 @@ export class TryoutRepository {
                 clubId: 1,
                 clubName: { $arrayElemAt: ["$_club.name", 0] },
                 createdBy: 1,
+                isTest: 1,
                 createdAt: 1,
                 updatedAt: 1,
                 startAt: 1,
@@ -442,7 +471,11 @@ export class TryoutRepository {
     };
   }
 
-  async findDistinctClubs(): Promise<{ id: string; name: string }[]> {
+  async findDistinctClubs(isTest?: boolean): Promise<{ id: string; name: string }[]> {
+    const matchStage: any = { status: "open" };
+    if (isTest !== undefined) {
+      matchStage.isTest = isTest ? true : { $ne: true };
+    }
     const pipeline: any[] = [
       {
         $addFields: {
@@ -455,7 +488,7 @@ export class TryoutRepository {
           },
         },
       },
-      { $match: { status: "open" } },
+      { $match: matchStage },
       {
         $lookup: {
           from: "clubs",
@@ -472,12 +505,16 @@ export class TryoutRepository {
     return result.map((r) => ({ id: String(r._id), name: r.name as string }));
   }
 
-  async getPlatformStats(): Promise<{
+  async getPlatformStats(isTest?: boolean): Promise<{
     openTryouts: number;
     availableSlots: number;
     registeredFamilies: number;
     participatingClubs: number;
   }> {
+    const statsMatch: any = { status: "open" };
+    if (isTest !== undefined) {
+      statsMatch.isTest = isTest ? true : { $ne: true };
+    }
     const [statsResult, familiesResult] = await Promise.all([
       TryoutModel.aggregate([
         {
@@ -493,7 +530,7 @@ export class TryoutRepository {
             },
           },
         },
-        { $match: { status: "open" } },
+        { $match: statsMatch },
         {
           $lookup: {
             from: "tryout_slots",

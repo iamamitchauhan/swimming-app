@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { TryoutRepository } from "../tryout/tryout.repository";
 import { PublicController } from "./public.controller";
+import { optionalAuth } from "../../middleware/optionalAuth.middleware";
 
 const tryoutRepository = new TryoutRepository();
 const controller = new PublicController(tryoutRepository);
@@ -17,9 +18,9 @@ const controller = new PublicController(tryoutRepository);
  */
 const publicRouter = Router();
 
-publicRouter.get("/stats", controller.getStats);
-publicRouter.get("/clubs", controller.getClubs);
-publicRouter.get("/tryouts", controller.listTryouts);
-publicRouter.get("/tryouts/:id", controller.getTryoutById);
+publicRouter.get("/stats", optionalAuth, controller.getStats);
+publicRouter.get("/clubs", optionalAuth, controller.getClubs);
+publicRouter.get("/tryouts", optionalAuth, controller.listTryouts);
+publicRouter.get("/tryouts/:id", optionalAuth, controller.getTryoutById);
 
 export { publicRouter };

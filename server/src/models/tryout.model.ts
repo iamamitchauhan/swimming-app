@@ -81,6 +81,7 @@ const TryoutSchema = new Schema(
     faqs: { type: [FaqSchema], default: [] },
     clubId: { type: Schema.Types.ObjectId, ref: "Club", required: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    isTest: { type: Boolean, default: false, index: true },
   },
   { timestamps: true },
 );
@@ -89,6 +90,7 @@ const TryoutSchema = new Schema(
 
 TryoutSchema.index({ clubId: 1, createdAt: -1 });
 TryoutSchema.index({ createdBy: 1 });
+TryoutSchema.index({ isTest: 1, clubId: 1, createdAt: -1 });
 
 // ─── Export ─────────────────────────────────────────────────────────────────────
 

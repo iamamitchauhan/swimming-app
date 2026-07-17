@@ -41,6 +41,16 @@ const envSchema = z.object({
     .default("48")
     .transform((v) => parseInt(v, 10))
     .pipe(z.number().positive()),
+  TEST_USER_IDS: z
+    .string()
+    .optional()
+    .default("")
+    .transform((v) =>
+      v
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
 });
 
 /**

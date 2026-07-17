@@ -1,5 +1,5 @@
 import { Fragment, useState, useMemo, useCallback } from "react";
-import { ArrowLeft, Check, Loader2, Save, X } from "lucide-react";
+import { ArrowLeft, Check, Dices, Loader2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -245,6 +245,25 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     });
   }
 
+  function fillRandomScores() {
+    const next: ScoreMap = {};
+    for (const swimmer of registrations) {
+      next[swimmer.id] = {};
+      for (const criterion of SCORING_CRITERIA) {
+        if (criterion.type === "yesno") {
+          next[swimmer.id][criterion.id] = Math.random() < 0.7 ? "yes" : "no";
+        } else if (criterion.type === "rate15") {
+          next[swimmer.id][criterion.id] = Math.floor(Math.random() * 5) + 1;
+        } else {
+          next[swimmer.id][criterion.id] = Math.random() < 0.6 ? true : false;
+        }
+      }
+    }
+    setScores(next);
+    setSavedIds(new Set());
+    toast.success("Random scores filled for all swimmers");
+  }
+
   const swimmers = registrations;
 
   if (swimmers.length === 0) {
@@ -443,6 +462,10 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
             )}
           </div>
           <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={fillRandomScores}>
+              <Dices className="h-4 w-4 mr-1" />
+              Random fill
+            </Button>
             <Button variant="outline" onClick={onBack}>
               Cancel
             </Button>

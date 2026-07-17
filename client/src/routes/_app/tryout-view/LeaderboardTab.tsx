@@ -33,6 +33,7 @@ import {
 import type { LeaderboardEntry, Registration } from "@/lib/api/tryouts.api";
 import { calculateDetailedScoreTotal } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth.store";
+import { toast } from "sonner";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -107,35 +108,60 @@ export function LeaderboardTab({ tryoutId }: Props) {
     const hasAvg = calculateDetailedScoreTotal(l.detailed_scores) !== null;
     const offerBtn = (
       <button
-        disabled={!hasAvg}
-        onClick={() => openDecisionDialog(l.registration_id, "offered")}
-        className="text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+        disabled={!hasAvg || !l.coach_recommendation || l.coach_recommendation === REJECTED_VALUE}
+        onClick={() => {
+          if (!l.coach_recommendation) {
+            toast.error("Coach recommendation required", {
+              description: `Please assign a coach recommendation for ${l.swimmer_name} before proceeding.`,
+              duration: 6000,
+            });
+            return;
+          }
+          openDecisionDialog(l.registration_id, "offered");
+        }}
+        className="text-xs sm:text-sm text-green-600 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed px-1 py-0.5"
       >
-        <CheckCircle2 className="h-3.5 w-3.5" /> Offer
+        <CheckCircle2 className="h-4 w-4" /> Offer
       </button>
     );
     const rejectBtn = (
       <button
         disabled={!hasAvg}
-        onClick={() => openDecisionDialog(l.registration_id, "rejected")}
-        className="text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+        onClick={() => {
+          if (!l.coach_recommendation) {
+            toast.error("Coach recommendation required", {
+              description: `Please assign a coach recommendation for ${l.swimmer_name} before proceeding.`,
+              duration: 6000,
+            });
+            return;
+          }
+          openDecisionDialog(l.registration_id, "rejected");
+        }}
+        className="text-xs sm:text-sm text-red-500 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed px-1 py-0.5"
       >
-        <XCircle className="h-3.5 w-3.5" /> Reject
+        <XCircle className="h-4 w-4" /> Reject
       </button>
     );
+    const isRejected = l.coach_recommendation === REJECTED_VALUE;
+    const offerDisabled = !hasAvg || !l.coach_recommendation || isRejected;
+    const offerTooltip = isRejected
+      ? "Cannot offer — coach recommendation is set to Reject."
+      : !l.coach_recommendation
+        ? "Cannot offer — please assign a coach recommendation first."
+        : "Cannot offer without an average score.";
     return (
-      <div className="flex items-center gap-2 justify-end">
-        {hasAvg ? (
-          offerBtn
-        ) : (
+      <div className="flex items-center gap-3 justify-end">
+        {offerDisabled ? (
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="block">{offerBtn}</span>
               </TooltipTrigger>
-              <TooltipContent side="left">Cannot offer without an average score.</TooltipContent>
+              <TooltipContent side="left">{offerTooltip}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
+        ) : (
+          offerBtn
         )}
         {hasAvg ? (
           rejectBtn
@@ -145,7 +171,7 @@ export function LeaderboardTab({ tryoutId }: Props) {
               <TooltipTrigger asChild>
                 <span className="block">{rejectBtn}</span>
               </TooltipTrigger>
-              <TooltipContent side="left">Cannot reject without an average score.</TooltipContent>
+              <TooltipContent side="top">Cannot reject without an average score.</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         )}
@@ -194,22 +220,27 @@ export function LeaderboardTab({ tryoutId }: Props) {
               key={seg}
               className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm"
             >
-              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
-                <h3 className="font-semibold text-gray-800">{seg}</h3>
+              <div className="flex items-center justify-between px-4 py-3 sm:px-5 border-b border-gray-100 bg-gray-50">
+                <h3 className="font-semibold text-gray-800 text-sm sm:text-base">{seg}</h3>
                 <span className="text-xs text-gray-400">{group.length} scored</span>
               </div>
 
-              {/* ── Mobile: cards per swimmer (hidden on lg+) ───────────────────── */}
-              <div className="lg:hidden divide-y divide-gray-50">
+              {/* ── Mobile / Tablet: cards per swimmer (hidden on xl+) ──────────── */}
+              <div className="xl:hidden divide-y divide-gray-50">
                 {group.map((l, i) => (
-                  <div key={l.registration_id} className="px-4 py-3 space-y-2">
+                  <div key={l.registration_id} className="px-4 py-3.5 space-y-3 sm:px-5 sm:py-4">
+                    {/* Row 1: rank + swimmer info + score */}
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-gray-100 text-gray-500">
+                        <span
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                            i < 3 ? RANK_COLORS[i] : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
                           {i + 1}
                         </span>
                         <div className="min-w-0">
-                          <div className="font-medium text-gray-900 text-sm truncate">
+                          <div className="font-medium text-gray-900 text-sm sm:text-base truncate">
                             {l.swimmer_name}
                           </div>
                           <div className="text-xs text-gray-400">
@@ -219,19 +250,49 @@ export function LeaderboardTab({ tryoutId }: Props) {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-[16px] font-bold text-gray-900">
+                        <div className="text-lg sm:text-xl font-bold text-gray-900">
                           {calculateDetailedScoreTotal(l.detailed_scores) ?? "—"}
                         </div>
                         <div className="text-[10px] text-gray-400 uppercase tracking-wider">
                           Score
                         </div>
-                        {l.coach_recommendation_name && (
-                          <div className="text-xs text-gray-500 mt-0.5">
+                      </div>
+                    </div>
+
+                    {/* Row 2: badges + coach recommendation */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wider">
+                          Yes/No
+                        </span>
+                        <YesNoBadge l={l} />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wider">
+                          Status
+                        </span>
+                        <StatusBadge status={l.status} />
+                      </div>
+                      {l.coach_recommendation_name && !canManageCoaches && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-400 uppercase tracking-wider">
+                            Rec
+                          </span>
+                          <span className="text-xs text-gray-600 font-medium">
                             {l.coach_recommendation_name}
-                          </div>
-                        )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Row 3: coach recommendation select + actions */}
+                    {(canManageCoaches || (l.status === "registered" && canManageCoaches)) && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-50">
                         {canManageCoaches && (
-                          <div className="mt-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-gray-400 uppercase tracking-wider">
+                              Coach
+                            </span>
                             <CoachRecommendationSelect
                               tryoutId={tryoutId}
                               regId={l.registration_id}
@@ -243,21 +304,15 @@ export function LeaderboardTab({ tryoutId }: Props) {
                             />
                           </div>
                         )}
+                        {l.status === "registered" && canManageCoaches && <OfferReject l={l} />}
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <YesNoBadge l={l} />
-                        <StatusBadge status={l.status} />
-                      </div>
-                      {l.status === "registered" && canManageCoaches && <OfferReject l={l} />}
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
 
-              {/* ── Desktop: table (hidden below lg) ─────────────────────────────── */}
-              <div className="hidden lg:block overflow-x-auto">
+              {/* ── Desktop: table (hidden below xl) ─────────────────────────────── */}
+              <div className="hidden xl:block overflow-x-auto">
                 <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow>
@@ -268,34 +323,34 @@ export function LeaderboardTab({ tryoutId }: Props) {
                       <TableHead className="w-52 max-w-52 text-center whitespace-nowrap">
                         Coach Recommendation
                       </TableHead>
-                      <TableHead className="w-24 max-w-24 text-center">Status</TableHead>
-                      <TableHead className="w-36 max-w-36 text-right">Actions</TableHead>
+                      <TableHead className="w-28 min-w-28 max-w-28 text-center">Status</TableHead>
+                      <TableHead className="w-48 min-w-48 max-w-48 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="divide-y divide-gray-50">
                     {group.map((l, i) => (
                       <TableRow key={l.registration_id} className="hover:bg-gray-50 transition">
-                        <TableCell className="text-center px-4 py-3 w-12">
+                        <TableCell className="text-center align-middle px-4 py-3 w-12">
                           <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mx-auto bg-gray-100 text-gray-500">
                             {i + 1}
                           </span>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="align-middle px-4 py-3">
                           <div className="font-medium text-gray-900">{l.swimmer_name}</div>
                           <div className="text-xs text-gray-400">
                             {l.segment_name || l.age_segment}
                             {l.swimmer_age ? ` · Age ${l.swimmer_age}` : ""}
                           </div>
                         </TableCell>
-                        <TableCell className="text-center px-4 py-3 w-24 max-w-24">
+                        <TableCell className="text-center align-middle px-4 py-3 w-24 max-w-24">
                           <YesNoBadge l={l} />
                         </TableCell>
-                        <TableCell className="text-center px-4 py-3 w-20 max-w-20">
+                        <TableCell className="text-center align-middle px-4 py-3 w-20 max-w-20">
                           <div className="text-[16px] font-bold text-gray-900">
                             {calculateDetailedScoreTotal(l.detailed_scores) ?? "—"}
                           </div>
                         </TableCell>
-                        <TableCell className="text-center px-4 py-3 w-52 max-w-52">
+                        <TableCell className="text-center align-middle px-4 py-3 w-52 max-w-52">
                           {canManageCoaches ? (
                             <CoachRecommendationSelect
                               tryoutId={tryoutId}
@@ -312,10 +367,10 @@ export function LeaderboardTab({ tryoutId }: Props) {
                             </span>
                           )}
                         </TableCell>
-                        <TableCell className="text-center px-4 py-3 w-24 max-w-24">
+                        <TableCell className="text-center align-middle px-4 py-3 w-28 min-w-28 max-w-28">
                           <StatusBadge status={l.status} />
                         </TableCell>
-                        <TableCell className="text-right px-4 py-3 w-36 max-w-36">
+                        <TableCell className="text-right align-middle px-4 py-3 w-36 min-w-36 max-w-36">
                           {l.status === "registered" && canManageCoaches ? (
                             <OfferReject l={l} />
                           ) : (
@@ -397,7 +452,7 @@ function CoachRecommendationSelect({
       <DropdownMenuTrigger asChild>
         <button
           disabled={isLoading}
-          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition cursor-pointer hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 border-gray-200"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm px-2.5 py-1.5 rounded-full border font-medium transition cursor-pointer hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 border-gray-200"
         >
           {isLoading ? (
             <Loader2 className="inline h-3 w-3 animate-spin" />

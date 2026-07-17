@@ -7,6 +7,7 @@ paths:
         Returns a paginated list of all active tryouts across all clubs.
         This endpoint is publicly accessible and does not require authentication.
         Parents can use this to discover available tryouts for registration.
+        Test data isolation: only real (isTest:false) tryouts are shown. If an optional Bearer token is provided and the user's ID is in TEST_USER_IDS, only test (isTest:true) tryouts are returned instead.
       operationId: listPublicTryouts
       parameters:
         - name: page
@@ -85,6 +86,7 @@ paths:
                       swimmersPerLane: 4
                       ctaLabel: "Sign up today"
                       highlights: "Professional coaching staff"
+                      isTest: false
                       sessions:
                         - date: "2024-07-15"
                           startTime: "09:00"
@@ -115,6 +117,7 @@ paths:
       description: |
         Returns a paginated list of tryouts for the authenticated user's club.
         Requires admin or coach role. Supports filtering by status, date range, and search.
+        Test data isolation: users in TEST_USER_IDS see only isTest:true tryouts; all other users see only isTest:false tryouts.
       operationId: listClubTryouts
       security:
         - bearerAuth: []
@@ -207,6 +210,7 @@ paths:
       description: |
         Creates a new tryout for the authenticated user's club.
         Requires admin or coach role. Supports multipart/form-data for banner image upload.
+        The isTest field is set automatically: true if the creator's userId is in TEST_USER_IDS env var, false otherwise.
       operationId: createTryout
       security:
         - bearerAuth: []

@@ -15,8 +15,8 @@ export class TryoutService {
   /**
    * Returns a single tryout by ID.
    */
-  async getById(id: string, clubId: string): Promise<PlainTryout> {
-    const tryout = await this.repo.findById(id);
+  async getById(id: string, clubId: string, isTest?: boolean): Promise<PlainTryout> {
+    const tryout = await this.repo.findById(id, isTest);
     if (!tryout) throw new NotFoundError("Tryout not found");
     // if (tryout.clubId !== clubId) throw new ForbiddenError('Access denied');
     return tryout;
@@ -67,8 +67,8 @@ export class TryoutService {
   /**
    * Returns a single active tryout by ID for public landing page (no auth required).
    */
-  async getPublicById(id: string): Promise<PlainTryout> {
-    const tryout = await this.repo.findById(id);
+  async getPublicById(id: string, isTest?: boolean): Promise<PlainTryout> {
+    const tryout = await this.repo.findById(id, isTest);
     if (!tryout) throw new NotFoundError("Tryout not found");
     if (tryout.status !== "open") throw new NotFoundError("Tryout not available");
     return tryout;

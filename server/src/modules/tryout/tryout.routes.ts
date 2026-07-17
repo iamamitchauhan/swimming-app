@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../../middleware/auth.middleware";
 import { authorize } from "../../middleware/authorize.middleware";
 import { clubIsolation } from "../../middleware/clubIsolation.middleware";
+import { optionalAuth } from "../../middleware/optionalAuth.middleware";
 import { USER_ROLES } from "../../shared/constants/roles";
 import { TryoutRepository } from "./tryout.repository";
 import { TryoutService } from "./tryout.service";
@@ -36,11 +37,11 @@ const controller = new TryoutController(service);
  */
 const tryoutRouter = Router();
 
-tryoutRouter.get("/public", controller.listPublic);
+tryoutRouter.get("/public", optionalAuth, controller.listPublic);
 tryoutRouter.get("/public/:id/sessions", controller.getSessions);
 tryoutRouter.get("/public/:id/slots", controller.getSlots);
 tryoutRouter.get("/public/:id/registration-questions", controller.getPublicRegistrationQuestions);
-tryoutRouter.get("/public/:id", controller.getPublicById);
+tryoutRouter.get("/public/:id", optionalAuth, controller.getPublicById);
 tryoutRouter.get("/", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.list);
 tryoutRouter.get("/:id/sessions", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getSessions);
 tryoutRouter.get("/:id/slots", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getSlots);

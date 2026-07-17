@@ -20,6 +20,7 @@ import { sendRegistrationOffer, sendRegistrationReject, sendBulkTemplateEmail } 
 import { UserService } from "../user/user.service";
 import { TryoutSlotModel } from "../../models/tryout-slot.model";
 import logger from "../../shared/utils/logger";
+import { isTestUser } from "../../shared/constants/testUsers";
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
@@ -219,6 +220,7 @@ export class TryoutController {
         dateTo,
         sortBy,
         sortOrder,
+        isTest: isTestUser(req.user?.id),
       });
 
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
@@ -237,7 +239,7 @@ export class TryoutController {
       const clubId = req.user?.clubId;
       if (!clubId) return next(new ForbiddenError("No club associated with user"));
 
-      const tryout = await this.service.getById(id, clubId);
+      const tryout = await this.service.getById(id, clubId, isTestUser(req.user?.id));
       const sessions = await sessionRepo.findByTryout(id);
       sendSuccess(res, { tryout: { ...tryout, sessions } }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
@@ -296,6 +298,7 @@ export class TryoutController {
         endAt,
         clubId,
         createdBy: userId,
+        isTest: isTestUser(userId),
       });
 
       await syncSessionsAndSlots(tryout._id.toString(), rawSessions, slotDuration, swimmersPerSlot);
@@ -445,7 +448,7 @@ export class TryoutController {
   getPublicById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
-      const tryout = await this.service.getPublicById(id);
+      const tryout = await this.service.getPublicById(id, isTestUser(req.user?.id) ? undefined : false);
 
       const sessions = await sessionRepo.findByTryout(id);
       const sessionsWithSlots = await Promise.all(
@@ -494,6 +497,7 @@ export class TryoutController {
         clubId,
         minAge: isNaN(minAge as number) ? undefined : minAge,
         maxAge: isNaN(maxAge as number) ? undefined : maxAge,
+        isTest: isTestUser(req.user?.id) ? undefined : false,
       });
 
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);

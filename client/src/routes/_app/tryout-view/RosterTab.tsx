@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/search-input";
+import { toast } from "sonner";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -182,6 +183,19 @@ export function RosterTab({ tryoutId }: Props) {
     setPendingRegId(regId);
     setBulkAction(status);
     setConfirmOpen(true);
+  }
+
+  function validateCoachRecommendation(): boolean {
+    const missing = registrations.filter((r) => selectedIds.has(r.id) && !r.coach_recommendation);
+    if (missing.length > 0) {
+      const names = missing.map((r) => r.swimmer_name).join(", ");
+      toast.error("Coach recommendation required", {
+        description: `Please assign a coach recommendation before proceeding: ${names}`,
+        duration: 6000,
+      });
+      return false;
+    }
+    return true;
   }
 
   useEffect(() => {
@@ -523,8 +537,21 @@ export function RosterTab({ tryoutId }: Props) {
 
                           const offerBtn = (
                             <button
-                              disabled={!isComplete}
-                              onClick={() => openDecisionDialog(r.id, "offered")}
+                              disabled={
+                                !isComplete ||
+                                !r.coach_recommendation ||
+                                r.coach_recommendation === REJECTED_VALUE
+                              }
+                              onClick={() => {
+                                if (!r.coach_recommendation) {
+                                  toast.error("Coach recommendation required", {
+                                    description: `Please assign a coach recommendation for ${r.swimmer_name} before proceeding.`,
+                                    duration: 6000,
+                                  });
+                                  return;
+                                }
+                                openDecisionDialog(r.id, "offered");
+                              }}
                               className="text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" /> Offer
@@ -533,27 +560,42 @@ export function RosterTab({ tryoutId }: Props) {
                           const rejectBtn = (
                             <button
                               disabled={!isComplete}
-                              onClick={() => openDecisionDialog(r.id, "rejected")}
+                              onClick={() => {
+                                if (!r.coach_recommendation) {
+                                  toast.error("Coach recommendation required", {
+                                    description: `Please assign a coach recommendation for ${r.swimmer_name} before proceeding.`,
+                                    duration: 6000,
+                                  });
+                                  return;
+                                }
+                                openDecisionDialog(r.id, "rejected");
+                              }}
                               className="text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <XCircle className="h-3.5 w-3.5" /> Reject
                             </button>
                           );
+                          const isRejected = r.coach_recommendation === REJECTED_VALUE;
+                          const offerDisabled =
+                            !isComplete || !r.coach_recommendation || isRejected;
+                          const offerTooltip = isRejected
+                            ? "Cannot offer — coach recommendation is set to Reject."
+                            : !r.coach_recommendation
+                              ? "Cannot offer — please assign a coach recommendation first."
+                              : "Cannot offer until scoring is 100% complete.";
                           return (
                             <div className="flex items-center gap-2">
-                              {isComplete ? (
-                                offerBtn
-                              ) : (
+                              {offerDisabled ? (
                                 <TooltipProvider delayDuration={0}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span className="block">{offerBtn}</span>
                                     </TooltipTrigger>
-                                    <TooltipContent side="left">
-                                      Cannot offer until scoring is 100% complete.
-                                    </TooltipContent>
+                                    <TooltipContent side="top">{offerTooltip}</TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
+                              ) : (
+                                offerBtn
                               )}
                               {isComplete ? (
                                 rejectBtn
@@ -563,7 +605,7 @@ export function RosterTab({ tryoutId }: Props) {
                                     <TooltipTrigger asChild>
                                       <span className="block">{rejectBtn}</span>
                                     </TooltipTrigger>
-                                    <TooltipContent side="left">
+                                    <TooltipContent side="top">
                                       Cannot reject until scoring is 100% complete.
                                     </TooltipContent>
                                   </Tooltip>
@@ -600,6 +642,7 @@ export function RosterTab({ tryoutId }: Props) {
           <div className="h-4 w-px bg-gray-600" />
           <button
             onClick={() => {
+              if (!validateCoachRecommendation()) return;
               setBulkAction("offered");
               setConfirmOpen(true);
             }}
@@ -609,6 +652,7 @@ export function RosterTab({ tryoutId }: Props) {
           </button>
           <button
             onClick={() => {
+              if (!validateCoachRecommendation()) return;
               setBulkAction("rejected");
               setConfirmOpen(true);
             }}

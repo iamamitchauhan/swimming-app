@@ -245,6 +245,7 @@ const options: swaggerJsdoc.Options = {
             },
             clubId: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
             createdBy: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
+            isTest: { type: "boolean", example: false, description: "Whether this is test data (set automatically based on TEST_USER_IDS)" },
             createdAt: { type: "string", format: "date-time" },
             updatedAt: { type: "string", format: "date-time" },
           },

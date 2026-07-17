@@ -163,7 +163,10 @@ export async function fetchTryouts(filters: TryoutFilters = {}): Promise<TryoutL
   if (filters.minAge !== undefined) params.set("minAge", String(filters.minAge));
   if (filters.maxAge !== undefined) params.set("maxAge", String(filters.maxAge));
 
-  const response = await fetch(`${API_BASE}/tryouts/public?${params.toString()}`);
+  const token = localStorage.getItem("auth_token");
+  const response = await fetch(`${API_BASE}/tryouts/public?${params.toString()}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!response.ok) throw new Error("Failed to fetch tryouts");
 
   const body = await response.json();
@@ -178,7 +181,10 @@ export async function fetchTryouts(filters: TryoutFilters = {}): Promise<TryoutL
 }
 
 export async function fetchTryoutById(id: string): Promise<Tryout | null> {
-  const response = await fetch(`${API_BASE}/tryouts/public/${id}`);
+  const token = localStorage.getItem("auth_token");
+  const response = await fetch(`${API_BASE}/tryouts/public/${id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!response.ok) return null;
   const body = await response.json();
   return body.data ? mapTryout(body.data) : null;

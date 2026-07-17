@@ -5,6 +5,7 @@ import { MESSAGES } from "../../shared/constants/messages";
 import { sendSuccess } from "../../shared/utils/response";
 import { NotFoundError } from "../../shared/errors/domain.errors";
 import { publicTryoutListParamsSchema, publicTryoutIdSchema } from "./public.validation";
+import { isTestUser } from "../../shared/constants/testUsers";
 
 export class PublicController {
   constructor(private readonly tryoutRepo: TryoutRepository) {}
@@ -18,7 +19,7 @@ export class PublicController {
       const params = publicTryoutListParamsSchema.parse(req.query);
 
       // Only show open tryouts to the public
-      const result = await this.tryoutRepo.findByStatus("open", params);
+      const result = await this.tryoutRepo.findByStatus("open", { ...params, isTest: isTestUser(req.user?.id) ? undefined : false });
 
       sendSuccess(res, result, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
@@ -34,7 +35,7 @@ export class PublicController {
     try {
       const { id } = publicTryoutIdSchema.parse(req.params);
 
-      const tryout = await this.tryoutRepo.findById(id);
+      const tryout = await this.tryoutRepo.findById(id, isTestUser(req.user?.id) ? undefined : false);
       if (!tryout) throw new NotFoundError("Tryout not found");
 
       // Only allow viewing of open tryouts
@@ -62,9 +63,9 @@ export class PublicController {
    * GET /public/clubs
    * Returns unique club names that have open tryouts
    */
-  getClubs = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getClubs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const clubs = await this.tryoutRepo.findDistinctClubs();
+      const clubs = await this.tryoutRepo.findDistinctClubs(isTestUser(req.user?.id) ? undefined : false);
       sendSuccess(res, { clubs }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -75,9 +76,9 @@ export class PublicController {
    * GET /public/stats
    * Returns platform-wide stats for the public landing page
    */
-  getStats = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const stats = await this.tryoutRepo.getPlatformStats();
+      const stats = await this.tryoutRepo.getPlatformStats(isTestUser(req.user?.id) ? undefined : false);
       sendSuccess(res, stats, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
