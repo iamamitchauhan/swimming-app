@@ -357,7 +357,7 @@ export async function sendClubSubmittedNotification(opts: { to: string; clubName
 export async function sendClubApproved(opts: { to: string; clubName: string; loginUrl?: string }): Promise<void> {
   await sendMail({
     to: opts.to,
-    subject: `🎉 Club Approved: ${opts.clubName} | ${config.SES_FROM_NAME}`,
+    subject: `Club Approved: ${opts.clubName} | ${config.SES_FROM_NAME}`,
     html: `
     <!DOCTYPE html>
     <html>

@@ -397,7 +397,7 @@ export async function sendClubApproved(opts: { to: string; clubName: string; log
 
   await sendMail({
     to: opts.to,
-    subject: `🎉 Club Approved: ${opts.clubName} | ${config.SES_FROM_NAME}`,
+    subject: `Club Approved: ${opts.clubName} | ${config.SES_FROM_NAME}`,
     html: renderLayout({ accent: "success", bodyHtml }),
   });
 }
