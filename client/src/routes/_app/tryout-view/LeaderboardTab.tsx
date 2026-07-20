@@ -250,27 +250,24 @@ export function LeaderboardTab({ tryoutId }: Props) {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-lg sm:text-xl font-bold text-gray-900">
-                          {calculateDetailedScoreTotal(l.detailed_scores) ?? "—"}
-                        </div>
                         <div className="text-[10px] text-gray-400 uppercase tracking-wider">
                           Score
+                        </div>
+                        <div className="text-lg sm:text-xl font-bold text-gray-900">
+                          {calculateDetailedScoreTotal(l.detailed_scores) ?? "—"}
                         </div>
                       </div>
                     </div>
 
                     {/* Row 2: badges + coach recommendation */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-between">
+                      <div className="flex items-center gap-2 flex-col">
                         <span className="text-[10px] text-gray-400 uppercase tracking-wider">
                           Yes/No
                         </span>
                         <YesNoBadge l={l} />
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-400 uppercase tracking-wider">
-                          Status
-                        </span>
                         <StatusBadge status={l.status} />
                       </div>
                       {l.coach_recommendation_name && !canManageCoaches && (
@@ -289,9 +286,9 @@ export function LeaderboardTab({ tryoutId }: Props) {
                     {(canManageCoaches || (l.status === "registered" && canManageCoaches)) && (
                       <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-50">
                         {canManageCoaches && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-start gap-2 flex-col">
                             <span className="text-[10px] text-gray-400 uppercase tracking-wider">
-                              Coach
+                              Coach recommendation
                             </span>
                             <CoachRecommendationSelect
                               tryoutId={tryoutId}

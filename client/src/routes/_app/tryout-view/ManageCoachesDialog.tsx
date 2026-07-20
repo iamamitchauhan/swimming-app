@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Trash2, UserCog, X } from "lucide-react";
+import { Check, ChevronDown, Loader2, Plus, Trash2, UserCog, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -38,6 +44,59 @@ function segmentKey(segment: { id?: string; name: string }) {
   return segment.id ?? segment.name;
 }
 
+function MultiSelectDropdown({
+  label,
+  options,
+  selected,
+  onChange,
+  emptyText = "All",
+}: {
+  label: string;
+  options: { id: string; name: string }[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  emptyText?: string;
+}) {
+  function toggle(id: string) {
+    onChange(selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
+  }
+
+  const display =
+    selected.length === 0
+      ? emptyText
+      : selected.length === 1
+        ? (options.find((o) => o.id === selected[0])?.name ?? "1 selected")
+        : `${selected.length} selected`;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span className="truncate">{display}</span>
+          <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0 ml-2" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="start">
+        {options.map((option) => (
+          <DropdownMenuCheckboxItem
+            key={option.id}
+            checked={selected.includes(option.id)}
+            onCheckedChange={() => toggle(option.id)}
+          >
+            {option.name}
+          </DropdownMenuCheckboxItem>
+        ))}
+        {options.length === 0 && (
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">No {label} available</div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
   const { data: tryout } = useTryout(tryoutId);
   const { data: coaches = [], isLoading: coachesLoading } = useClubCoaches();
@@ -48,6 +107,11 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
   const [role, setRole] = useState<CoachRole>(COACH_ROLES[0]);
   const [segmentIds, setSegmentIds] = useState<string[]>([]);
   const [laneIds, setLaneIds] = useState<string[]>([]);
+  const [showAddRow, setShowAddRow] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editRole, setEditRole] = useState<CoachRole>(COACH_ROLES[0]);
+  const [editSegmentIds, setEditSegmentIds] = useState<string[]>([]);
+  const [editLaneIds, setEditLaneIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open || !tryout) return;
@@ -57,6 +121,11 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
     setRole(COACH_ROLES[0]);
     setSegmentIds([]);
     setLaneIds([]);
+    setShowAddRow(false);
+    setEditingIndex(null);
+    setEditRole(COACH_ROLES[0]);
+    setEditSegmentIds([]);
+    setEditLaneIds([]);
   }, [open, tryout]);
 
   const usedCoachIds = useMemo(
@@ -64,10 +133,6 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
     [assignments],
   );
   const availableCoaches = coaches.filter((coach) => !usedCoachIds.has(coach._id));
-
-  function toggleValue(values: string[], value: string, setValue: (next: string[]) => void) {
-    setValue(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
-  }
 
   function addLane() {
     const hexId = Array.from(crypto.getRandomValues(new Uint8Array(12)))
@@ -96,8 +161,40 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
     if (!coachId) return;
     setAssignments((current) => [...current, { coachId, role, segmentIds, laneIds }]);
     setCoachId("");
+    setRole(COACH_ROLES[0]);
     setSegmentIds([]);
     setLaneIds([]);
+    setShowAddRow(false);
+  }
+
+  function startEdit(index: number) {
+    const a = assignments[index];
+    setEditingIndex(index);
+    setEditRole(a.role);
+    setEditSegmentIds([...a.segmentIds]);
+    setEditLaneIds([...a.laneIds]);
+  }
+
+  function cancelEdit() {
+    setEditingIndex(null);
+    setEditRole(COACH_ROLES[0]);
+    setEditSegmentIds([]);
+    setEditLaneIds([]);
+  }
+
+  function saveEdit(index: number) {
+    setAssignments((current) =>
+      current.map((a, i) =>
+        i === index
+          ? { ...a, role: editRole, segmentIds: editSegmentIds, laneIds: editLaneIds }
+          : a,
+      ),
+    );
+    cancelEdit();
+  }
+
+  function removeAssignment(index: number) {
+    setAssignments((current) => current.filter((_, i) => i !== index));
   }
 
   async function save() {
@@ -197,153 +294,241 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
             )}
           </section>
 
+          {/* ── Unified Coach Assignments ──────────────────────────────────── */}
           <section className="rounded-lg border p-4">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h3 className="font-semibold">Add a coach</h3>
+                <h3 className="font-semibold">Coach assignments ({assignments.length})</h3>
                 <p className="text-xs text-muted-foreground">
-                  Assign a coach to specific segments and lanes.
+                  Assign coaches to segments and lanes. Leave unselected for full access.
                 </p>
               </div>
+              {!showAddRow && availableCoaches.length > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddRow(true)}
+                >
+                  <Plus className="mr-1.5 h-4 w-4" /> Add coach
+                </Button>
+              )}
             </div>
 
-            {/* Coach + Role row */}
-            <div className="grid gap-4 sm:grid-cols-2 mb-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">Coach</Label>
-                <Select
-                  value={coachId}
-                  onValueChange={setCoachId}
-                  disabled={availableCoaches.length === 0 || coachesLoading}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue
-                      placeholder={
-                        coachesLoading
-                          ? "Loading coaches…"
-                          : availableCoaches.length === 0
-                            ? "No coaches available"
-                            : "Choose a coach or admin"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableCoaches.map((coach) => (
-                      <SelectItem key={coach._id} value={coach._id}>
-                        {`${coach.firstName} ${coach.lastName}`.trim() || coach.email} (
-                        {coach.role === "admin" ? "Admin" : "Coach"})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {availableCoaches.length === 0 && !coachesLoading && (
-                  <p className="text-xs text-muted-foreground">All coaches have been assigned.</p>
+            {assignments.length === 0 && !showAddRow ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+                <p className="text-sm text-muted-foreground">No coaches assigned yet.</p>
+                {availableCoaches.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddRow(true)}
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" /> Assign your first coach
+                  </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {coachesLoading ? "Loading coaches…" : "All coaches have been assigned."}
+                  </p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">Role</Label>
-                <Select value={role} onValueChange={(value) => setRole(value as CoachRole)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COACH_ROLES.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {item}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Segments */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-muted-foreground">Segments</Label>
-                  {segmentIds.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setSegmentIds([])}
-                      className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(tryout?.segments ?? []).map((segment) => {
-                    const id = segmentKey(segment);
-                    const selected = segmentIds.includes(id);
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => toggleValue(segmentIds, id, setSegmentIds)}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted"}`}
-                      >
-                        {segment.name}
-                      </button>
-                    );
-                  })}
-                  {(tryout?.segments ?? []).length === 0 && (
-                    <span className="text-sm text-muted-foreground">No segments defined.</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Lanes */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-muted-foreground">Lanes</Label>
-                  {laneIds.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setLaneIds([])}
-                      className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {lanes.map((lane) => {
-                    const selected = laneIds.includes(lane._id);
-                    return (
-                      <button
-                        key={lane._id}
-                        type="button"
-                        onClick={() => toggleValue(laneIds, lane._id, setLaneIds)}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted"}`}
-                      >
-                        {lane.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-between gap-3 pt-1">
-              <p className="text-xs text-muted-foreground">
-                Leave segments or lanes unselected for full access.
-              </p>
-              <Button type="button" onClick={addAssignment} disabled={!coachId} size="sm">
-                <Plus className="mr-1.5 h-4 w-4" /> Add coach
-              </Button>
-            </div>
-          </section>
-
-          <section className="rounded-lg border p-4">
-            <h3 className="mb-3 font-semibold">Assigned coaches ({assignments.length})</h3>
-            {assignments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No coaches assigned yet.</p>
             ) : (
               <div className="space-y-2">
+                {/* ── Inline add row ─────────────────────────────────────────── */}
+                {showAddRow && (
+                  <div className="rounded-md border-2 border-primary/30 bg-primary/5 p-3">
+                    <div className="grid grid-cols-1 md:grid-cols-[minmax(180px,1.5fr)_130px_1fr_1fr_auto] gap-3 items-start">
+                      <div className="space-y-1 min-w-0">
+                        <Label className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">
+                          Coach
+                        </Label>
+                        <Select
+                          value={coachId}
+                          onValueChange={setCoachId}
+                          disabled={availableCoaches.length === 0 || coachesLoading}
+                        >
+                          <SelectTrigger className="w-full h-8 text-xs">
+                            <SelectValue
+                              placeholder={
+                                coachesLoading
+                                  ? "Loading…"
+                                  : availableCoaches.length === 0
+                                    ? "No coaches"
+                                    : "Choose coach"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableCoaches.map((coach) => (
+                              <SelectItem key={coach._id} value={coach._id}>
+                                {`${coach.firstName} ${coach.lastName}`.trim() || coach.email} (
+                                {coach.role === "admin" ? "Admin" : "Coach"})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1 min-w-0">
+                        <Label className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">
+                          Role
+                        </Label>
+                        <Select value={role} onValueChange={(value) => setRole(value as CoachRole)}>
+                          <SelectTrigger className="w-full h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {COACH_ROLES.map((item) => (
+                              <SelectItem key={item} value={item}>
+                                {item}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1 min-w-0">
+                        <Label className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">
+                          Segments
+                        </Label>
+                        <MultiSelectDropdown
+                          label="segments"
+                          options={(tryout?.segments ?? []).map((segment) => ({
+                            id: segmentKey(segment),
+                            name: segment.name,
+                          }))}
+                          selected={segmentIds}
+                          onChange={setSegmentIds}
+                          emptyText="All segments"
+                        />
+                      </div>
+
+                      <div className="space-y-1 min-w-0">
+                        <Label className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">
+                          Lanes
+                        </Label>
+                        <MultiSelectDropdown
+                          label="lanes"
+                          options={lanes.map((lane) => ({ id: lane._id, name: lane.name }))}
+                          selected={laneIds}
+                          onChange={setLaneIds}
+                          emptyText="All lanes"
+                        />
+                      </div>
+
+                      <div className="flex items-end gap-1 h-full pt-5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowAddRow(false);
+                            setCoachId("");
+                            setRole(COACH_ROLES[0]);
+                            setSegmentIds([]);
+                            setLaneIds([]);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="button" size="sm" onClick={addAssignment} disabled={!coachId}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Assigned coach rows ────────────────────────────────────── */}
                 {assignments.map((assignment, index) => {
                   const coach = coaches.find((item) => item._id === assignment.coachId);
+                  const isEditing = editingIndex === index;
+
+                  if (isEditing) {
+                    return (
+                      <div
+                        key={assignment._id ?? `${assignment.coachId}-${index}`}
+                        className="rounded-md border-2 border-primary/30 bg-primary/5 p-3"
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-[minmax(180px,1.5fr)_130px_1fr_1fr_auto] gap-3 items-start">
+                          <div className="space-y-1 min-w-0">
+                            <Label className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">
+                              Coach
+                            </Label>
+                            <div className="text-sm font-medium truncate">
+                              {coach
+                                ? `${coach.firstName} ${coach.lastName}`.trim() || coach.email
+                                : "Unknown"}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground truncate">
+                              {coach?.email}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 min-w-0">
+                            <Label className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">
+                              Role
+                            </Label>
+                            <Select
+                              value={editRole}
+                              onValueChange={(value) => setEditRole(value as CoachRole)}
+                            >
+                              <SelectTrigger className="w-full h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {COACH_ROLES.map((item) => (
+                                  <SelectItem key={item} value={item}>
+                                    {item}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-1 min-w-0">
+                            <Label className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">
+                              Segments
+                            </Label>
+                            <MultiSelectDropdown
+                              label="segments"
+                              options={(tryout?.segments ?? []).map((segment) => ({
+                                id: segmentKey(segment),
+                                name: segment.name,
+                              }))}
+                              selected={editSegmentIds}
+                              onChange={setEditSegmentIds}
+                              emptyText="All segments"
+                            />
+                          </div>
+
+                          <div className="space-y-1 min-w-0">
+                            <Label className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">
+                              Lanes
+                            </Label>
+                            <MultiSelectDropdown
+                              label="lanes"
+                              options={lanes.map((lane) => ({ id: lane._id, name: lane.name }))}
+                              selected={editLaneIds}
+                              onChange={setEditLaneIds}
+                              emptyText="All lanes"
+                            />
+                          </div>
+
+                          <div className="flex items-end gap-1 h-full pt-5">
+                            <Button type="button" variant="ghost" size="sm" onClick={cancelEdit}>
+                              Cancel
+                            </Button>
+                            <Button type="button" size="sm" onClick={() => saveEdit(index)}>
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const names = assignment.segmentIds
                     .map(
                       (id) => tryout?.segments.find((segment) => segmentKey(segment) === id)?.name,
@@ -352,26 +537,36 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
                   const laneNames = assignment.laneIds
                     .map((id) => lanes.find((lane) => lane._id === id)?.name)
                     .filter(Boolean);
+
                   return (
                     <div
                       key={assignment._id ?? `${assignment.coachId}-${index}`}
-                      className="flex flex-wrap items-center gap-3 rounded-md border p-3"
+                      className="grid grid-cols-1 md:grid-cols-[minmax(180px,1.5fr)_130px_1fr_1fr_auto] gap-3 items-start rounded-md border p-3"
                     >
-                      <div className="min-w-44 flex-1">
-                        <div className="font-medium">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">
                           {coach
                             ? `${coach.firstName} ${coach.lastName}`.trim() || coach.email
                             : "Unknown"}
                         </div>
-                        <div className="text-xs text-muted-foreground">{coach?.email}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {coach?.email}
+                        </div>
                       </div>
-                      <span className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
-                        {assignment.role}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
+
+                      <div className="min-w-0">
+                        <span className="inline-flex rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
+                          {assignment.role}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1 min-w-0">
                         {names.length ? (
                           names.map((name) => (
-                            <span key={name} className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                            <span
+                              key={name}
+                              className="rounded-full bg-muted px-2 py-0.5 text-xs truncate max-w-[120px]"
+                            >
                               {name}
                             </span>
                           ))
@@ -379,12 +574,13 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
                           <span className="text-xs text-muted-foreground">All segments</span>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-1">
+
+                      <div className="flex flex-wrap gap-1 min-w-0">
                         {laneNames.length ? (
                           laneNames.map((name) => (
                             <span
                               key={name}
-                              className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-800"
+                              className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-800 truncate max-w-[120px]"
                             >
                               {name}
                             </span>
@@ -393,19 +589,27 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
                           <span className="text-xs text-muted-foreground">All lanes</span>
                         )}
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setAssignments((current) =>
-                            current.filter((_, itemIndex) => itemIndex !== index),
-                          )
-                        }
-                        aria-label="Remove coach assignment"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEdit(index)}
+                          aria-label="Edit coach assignment"
+                        >
+                          <UserCog className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeAssignment(index)}
+                          aria-label="Remove coach assignment"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
