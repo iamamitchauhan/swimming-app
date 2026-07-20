@@ -1,7 +1,10 @@
 export const DEFAULT_EMAIL_TEMPLATES = {
   rejected: {
-    subject: "Tryout Result for {{swimmer_name}}",
-    body: "Hi {{parent_name}}, \n\nThank you for participating in our tryout. After careful evaluation, we are unable to offer {{swimmer_name}} a spot at this time.\nWe encourage you to try again next season.\n\nBest regards,\n{{club_name}}",
+    subject: `Tryout Result for {{swimmer_name}}`,
+    body: `Hi {{parent_name}}, \n\nThank you for participating in our tryout. After careful evaluation, we are unable to offer {{swimmer_name}} a spot at this time.\nWe encourage you to try again next season.\n\nBest regards,
+Justin Bilgri
+Bilgrij@friscoisd.org
+{{club_name}}`,
   },
   offered: {
     subject: `Congratulations – Team Offer for {{swimmer_name}}`,

@@ -605,7 +605,7 @@ export async function sendRegistrationReceivedEmail(opts: {
 
   await sendMail({
     to: opts.to,
-    subject: `✅ Registration Received: ${opts.tryoutName} | ${config.SES_FROM_NAME}`,
+    subject: `Registration Received: ${opts.tryoutName} | ${config.SES_FROM_NAME}`,
     html: renderLayout({ bodyHtml }),
   });
 }

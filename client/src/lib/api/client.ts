@@ -1,6 +1,6 @@
 /**
  * Axios instance with:
- *  - Base URL from VITE_API_BASE_URL (falls back to localhost:3001)
+ *  - Base URL from VITE_API_BASE_URL (falls back to localhost:5000)
  *  - Automatic Bearer token injection from localStorage
  *  - 401 auto-redirect to /login (clears token first)
  *  - Normalised error shape thrown as ApiError
@@ -45,7 +45,7 @@ export const apiClient = axios.create({
   baseURL:
     (typeof import.meta !== "undefined" &&
       (import.meta as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL) ||
-    "http://localhost:3001/api/v1",
+    "http://localhost:5000/api/v1",
   headers: { "Content-Type": "application/json" },
   timeout: 15_000,
 });

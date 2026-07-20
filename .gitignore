@@ -2,3 +2,4 @@ client/.env
 landing/.env
 server/.env
 server/scripts/generate-token.ts
+landing/.env
