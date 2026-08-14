@@ -21,6 +21,7 @@ export const TEMPLATE_TOKENS = [
   { token: "{{tryout_name}}", label: "Tryout Name" },
   { token: "{{club_name}}", label: "Club Name" },
   { token: "{{group_name}}", label: "Group Name" },
+  { token: "{{note}}", label: "Note" },
 ] as const;
 
 // ─── Props ────────────────────────────────────────────────────────────────────

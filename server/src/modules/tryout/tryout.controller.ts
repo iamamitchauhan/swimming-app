@@ -190,6 +190,116 @@ export class TryoutController {
   }
 
   /**
+   * Fetches a paginated page of registrations for a tryout, honouring the
+   * requested sort field and order.
+   *
+   * For the standard sort fields (swimmer_name, swimmer_age, status) a simple
+   * `find().sort().populate()` is used. For `session_time` — which requires
+   * data from the `tryout_slots` collection (sessionDate + startTime) — a
+   * MongoDB aggregation pipeline with `$lookup` is used so the sort is
+   * performed server-side and pagination stays correct.
+   */
+  private async fetchRegistrationsPage(filter: Record<string, any>, sortBy: string, sortOrder: 1 | -1, page: number, limit: number): Promise<any[]> {
+    if (sortBy === "session_time") {
+      // Mongoose's find() auto-casts string IDs to ObjectIds based on the
+      // schema, but aggregate() does NOT. We must manually cast every
+      // ObjectId field in the filter before $match, otherwise the pipeline
+      // returns zero documents.
+      const aggFilter: Record<string, any> = { ...filter };
+      if (aggFilter["tryoutId"] && typeof aggFilter["tryoutId"] === "string") {
+        aggFilter["tryoutId"] = new mongoose.Types.ObjectId(aggFilter["tryoutId"]);
+      }
+      if (aggFilter["_id"]) {
+        if (aggFilter["_id"] instanceof mongoose.Types.ObjectId) {
+          // already cast — nothing to do
+        } else if (typeof aggFilter["_id"] === "string") {
+          aggFilter["_id"] = new mongoose.Types.ObjectId(aggFilter["_id"]);
+        } else if (aggFilter["_id"]["$in"]) {
+          aggFilter["_id"] = {
+            $in: aggFilter["_id"]["$in"].map((v: any) => (v instanceof mongoose.Types.ObjectId ? v : new mongoose.Types.ObjectId(v))),
+          };
+        }
+      }
+
+      // Nulls always sort last regardless of direction.
+      const nullDateVal = sortOrder === 1 ? "9999-99-99" : "0000-00-00";
+      const nullTimeVal = sortOrder === 1 ? "99:99" : "00:00";
+
+      return await RegistrationModel.aggregate([
+        { $match: aggFilter },
+        // Lookup the slot for its sessionDate + startTime
+        {
+          $lookup: {
+            from: "tryout_slots",
+            let: { slotId: "$slotId" },
+            pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$slotId"] } } }, { $project: { sessionDate: 1, startTime: 1, endTime: 1 } }],
+            as: "_sortSlot",
+          },
+        },
+        { $unwind: { path: "$_sortSlot", preserveNullAndEmptyArrays: true } },
+        {
+          $addFields: {
+            _sortSessionDate: { $ifNull: ["$_sortSlot.sessionDate", nullDateVal] },
+            _sortSlotStartTime: { $ifNull: ["$_sortSlot.startTime", nullTimeVal] },
+          },
+        },
+        {
+          $sort: {
+            _sortSessionDate: sortOrder,
+            _sortSlotStartTime: sortOrder,
+            registeredAt: sortOrder,
+          },
+        },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+        // Populate swimmer (same shape as .populate("swimmerId", "firstName lastName birthDate"))
+        {
+          $lookup: {
+            from: "swimmers",
+            let: { swimmerId: "$swimmerId" },
+            pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$swimmerId"] } } }, { $project: { firstName: 1, lastName: 1, birthDate: 1 } }],
+            as: "swimmerId",
+          },
+        },
+        { $unwind: { path: "$swimmerId", preserveNullAndEmptyArrays: true } },
+        // Populate parent (same shape as .populate("parentId", "firstName lastName email"))
+        {
+          $lookup: {
+            from: "users",
+            let: { parentId: "$parentId" },
+            pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$parentId"] } } }, { $project: { firstName: 1, lastName: 1, email: 1 } }],
+            as: "parentId",
+          },
+        },
+        { $unwind: { path: "$parentId", preserveNullAndEmptyArrays: true } },
+        // Replace slotId with the slot document (same as .populate("slotId", "startTime endTime"))
+        { $addFields: { slotId: { _id: "$_sortSlot._id", startTime: "$_sortSlot.startTime", endTime: "$_sortSlot.endTime" } } },
+        // Remove temp sort fields
+        { $project: { _sortSlot: 0, _sortSessionDate: 0, _sortSlotStartTime: 0 } },
+      ]);
+    }
+
+    // Standard sort fields
+    const sortFieldMap: Record<string, string> = {
+      swimmer_name: "swimmerDetails.firstName",
+      swimmer_age: "swimmerDetails.ageOnTryoutDay",
+      status: "status",
+    };
+    const mongoSortField = sortFieldMap[sortBy] ?? "swimmerDetails.firstName";
+    const mongoSort: Record<string, 1 | -1> = { [mongoSortField]: sortOrder };
+
+    return await RegistrationModel.find(filter)
+      .sort(mongoSort)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate("swimmerId", "firstName lastName birthDate")
+      .populate("parentId", "firstName lastName email")
+      .populate("slotId", "startTime endTime")
+      .lean()
+      .exec();
+  }
+
+  /**
    * GET /tryouts
    * Lists tryouts for the authenticated user's club with pagination, filters, and sort.
    */
@@ -520,7 +630,8 @@ export class TryoutController {
    *   search      — swimmer name or parent/guardian email (case-insensitive)
    *   status      — one of: registered | waitlisted | offered | rejected | cancelled
    *   segmentId   — filter by segmentId value
-   *   sortBy      — swimmer_name | swimmer_age | status (default: swimmer_name)
+   *   sortBy      — swimmer_name | swimmer_age | status | session_time (default: swimmer_name)
+   *                 session_time sorts by the slot's sessionDate + startTime (ascending = earliest first).
    *   sortOrder   — asc | desc (default: asc)
    */
   getRegistrations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -576,27 +687,14 @@ export class TryoutController {
       }
 
       // ── Build sort ────────────────────────────────────────────────────────
-      const sortFieldMap: Record<string, string> = {
-        swimmer_name: "swimmerDetails.firstName",
-        swimmer_age: "swimmerDetails.ageOnTryoutDay",
-        status: "status",
-      };
-      const mongoSortField = sortFieldMap[sortBy] ?? "swimmerDetails.firstName";
-      const mongoSort: Record<string, 1 | -1> = { [mongoSortField]: sortOrder as 1 | -1 };
+      // session_time is handled via aggregation in fetchRegistrationsPage;
+      // the other fields use a simple indexed sort.
 
       // ── Count total (for pagination) ──────────────────────────────────────
       const total = await RegistrationModel.countDocuments(mongoFilter);
 
       // ── Fetch page ────────────────────────────────────────────────────────
-      const registrations = await RegistrationModel.find(mongoFilter)
-        .sort(mongoSort)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .populate("swimmerId", "firstName lastName birthDate")
-        .populate("parentId", "firstName lastName email")
-        .populate("slotId", "startTime endTime")
-        .lean()
-        .exec();
+      const registrations = await this.fetchRegistrationsPage(mongoFilter, sortBy, sortOrder as 1 | -1, page, limit);
 
       // ── Enrich with session/slot/segment data ─────────────────────────────
       const tryout = await this.service.getById(id, req.user?.clubId ?? "");
@@ -619,15 +717,7 @@ export class TryoutController {
         }
         // Re-count with the updated filter
         const scopedTotal = await RegistrationModel.countDocuments(mongoFilter);
-        const scopedRegistrations = await RegistrationModel.find(mongoFilter)
-          .sort(mongoSort)
-          .skip((page - 1) * limit)
-          .limit(limit)
-          .populate("swimmerId", "firstName lastName birthDate")
-          .populate("parentId", "firstName lastName email")
-          .populate("slotId", "startTime endTime")
-          .lean()
-          .exec();
+        const scopedRegistrations = await this.fetchRegistrationsPage(mongoFilter, sortBy, sortOrder as 1 | -1, page, limit);
         const sessions = await sessionRepo.findByTryout(id);
         const slots = await slotRepo.findByTryout(id);
         const segmentMap = new Map((tryout.segments || []).map((s: any) => [s.id || s.name, s.name]));
@@ -856,7 +946,7 @@ export class TryoutController {
         }
 
         const [tryout, group, template, club, sender] = await Promise.all([
-          this.service.getPublicById(updated.tryoutId.toString()),
+          this.service.getById(updated.tryoutId.toString(), clubId),
           groupId ? GroupModel.findById(groupId).lean().exec() : Promise.resolve(null),
           EmailTemplateModel.findOne({ clubId, groupId, type: emailType }).lean().exec(),
           clubId ? ClubModel.findById(clubId).lean().exec() : Promise.resolve(null),
@@ -883,6 +973,7 @@ export class TryoutController {
                   tryout_name: tryout.name,
                   group_name: group?.name ?? "",
                   sender_name: senderName,
+                  note: updated.notes ?? "",
                 },
               ],
               subjectTemplate: template.subject,
@@ -1013,6 +1104,39 @@ export class TryoutController {
       }
 
       const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: scoreUpdate }, { new: true }).lean().exec();
+      if (!updated) throw new NotFoundError("Registration not found");
+      sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * DELETE /tryouts/:id/registrations/:regId/score
+   * Reset (clear) all scores for a registration.
+   */
+  resetScore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { regId } = req.params;
+
+      const updated = await RegistrationModel.findByIdAndUpdate(
+        regId,
+        {
+          $set: { "scores.totalScore": null },
+          $unset: {
+            "scores.safetyEntryExit": "",
+            "scores.safetyFloat": "",
+            "scores.freestyle": "",
+            "scores.backstroke": "",
+            "scores.breaststroke": "",
+            "scores.butterfly": "",
+            detailedScores: "",
+          },
+        },
+        { new: true },
+      )
+        .lean()
+        .exec();
       if (!updated) throw new NotFoundError("Registration not found");
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
@@ -1185,6 +1309,7 @@ export class TryoutController {
             tryout_name: tryoutName,
             group_name: groupName,
             sender_name: senderName,
+            note: reg.notes ?? "",
           };
         })
         .filter((r) => !!r.to);

@@ -7,6 +7,7 @@ import {
   ChevronUp,
   ClipboardList,
   Loader2,
+  RotateCcw,
   UserCog,
   X,
   XCircle,
@@ -32,7 +33,12 @@ import type {
   SortOrder,
 } from "@/lib/api/tryouts.api";
 import { useTryout } from "@/hooks/use-tryouts";
-import { useTryoutRegistration, useSendDecision, useSaveScore } from "@/hooks/use-tryout-dashboard";
+import {
+  useTryoutRegistration,
+  useSendDecision,
+  useSaveScore,
+  useResetScore,
+} from "@/hooks/use-tryout-dashboard";
 import { useGroups } from "@/hooks/use-groups";
 import { useAuthStore } from "@/lib/auth.store";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
@@ -155,12 +161,13 @@ export function RosterTab({ tryoutId }: Props) {
   const [rosterParams, setRosterParams] = useState<RegistrationListParams>({
     page: 1,
     limit: 10,
-    sortBy: "swimmer_name",
+    sortBy: "session_time",
     sortOrder: "asc",
   });
-  const { data: rosterResult, isFetching: loading } = useTryoutRegistration(tryoutId, rosterParams);
+  const { data: rosterResult, isLoading: loading } = useTryoutRegistration(tryoutId, rosterParams);
   const { registrations = [], total = 0, page = 1, totalPages = 0 } = rosterResult ?? {};
   const sendDecision = useSendDecision(tryoutId);
+  const resetScore = useResetScore(tryoutId);
 
   function onParamsChange(params: Partial<RegistrationListParams>) {
     setRosterParams((prev) => ({ ...prev, ...params }));
@@ -175,6 +182,7 @@ export function RosterTab({ tryoutId }: Props) {
   const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
   const [pendingRegId, setPendingRegId] = useState<string | null>(null);
   const [manageCoachesOpen, setManageCoachesOpen] = useState(false);
+  const [resetConfirmRegId, setResetConfirmRegId] = useState<string | null>(null);
 
   const user = useAuthStore((state) => state.user);
   const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
@@ -396,7 +404,13 @@ export function RosterTab({ tryoutId }: Props) {
                 <SortIcon field="swimmer_age" active={sortBy} order={sortOrder} />
               </TableHead>
               <TableHead>Segment</TableHead>
-              <TableHead>When</TableHead>
+              <TableHead
+                className="cursor-pointer select-none whitespace-nowrap"
+                onClick={() => handleSort("session_time")}
+              >
+                When
+                <SortIcon field="session_time" active={sortBy} order={sortOrder} />
+              </TableHead>
               <TableHead>Parent</TableHead>
               <TableHead
                 className="cursor-pointer select-none whitespace-nowrap"
@@ -496,26 +510,47 @@ export function RosterTab({ tryoutId }: Props) {
                       {/* show yes/no chip like this [(10)Yes/(5)No] */}
                     </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
-                      <button
-                        onClick={() =>
-                          navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)
-                        }
-                        className="hover:underline cursor-pointer"
-                      >
-                        <div>{avg(r) || <span className="">Add Score</span>}</div>
-                        {/* <div className="text-xs font-normal text-gray-400">
-                          {(() => {
-                            const completion = detailedScoreCompletion(r);
-                            return `${completion.pct}% (${completion.done}/${completion.total})`;
-                          })()}
+                      {r.status === "cancelled" ? (
+                        <span className="text-gray-400">—</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)
+                            }
+                            className="hover:underline cursor-pointer text-sm"
+                          >
+                            <div>{avg(r) || <span className="">Add Score</span>}</div>
+                            {/* <div className="text-xs font-normal text-gray-400">
+                              {(() => {
+                                const completion = detailedScoreCompletion(r);
+                                return `${completion.pct}% (${completion.done}/${completion.total})`;
+                              })()}
+                            </div>
+                            <div className="mt-1 h-1 w-20 rounded-full bg-gray-100 overflow-hidden">
+                              <div
+                                className="h-full bg-blue-600 transition-all"
+                                style={{ width: `${detailedScoreCompletion(r).pct}%` }}
+                              />
+                            </div> */}
+                          </button>
+                          {avg(r) ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => setResetConfirmRegId(r.id)}
+                                    className="text-gray-400 hover:text-red-500 cursor-pointer"
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Reset score</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : null}
                         </div>
-                        <div className="mt-1 h-1 w-20 rounded-full bg-gray-100 overflow-hidden">
-                          <div
-                            className="h-full bg-blue-600 transition-all"
-                            style={{ width: `${detailedScoreCompletion(r).pct}%` }}
-                          />
-                        </div> */}
-                      </button>
+                      )}
                     </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
                       <CoachRecommendationSelect
@@ -745,6 +780,42 @@ export function RosterTab({ tryoutId }: Props) {
             >
               {sendDecision.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
               Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={resetConfirmRegId !== null}
+        onOpenChange={(open) => {
+          if (!open) setResetConfirmRegId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset score?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear all scores for this swimmer. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setResetConfirmRegId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!resetConfirmRegId) return;
+                try {
+                  await resetScore.mutateAsync(resetConfirmRegId);
+                } catch {
+                  // Errors are handled by the mutation's onError
+                } finally {
+                  setResetConfirmRegId(null);
+                }
+              }}
+              disabled={resetScore.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {resetScore.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Reset
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

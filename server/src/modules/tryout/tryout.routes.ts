@@ -30,6 +30,7 @@ const controller = new TryoutController(service);
  * PUT  /:id/registrations/:regId/promote  — promote from waitlist
  * PUT  /:id/registrations/:regId/verify   — update USA-S verification
  * PUT  /:id/registrations/:regId/score    — update scores
+ * DELETE /:id/registrations/:regId/score — reset (clear) scores
  * POST /:id/comms                — send bulk communication
  * POST /                         — create tryout (admin, coach)
  * PUT  /:id                      — update tryout (admin, coach)
@@ -67,6 +68,8 @@ tryoutRouter.put("/:id/registrations/:regId/promote", authenticate, authorize(US
 tryoutRouter.put("/:id/registrations/:regId/verify", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.verifyUsa);
 
 tryoutRouter.put("/:id/registrations/:regId/score", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.updateScore);
+
+tryoutRouter.delete("/:id/registrations/:regId/score", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.resetScore);
 
 tryoutRouter.put("/:id/registration-questions", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.upsertRegistrationQuestions);
 

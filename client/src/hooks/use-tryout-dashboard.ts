@@ -7,6 +7,7 @@
  * useSendDecision()                  → PUT .../decision  + cache invalidation
  * usePromoteWaitlist()               → PUT .../promote   + cache invalidation
  * useSaveScore()                     → PUT .../score     + cache invalidation
+ * useResetScore()                    → DELETE .../score  + cache invalidation
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -163,6 +164,65 @@ export function useSaveScore(tryoutId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tryouts", tryoutId, "leaderboard"] });
       toast.success("Saved.", { id: "score-toast-success" });
+    },
+  });
+}
+
+export function useResetScore(tryoutId: string) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (regId: string) =>
+      api(apiClient.delete(`/tryouts/${tryoutId}/registrations/${regId}/score`)),
+
+    onMutate: async (regId) => {
+      await qc.cancelQueries({ queryKey: ["tryouts", tryoutId, "roster"] });
+
+      const queries = qc.getQueriesData<RegistrationListResult>({
+        queryKey: ["tryouts", tryoutId, "roster"],
+      });
+
+      qc.getQueriesData<RegistrationListResult>({
+        queryKey: ["tryouts", tryoutId, "roster"],
+      }).forEach(([key, data]) => {
+        if (data?.registrations) {
+          qc.setQueryData<RegistrationListResult>(key, {
+            ...data,
+            registrations: data.registrations.map((r) =>
+              r.id === regId
+                ? {
+                    ...r,
+                    detailed_scores: {},
+                    total_score: undefined,
+                    freestyle: undefined,
+                    backstroke: undefined,
+                    breaststroke: undefined,
+                    butterfly: undefined,
+                    safety_entry_exit: undefined,
+                    safety_float: undefined,
+                  }
+                : r,
+            ),
+          });
+        }
+      });
+
+      return { queries };
+    },
+
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.queries) {
+        ctx.queries.forEach(([key, data]) => {
+          qc.setQueryData(key, data);
+        });
+      }
+      toast.error("Failed to reset score.");
+    },
+
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tryouts", tryoutId, "roster"] });
+      qc.invalidateQueries({ queryKey: ["tryouts", tryoutId, "leaderboard"] });
+      toast.success("Score reset.");
     },
   });
 }

@@ -8,6 +8,7 @@
     "start": "node dist/server.js",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:questions": "ts-node src/scripts/question-library.seed.ts",
+    "export:registrations": "ts-node scripts/export-tryout-registrations.ts",
     "lint": "eslint src --ext .ts",
     "test": "jest"
   },
@@ -19,6 +20,7 @@
     "bullmq": "^5.8.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "express-rate-limit": "^7.3.1",
     "helmet": "^7.1.0",

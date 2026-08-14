@@ -507,7 +507,7 @@ export interface WaitlistListResult {
 
 // ─── Registration List (server-side) ─────────────────────────────────────────
 
-export type RegistrationSortField = "swimmer_name" | "swimmer_age" | "status";
+export type RegistrationSortField = "swimmer_name" | "swimmer_age" | "status" | "session_time";
 
 export interface RegistrationListParams {
   page?: number;

@@ -628,7 +628,16 @@ paths:
     get:
       tags: [Tryouts]
       summary: List tryout registrations
-      description: Returns paginated registrations. Use registerIds to fetch selected registrations for bulk scoring.
+      description: |
+        Returns paginated, filtered, and sorted registrations for a tryout.
+
+        Use `registerIds` to fetch a selected set of registrations (e.g. for bulk scoring).
+
+        **Sorting:** `sortBy` accepts `swimmer_name`, `swimmer_age`, `status`, or
+        `session_time`. The `session_time` option sorts by the slot's
+        `sessionDate` + `startTime` (ascending = earliest first) and is
+        resolved server-side via a `$lookup` to the `tryout_slots` collection.
+        Default sort is `swimmer_name` ascending.
       operationId: listTryoutRegistrations
       parameters:
         - name: id
@@ -658,6 +667,40 @@ paths:
             minimum: 1
             maximum: 100
             default: 20
+        - name: search
+          in: query
+          required: false
+          description: Case-insensitive search on swimmer name or guardian email.
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          description: Filter by registration status.
+          schema:
+            type: string
+            enum: [registered, waitlisted, offered, rejected, cancelled]
+        - name: segmentId
+          in: query
+          required: false
+          description: Filter by segment ID.
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          required: false
+          description: Sort field. `session_time` sorts by slot sessionDate + startTime.
+          schema:
+            type: string
+            enum: [swimmer_name, swimmer_age, status, session_time]
+            default: swimmer_name
+        - name: sortOrder
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
       responses:
         "200":
           description: Registrations returned successfully
@@ -794,8 +837,55 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/TooManyRequests"
+    delete:
+      tags: [Tryouts]
+      summary: Reset (clear) swimmer scores
+      description: |
+        Clears all scores for a specific registration. Removes the simple
+        stroke-level scores (`scores.freestyle`, `scores.backstroke`, etc.),
+        the `detailedScores` object, and resets `scores.totalScore` to null.
+        The swimmer will no longer appear in the leaderboard.
 
-  /tryouts/{id}/leaderboard:
+        Requires admin or coach role.
+      operationId: resetScore
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tryout ID
+          schema:
+            type: string
+        - name: regId
+          in: path
+          required: true
+          description: Registration ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scores reset successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          registration:
+                            type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
     get:
       tags: [Tryouts]
       summary: Get scored swimmer leaderboard
@@ -965,8 +1055,9 @@ paths:
         Sends a templated email to the parents of the selected registrations.
         The following template variables are supported:
         `{{swimmer_name}}`, `{{parent_name}}`, `{{parent_email}}`,
-        `{{club_name}}`, `{{tryout_name}}`, `{{group_name}}`.
+        `{{club_name}}`, `{{tryout_name}}`, `{{group_name}}`, `{{note}}`.
         `{{group_name}}` is resolved from the registration's `coachRecommendation` field.
+        `{{note}}` is resolved from the registration's `notes` field.
       operationId: sendBulkEmail
       security:
         - bearerAuth: []
