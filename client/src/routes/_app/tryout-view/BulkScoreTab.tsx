@@ -470,10 +470,12 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
             )}
           </div>
           <div className="flex gap-2 ml-auto">
-            <Button variant="outline" onClick={fillRandomScores}>
-              <Dices className="h-4 w-4 mr-1" />
-              Random fill
-            </Button>
+            {import.meta.env.DEV && (
+              <Button variant="outline" onClick={fillRandomScores}>
+                <Dices className="h-4 w-4 mr-1" />
+                Random fill
+              </Button>
+            )}
             <Button variant="outline" onClick={onBack}>
               Cancel
             </Button>
