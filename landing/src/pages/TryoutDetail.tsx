@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Calendar, CheckCircle2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,9 +48,10 @@ export default function TryoutDetailPage() {
   const [searchParams] = useSearchParams();
   const waitlistId = searchParams.get("q") ?? "";
   const { data: tryout, isLoading } = useQuery(tryoutQuery(id));
-  const { data: parent } = useQuery(parentQuery());
+  const { data: parent, isLoading: parentLoading } = useQuery(parentQuery());
   const { data: waitlistEntry } = useQuery(waitlistEntryQuery(waitlistId));
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [selectedSlotInfo, setSelectedSlotInfo] = useState<{
@@ -59,6 +60,18 @@ export default function TryoutDetailPage() {
     label: string;
     duration: string;
   } | null>(null);
+
+  // If this page was reached via a waitlist slot-available notification link
+  // (indicated by the ?q= param) and the parent is not logged in, redirect to
+  // login immediately so we can preserve the return URL and bring them back
+  // here (with prefilled waitlist data) after successful authentication.
+  useEffect(() => {
+    if (!waitlistId || parentLoading) return;
+    if (!parent) {
+      const returnUrl = `${location.pathname}${location.search}`;
+      navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`, { replace: true });
+    }
+  }, [waitlistId, parent, parentLoading, navigate, location]);
 
   if (!isLoading && !tryout) {
     return (
@@ -86,7 +99,8 @@ export default function TryoutDetailPage() {
   const handleSelectSlot = (slot: Slot) => {
     if (!parent) {
       toast.info("Please log in to register your child.");
-      navigate("/login");
+      const returnUrl = `${location.pathname}${location.search}`;
+      navigate(`/login?redirect=${encodeURIComponent(returnUrl)}`);
       return;
     }
     if (slot.capacity - slot.taken <= 0) {

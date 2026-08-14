@@ -220,29 +220,37 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
           } as Partial<Registration>,
         });
       }),
-    ).then(() => {
-      // Merge all saved edits into committed scores
-      setCommittedScores((prev) => {
-        const next = { ...prev };
-        for (const id of scoreIds) {
-          next[id] = { ...next[id], ...scores[id] };
-        }
-        return next;
-      });
-      setCommittedNotes((prev) => {
-        const next = { ...prev };
-        for (const id of notesDirtyIds) {
-          next[id] = notesByReg[id] ?? "";
-        }
-        return next;
-      });
-      setScores({});
-      setSavedIds(new Set(registrations.map((r) => r.id)));
-      setSavingAll(false);
+    )
+      .then(() => {
+        // Merge all saved edits into committed scores
+        setCommittedScores((prev) => {
+          const next = { ...prev };
+          for (const id of scoreIds) {
+            next[id] = { ...next[id], ...scores[id] };
+          }
+          return next;
+        });
+        setCommittedNotes((prev) => {
+          const next = { ...prev };
+          for (const id of notesDirtyIds) {
+            next[id] = notesByReg[id] ?? "";
+          }
+          return next;
+        });
+        setScores({});
+        setSavedIds(new Set(registrations.map((r) => r.id)));
+        setSavingAll(false);
 
-      // redirect to main tryout page
-      // onBack();
-    });
+        toast.success("Scores saved successfully");
+        // redirect to main tryout page
+        onBack();
+      })
+      .catch((err) => {
+        setSavingAll(false);
+        toast.error("Failed to save scores", {
+          description: err instanceof Error ? err.message : "Please try again",
+        });
+      });
   }
 
   function fillRandomScores() {

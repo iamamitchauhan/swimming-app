@@ -12,21 +12,24 @@ export default function AutoVerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  
-  const token = searchParams.get('token');
+
+  const token = searchParams.get("token");
   const hasVerified = useRef(false);
-  
+
   const verifyMut = useMutation({
     mutationFn: (t: string) => verifyEmail(t),
-    onSuccess: async ({ token: authToken, user }) => {
+    onSuccess: async ({ token: authToken, user, redirectUrl }) => {
       // Persist session to localStorage so it survives page refresh
-      localStorage.setItem('auth_token', authToken);
-      localStorage.setItem('auth_user', JSON.stringify(user));
+      localStorage.setItem("auth_token", authToken);
+      localStorage.setItem("auth_user", JSON.stringify(user));
       qc.setQueryData(qk.parent, user);
       toast.success(`Welcome, ${user.firstName}! Your email has been verified successfully.`);
-      
+
+      // Prefer redirectUrl from the verification record, fall back to URL query param
+      const redirect = redirectUrl || searchParams.get("redirect") || "/";
+
       setTimeout(() => {
-        navigate("/");
+        navigate(redirect);
       }, 1500);
     },
     onError: (e: Error) => {
@@ -60,7 +63,7 @@ export default function AutoVerifyEmailPage() {
           <AlertCircle className="h-7 w-7" />
         )}
       </div>
-      
+
       <Card className="w-full p-8 text-center">
         {verifyMut.isPending && (
           <>
@@ -73,7 +76,7 @@ export default function AutoVerifyEmailPage() {
             </div>
           </>
         )}
-        
+
         {verifyMut.isSuccess && (
           <>
             <h1 className="font-display text-2xl font-bold text-green-600">Email Verified!</h1>
@@ -85,7 +88,7 @@ export default function AutoVerifyEmailPage() {
             </p>
           </>
         )}
-        
+
         {verifyMut.isError && (
           <>
             <h1 className="font-display text-2xl font-bold text-red-600">Verification Failed</h1>
@@ -95,11 +98,7 @@ export default function AutoVerifyEmailPage() {
             <p className="mt-4 text-sm text-muted-foreground">
               Redirecting you to registration page...
             </p>
-            <Button 
-              variant="outline" 
-              className="mt-4"
-              onClick={() => navigate("/register")}
-            >
+            <Button variant="outline" className="mt-4" onClick={() => navigate("/register")}>
               Go to Registration
             </Button>
           </>

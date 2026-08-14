@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Waves, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/";
 
   const sendOtpMut = useMutation({
     mutationFn: () => requestLoginOtp(email),
@@ -34,7 +36,7 @@ export default function LoginPage() {
       localStorage.setItem("auth_user", JSON.stringify(user));
       qc.setQueryData(qk.parent, user);
       toast.success(`Welcome back, ${user.firstName}!`);
-      navigate("/");
+      navigate(redirect);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -129,7 +131,12 @@ export default function LoginPage() {
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           New here?{" "}
-          <Link to="/register" className="font-semibold text-primary hover:underline">
+          <Link
+            to={
+              redirect !== "/" ? `/register?redirect=${encodeURIComponent(redirect)}` : "/register"
+            }
+            className="font-semibold text-primary hover:underline"
+          >
             Create an account
           </Link>
         </p>

@@ -1,13 +1,14 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * POST /parent/auth/register — accepts email, firstName, lastName; triggers verification email for parent registration.
  */
 export const parentRegisterSchema = z
   .object({
-    email: z.string().email('Email must be a valid email address').toLowerCase(),
-    firstName: z.string().min(1, 'First name is required').trim(),
-    lastName: z.string().min(1, 'Last name is required').trim(),
+    email: z.string().email("Email must be a valid email address").toLowerCase(),
+    firstName: z.string().min(1, "First name is required").trim(),
+    lastName: z.string().min(1, "Last name is required").trim(),
+    redirectUrl: z.string().startsWith("/", "redirectUrl must be a relative path starting with /").optional(),
   })
   .strict();
 
@@ -16,7 +17,7 @@ export const parentRegisterSchema = z
  */
 export const parentLoginSchema = z
   .object({
-    email: z.string().email('Email must be a valid email address').toLowerCase(),
+    email: z.string().email("Email must be a valid email address").toLowerCase(),
   })
   .strict();
 
@@ -25,8 +26,8 @@ export const parentLoginSchema = z
  */
 export const parentVerifyOtpSchema = z
   .object({
-    email: z.string().email('Email must be a valid email address').toLowerCase(),
-    otp: z.string().length(6, 'OTP must be 6 digits'),
+    email: z.string().email("Email must be a valid email address").toLowerCase(),
+    otp: z.string().length(6, "OTP must be 6 digits"),
   })
   .strict();
 

@@ -35,6 +35,7 @@ export type PlainEmailVerification = {
   tokenHash: string;
   expiresAt: Date;
   usedAt: Date | null;
+  redirectUrl?: string;
 };
 
 // ─── Repository ───────────────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ export class AuthRepository {
 
   // ─── Email Verification ───────────────────────────────────────────────────
 
-  async createEmailVerification(data: { email: string; role: UserRole; tokenHash: string; expiresAt: Date }): Promise<void> {
+  async createEmailVerification(data: { email: string; role: UserRole; tokenHash: string; expiresAt: Date; redirectUrl?: string }): Promise<void> {
     await EmailVerificationModel.deleteMany({ email: data.email, role: data.role, usedAt: null }).exec();
     await new EmailVerificationModel(data).save();
   }

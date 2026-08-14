@@ -1,0 +1,215 @@
+paths:
+  /parent/auth/register:
+    post:
+      tags: [Parent Auth]
+      summary: Register parent and send verification email
+      description: |
+        Accepts email, firstName, and lastName, creates a pending parent account,
+        and sends a verification link. If the email is already registered and
+        verified a 409 Conflict is returned.
+
+        An optional `redirectUrl` (relative path starting with `/`) may be
+        provided. It is persisted with the verification record and appended to
+        the verification email link as a `redirect` query parameter so the
+        client can redirect the user back to their original destination
+        (e.g. a tryout registration page) after email verification.
+      operationId: parentRegister
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, firstName, lastName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: parent@example.com
+                firstName:
+                  type: string
+                  example: Jane
+                lastName:
+                  type: string
+                  example: Doe
+                redirectUrl:
+                  type: string
+                  description: Relative path to redirect to after email verification (must start with /)
+                  example: /tryouts/665f1a2b3c4d5e6f7a8b9c0d?q=665f1a2b3c4d5e6f7a8b9c0e
+      responses:
+        "201":
+          description: Verification email sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuccessResponse" }
+              example:
+                success: true
+                message: Verification email sent
+                data: null
+                error: null
+        "409":
+          description: Email already registered and verified
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /parent/auth/verify-email:
+    get:
+      tags: [Parent Auth]
+      summary: Verify parent email and auto-login
+      description: |
+        Validates the one-time token sent in the parent registration email. On
+        success the account is activated and a JWT is returned for auto-login.
+        The token is single-use and expires in `EMAIL_VERIFY_EXPIRES_HOURS`
+        hours (default 24 h).
+
+        If a `redirectUrl` was stored during registration it is returned in the
+        response so the client can navigate the user back to their original
+        destination.
+      operationId: parentVerifyEmail
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: One-time verification token from the email link
+          example: a3f8c1d2e4b5...
+        - in: query
+          name: redirect
+          required: false
+          schema: { type: string }
+          description: Optional redirect path echoed back from the email link
+          example: /tryouts/665f1a2b3c4d5e6f7a8b9c0d?q=665f1a2b3c4d5e6f7a8b9c0e
+      responses:
+        "200":
+          description: Email verified, account activated, JWT returned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+                            example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                          user: { $ref: "#/components/schemas/PublicUser" }
+                          redirectUrl:
+                            type: string
+                            nullable: true
+                            description: Relative path to redirect to after verification (if provided during registration)
+                            example: /tryouts/665f1a2b3c4d5e6f7a8b9c0d?q=665f1a2b3c4d5e6f7a8b9c0e
+        "400":
+          description: Token is invalid or expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+              example:
+                success: false
+                message: Invalid or expired verification link.
+                data: null
+                error: EMAIL_VERIFY_TOKEN_INVALID
+
+  /parent/auth/login:
+    post:
+      tags: [Parent Auth]
+      summary: Request OTP login for parent
+      description: |
+        Accepts a registered, verified parent email address and sends a 6-digit
+        OTP (valid for `OTP_EXPIRES_MINUTES` minutes, default 10 m).
+      operationId: parentLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: parent@example.com
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuccessResponse" }
+              example:
+                success: true
+                message: Verification email sent
+                data: null
+                error: null
+        "404":
+          description: No verified account found with this email
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /parent/auth/verify-otp:
+    post:
+      tags: [Parent Auth]
+      summary: Verify parent OTP and receive JWT
+      description: |
+        Validates the 6-digit OTP for the given parent email. Returns a signed
+        JWT on success.
+      operationId: parentVerifyOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, otp]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: parent@example.com
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: "482951"
+      responses:
+        "200":
+          description: OTP verified — JWT returned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+                            example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                          user: { $ref: "#/components/schemas/PublicUser" }
+        "400":
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+              example:
+                success: false
+                message: OTP is invalid or has expired. Please request a new one.
+                data: null
+                error: OTP_INVALID
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"

@@ -7,6 +7,7 @@ export interface RegisterInput {
   firstName: string;
   lastName: string;
   email: string;
+  redirectUrl?: string;
 }
 
 export async function registerParent(input: RegisterInput): Promise<{ message: string }> {
@@ -26,7 +27,9 @@ export async function registerParent(input: RegisterInput): Promise<{ message: s
   return response.json();
 }
 
-export async function verifyEmail(token: string): Promise<{ token: string; user: Parent }> {
+export async function verifyEmail(
+  token: string,
+): Promise<{ token: string; user: Parent; redirectUrl?: string }> {
   const response = await fetch(
     `${API_BASE}/parent/auth/verify-email?token=${encodeURIComponent(token)}`,
     {
@@ -44,8 +47,8 @@ export async function verifyEmail(token: string): Promise<{ token: string; user:
 
   const result = await response.json();
 
-  // Backend wraps response in { success, message, data: { token, user } }
-  const { token: authToken, user: rawUser } = result.data;
+  // Backend wraps response in { success, message, data: { token, user, redirectUrl? } }
+  const { token: authToken, user: rawUser, redirectUrl } = result.data;
 
   const user: Parent = {
     id: rawUser.id,
@@ -55,7 +58,7 @@ export async function verifyEmail(token: string): Promise<{ token: string; user:
     emailVerified: rawUser.emailVerified,
   };
 
-  return { token: authToken, user };
+  return { token: authToken, user, redirectUrl };
 }
 
 export async function resendVerification(email: string): Promise<{ message: string }> {

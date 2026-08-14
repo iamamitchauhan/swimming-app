@@ -628,6 +628,7 @@ const options: swaggerJsdoc.Options = {
       { name: "Email Templates", description: "Per-group email template configuration" },
       { name: "Groups", description: "Club group management" },
       { name: "Public", description: "Public endpoints for the landing page (no auth required)" },
+      { name: "Parent Auth", description: "Parent authentication (registration, email verification, OTP login)" },
     ],
   },
   apis: ["./src/docs/**/*.yaml"],

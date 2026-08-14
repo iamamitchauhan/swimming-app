@@ -8,6 +8,7 @@ export interface IEmailVerification extends Document {
   tokenHash: string;
   expiresAt: Date;
   usedAt: Date | null;
+  redirectUrl?: string;
   createdAt: Date;
 }
 
@@ -34,6 +35,10 @@ const emailVerificationSchema = new Schema<IEmailVerification>(
     },
     usedAt: {
       type: Date,
+      default: null,
+    },
+    redirectUrl: {
+      type: String,
       default: null,
     },
   },

@@ -57,7 +57,7 @@ export class ParentService {
    * Creates a pending user record with PARENT role if none exists.
    * Throws ConflictError if the email is already verified.
    */
-  async register(email: string, firstName: string, lastName: string): Promise<void> {
+  async register(email: string, firstName: string, lastName: string, redirectUrl?: string): Promise<void> {
     const existing = await this.repository.findUserByEmailAndRole(email, USER_ROLES.PARENT);
 
     if (existing?.emailVerified) {
@@ -81,10 +81,10 @@ export class ParentService {
     const tokenHash = hashToken(plainToken);
     const expiresAt = new Date(Date.now() + config.EMAIL_VERIFY_EXPIRES_HOURS * 60 * 60 * 1000);
 
-    await this.repository.createEmailVerification({ email, role: USER_ROLES.PARENT, tokenHash, expiresAt });
+    await this.repository.createEmailVerification({ email, role: USER_ROLES.PARENT, tokenHash, expiresAt, redirectUrl });
 
     // Parent registrations redirect to landing app (port 8000)
-    const verifyUrl = `${config.LANDING_BASE_URL}/auth/verify-email?token=${plainToken}`;
+    const verifyUrl = `${config.LANDING_BASE_URL}/auth/verify-email?token=${plainToken}${redirectUrl ? `&redirect=${encodeURIComponent(redirectUrl)}` : ""}`;
     await sendEmailVerification({ to: email, verifyUrl });
 
     logger.info({ email, verifyUrl: verifyUrl.substring(0, 50) + "..." }, "parent.register.verification_sent");
@@ -95,7 +95,7 @@ export class ParentService {
    * and returns a JWT token and the public user profile for auto-login.
    * Reuses the same verification logic as auth service but ensures parent context.
    */
-  async verifyEmail(token: string): Promise<{ token: string; user: PublicUser }> {
+  async verifyEmail(token: string): Promise<{ token: string; user: PublicUser; redirectUrl?: string }> {
     const tokenHash = hashToken(token);
     const record = await this.repository.findValidEmailVerification(tokenHash);
 
@@ -121,7 +121,7 @@ export class ParentService {
 
     logger.info({ email: record.email }, "parent.email.verified");
 
-    return { token: authToken, user: publicUser };
+    return { token: authToken, user: publicUser, redirectUrl: record.redirectUrl };
   }
 
   /**

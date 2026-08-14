@@ -107,7 +107,6 @@ const QUESTION_LIBRARY = [
     sortOrder: 1,
     category: "🧍 Basic Info",
     questions: [
-      { type: "text", label: "Date of Birth (for age verification)", required: true, placeholder: "MM/DD/YYYY" },
       { type: "radio", label: "Gender", required: false, options: ["Male", "Female", "Non-binary", "Prefer not to say"] },
       { type: "text", label: "USA Swimming ID Number", required: false, placeholder: "e.g. 12345678" },
       {
