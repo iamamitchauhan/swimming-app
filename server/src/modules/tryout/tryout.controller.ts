@@ -1131,6 +1131,7 @@ export class TryoutController {
             "scores.breaststroke": "",
             "scores.butterfly": "",
             detailedScores: "",
+            notes: "",
           },
         },
         { new: true },
