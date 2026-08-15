@@ -160,6 +160,7 @@ export class AuthService {
     }
 
     const otp = generateOtp();
+    logger.info({ otp }, "auth.otp.generated");
     const codeHash = hashOtp(otp);
     const expiresAt = new Date(Date.now() + config.OTP_EXPIRES_MINUTES * 60 * 1000);
 

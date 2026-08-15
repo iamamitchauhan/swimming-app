@@ -6,11 +6,13 @@ import { RegistrationModel } from "../src/models/registration.model";
 import { TryoutModel } from "../src/models/tryout.model";
 import { SwimmerModel } from "../src/models/swimmer.model";
 import { UserModel } from "../src/models/user.model";
+import { TryoutSlotModel } from "../src/models/tryout-slot.model";
 
 // Importing these registers their schemas with Mongoose so populate() can
-// resolve the "Swimmer" and "User" refs used by RegistrationModel.
+// resolve the "Swimmer", "User", and "TryoutSlot" refs used by RegistrationModel.
 void SwimmerModel;
 void UserModel;
+void TryoutSlotModel;
 
 dotenv.config();
 
@@ -23,7 +25,7 @@ dotenv.config();
  * registration and the following columns:
  *
  *   Registration ID, Swimmer First Name, Swimmer Last Name, Swimmer DOB,
- *   Age On Tryout Day, Segment ID, Parent Name, Parent Email, Status,
+ *   Age On Tryout Day, Segment ID, Slot Time, Parent Name, Parent Email, Status,
  *   Waitlist Position, Registered At, USA Membership, USA Membership ID,
  *   Club Name, USA Verification Status, Email Sent, Last Communication At,
  *   Created At, Updated At, plus one column per dynamic answer label.
@@ -58,13 +60,12 @@ async function main(): Promise<void> {
 
     console.log(`Exporting registrations for tryout: ${tryout.name} (${tryoutId})`);
 
-    // Fetch every registration for this tryout, populating the parent so we
-    // get the canonical parent name/email regardless of what was captured
-    // in swimmerDetails at registration time.
+    // Fetch every registration for this tryout, populating the parent and slot
+    // so we get the canonical parent name/email and slot time information.
     const registrations = await RegistrationModel.find({ tryoutId })
       .populate("swimmerId", "firstName lastName birthDate")
       .populate("parentId", "firstName lastName email")
-      .sort({ registeredAt: -1 })
+      .populate("slotId", "sessionDate startTime endTime")
       .lean()
       .exec();
 
@@ -73,6 +74,24 @@ async function main(): Promise<void> {
       await mongoose.disconnect();
       return;
     }
+
+    // Sort registrations in ascending order by slot time (date, then start, then end)
+    registrations.sort((a, b) => {
+      const slotA = (a as any).slotId ?? {};
+      const slotB = (b as any).slotId ?? {};
+
+      const dateA = slotA.sessionDate ?? "";
+      const dateB = slotB.sessionDate ?? "";
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+
+      const startA = slotA.startTime ?? "";
+      const startB = slotB.startTime ?? "";
+      if (startA !== startB) return startA.localeCompare(startB);
+
+      const endA = slotA.endTime ?? "";
+      const endB = slotB.endTime ?? "";
+      return endA.localeCompare(endB);
+    });
 
     console.log(`Found ${registrations.length} registration(s). Building workbook…`);
 
@@ -105,6 +124,7 @@ async function main(): Promise<void> {
       { header: "Swimmer DOB", key: "swimmerDob", width: 14 },
       { header: "Age On Tryout Day", key: "ageOnTryoutDay", width: 14 },
       { header: "Segment ID", key: "segmentId", width: 24 },
+      { header: "Slot Time", key: "slotTime", width: 30 },
       { header: "Parent Name", key: "parentName", width: 22 },
       { header: "Parent Email", key: "parentEmail", width: 28 },
       { header: "Status", key: "status", width: 14 },
@@ -159,6 +179,7 @@ async function main(): Promise<void> {
       const swimmerDetails = (reg as any).swimmerDetails ?? {};
       const parent = (reg as any).parentId ?? {};
       const swimmer = (reg as any).swimmerId ?? {};
+      const slot = (reg as any).slotId ?? {};
 
       // Prefer the populated parent document, fall back to swimmerDetails guardian
       const parentName =
@@ -173,6 +194,9 @@ async function main(): Promise<void> {
       const swimmerLastName = swimmerDetails.lastName ?? swimmer?.lastName ?? "";
       const swimmerDob = swimmerDetails.dob ?? swimmer?.birthDate ?? "";
 
+      // Format slot time as "sessionDate startTime to endTime"
+      const slotTime = slot.sessionDate && slot.startTime && slot.endTime ? `${slot.sessionDate} ${slot.startTime} to ${slot.endTime}` : "";
+
       const row: Record<string, string | number | boolean> = {
         registrationId: (reg as any)._id?.toString() ?? "",
         swimmerFirstName,
@@ -180,6 +204,7 @@ async function main(): Promise<void> {
         swimmerDob: fmt(swimmerDob),
         ageOnTryoutDay: swimmerDetails.ageOnTryoutDay ?? "",
         segmentId: (reg as any).segmentId ?? "",
+        slotTime,
         parentName,
         parentEmail,
         status: (reg as any).status ?? "",
