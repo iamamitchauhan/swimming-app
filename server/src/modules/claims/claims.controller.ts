@@ -1,16 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import { ClaimsService } from './claims.service';
-import {
-  createClaimSchema,
-  updateClaimSchema,
-  listClaimsSchema,
-  updateStatusSchema,
-  claimParamsSchema,
-} from './claims.validation';
-import { HTTP_STATUS } from '../../shared/constants/httpStatus';
-import { MESSAGES } from '../../shared/constants/messages';
-import { sendSuccess } from '../../shared/utils/response';
-import { UnauthorizedError } from '../../shared/errors/domain.errors';
+import { Request, Response, NextFunction } from "express";
+import { ClaimsService } from "./claims.service";
+import { createClaimSchema, updateClaimSchema, listClaimsSchema, updateStatusSchema, claimParamsSchema } from "./claims.validation";
+import { HTTP_STATUS } from "../../shared/constants/httpStatus";
+import { MESSAGES } from "../../shared/constants/messages";
+import { sendSuccess } from "../../shared/utils/response";
+import { UnauthorizedError } from "../../shared/errors/domain.errors";
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
@@ -31,17 +25,17 @@ export class ClaimsController {
    */
   list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
 
       const query = listClaimsSchema.parse(req.query);
       const { state, status, assignedTo, search, cursor, limit } = query;
+      req.step?.("validated");
 
-      const result = await this.service.listClaims(
-        req.user.clubId ?? '',
-        { state, status, assignedTo, search },
-        { cursor, limit },
-      );
+      req.step?.("delegating to service");
+      const result = await this.service.listClaims(req.user.clubId ?? "", { state, status, assignedTo, search }, { cursor, limit });
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -57,10 +51,15 @@ export class ClaimsController {
    */
   getOne = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
 
       const { id } = claimParamsSchema.parse(req.params);
-      const claim = await this.service.getClaim(id, req.user.clubId ?? '');
+      req.step?.("validated");
+
+      req.step?.("delegating to service");
+      const claim = await this.service.getClaim(id, req.user.clubId ?? "");
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, claim, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -76,20 +75,20 @@ export class ClaimsController {
    */
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
 
       const body = createClaimSchema.parse(req.body);
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const claim = await this.service.createClaim(
         {
           state: body.state,
-          firmId: req.user.clubId ?? '',
+          firmId: req.user.clubId ?? "",
           claimant: {
             name: body.claimant.name,
-            dateOfBirth:
-              body.claimant.dateOfBirth !== undefined
-                ? new Date(body.claimant.dateOfBirth)
-                : undefined,
+            dateOfBirth: body.claimant.dateOfBirth !== undefined ? new Date(body.claimant.dateOfBirth) : undefined,
             phone: body.claimant.phone,
             email: body.claimant.email,
           },
@@ -100,6 +99,7 @@ export class ClaimsController {
         req.user.id,
       );
 
+      req.step?.("responding", { status: HTTP_STATUS.CREATED });
       sendSuccess(res, claim, MESSAGES.CREATED, HTTP_STATUS.CREATED);
     } catch (err) {
       next(err);
@@ -115,23 +115,23 @@ export class ClaimsController {
    */
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
 
       const { id } = claimParamsSchema.parse(req.params);
       const body = updateClaimSchema.parse(req.body);
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const claim = await this.service.updateClaim(
         id,
-        req.user.clubId ?? '',
+        req.user.clubId ?? "",
         {
           claimant:
             body.claimant !== undefined
               ? {
                   name: body.claimant.name,
-                  dateOfBirth:
-                    body.claimant.dateOfBirth !== undefined
-                      ? new Date(body.claimant.dateOfBirth)
-                      : undefined,
+                  dateOfBirth: body.claimant.dateOfBirth !== undefined ? new Date(body.claimant.dateOfBirth) : undefined,
                   phone: body.claimant.phone,
                   email: body.claimant.email,
                 }
@@ -143,6 +143,7 @@ export class ClaimsController {
         req.user.id,
       );
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, claim, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -158,10 +159,15 @@ export class ClaimsController {
    */
   remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
 
       const { id } = claimParamsSchema.parse(req.params);
-      await this.service.deleteClaim(id, req.user.clubId ?? '', req.user.id);
+      req.step?.("validated");
+
+      req.step?.("delegating to service");
+      await this.service.deleteClaim(id, req.user.clubId ?? "", req.user.id);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, null, MESSAGES.DELETED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -177,18 +183,17 @@ export class ClaimsController {
    */
   updateStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
 
       const { id } = claimParamsSchema.parse(req.params);
       const body = updateStatusSchema.parse(req.body);
+      req.step?.("validated");
 
-      const claim = await this.service.updateClaimStatus(
-        id,
-        req.user.clubId ?? '',
-        body.status,
-        req.user.id,
-      );
+      req.step?.("delegating to service");
+      const claim = await this.service.updateClaimStatus(id, req.user.clubId ?? "", body.status, req.user.id);
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, claim, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);

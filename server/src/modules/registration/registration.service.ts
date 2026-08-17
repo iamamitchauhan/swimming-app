@@ -177,6 +177,24 @@ export class RegistrationService {
   }
 
   /**
+   * Admin: returns all registrations created by a given parent.
+   * No ownership check — caller is an admin/super_admin.
+   */
+  async listByParentAdmin(parentId: string): Promise<PlainRegistration[]> {
+    return this.repo.findAllByParent(parentId);
+  }
+
+  /**
+   * Admin: returns a single registration with all references populated.
+   * No ownership check — caller is an admin/super_admin.
+   */
+  async getByIdAdmin(id: string): Promise<PlainRegistration> {
+    const registration = await this.repo.findByIdDetailed(id);
+    if (!registration) throw new NotFoundError("Registration not found");
+    return registration;
+  }
+
+  /**
    * Creates a new registration with comprehensive validation
    */
   async create(input: CreateRegistrationInput, parentId: string): Promise<PlainRegistration> {

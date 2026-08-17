@@ -32,9 +32,18 @@ export interface ApiResponse<T> {
 
 // Augment express-serve-static-core (the canonical source of the Request interface)
 // so that middleware-set fields are type-safe throughout the application.
-declare module 'express-serve-static-core' {
+declare module "express-serve-static-core" {
   interface Request {
-    user?: import('./index').AuthUser;
+    user?: import("./index").AuthUser;
     requestId?: string;
+    /** Request-scoped child logger pre-bound with request id, method, path, user. */
+    log?: import("pino").Logger;
+    /** High-resolution timestamp (process.hrtime.bigint) set at request start. */
+    startedAt?: bigint;
+    /**
+     * Logs a narrative beat for the current request at `info` level with
+     * `step_ms` = milliseconds since request start. Set by requestLogger middleware.
+     */
+    step?: (msg: string, data?: Record<string, unknown>) => void;
   }
 }

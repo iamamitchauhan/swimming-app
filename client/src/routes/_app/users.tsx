@@ -28,8 +28,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Loader2,
   MoreHorizontal,
   Plus,
@@ -50,12 +53,45 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { useAuthStore } from "@/lib/auth.store";
 import { useApiError } from "@/hooks/use-api-error";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useParentRegistrations, useRegistrationDetail } from "@/hooks/use-admin-registrations";
+import type { AdminRegistration } from "@/lib/api/admin-registrations.api";
 import type { User, ClubUserItem } from "@/lib/api/users.api";
 import type { InvitationRole, Invitation } from "@/lib/api/invitations.api";
-import { ROLE_LABEL } from "@/lib/utils";
+import { ROLE_LABEL, calculateDetailedScoreTotal } from "@/lib/utils";
+
+/**
+ * Returns a compact list of page numbers (and "..." gaps) to render in the
+ * paginator. Always shows the first and last page, the current page, and one
+ * neighbour on each side; collapses the rest into ellipses.
+ *
+ * Example: page=5, totalPages=10 -> [1, "...", 4, 5, 6, "...", 10]
+ */
+function getPageNumbers(page: number, totalPages: number): Array<number | "..."> {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  const pages: Array<number | "..."> = [1];
+  const start = Math.max(2, page - 1);
+  const end = Math.min(totalPages - 1, page + 1);
+
+  if (start > 2) pages.push("...");
+  for (let p = start; p <= end; p++) pages.push(p);
+  if (end < totalPages - 1) pages.push("...");
+  pages.push(totalPages);
+
+  return pages;
+}
 
 export default function UsersPage() {
   const user = useAuthStore((s) => s.user);
@@ -86,6 +122,8 @@ export default function UsersPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [roleTarget, setRoleTarget] = useState<User | null>(null);
   const [removeTarget, setRemoveTarget] = useState<User | null>(null);
+  // Parent registrations drawer
+  const [parentDrawerUser, setParentDrawerUser] = useState<User | null>(null);
   const sendInvite = useSendInvitation(clubId);
   const resendInvite = useResendInvitation(clubId);
   const cancelInvite = useCancelInvitation(clubId);
@@ -130,7 +168,10 @@ export default function UsersPage() {
         <div className="flex gap-3">
           <SearchInput
             value={search}
-            onChange={(v) => { setSearch(v); setPage(1); }}
+            onChange={(v) => {
+              setSearch(v);
+              setPage(1);
+            }}
             placeholder="Search users…"
             className="w-lg"
             debounceMs={350}
@@ -263,6 +304,7 @@ export default function UsersPage() {
                   }
                   const u = item.data as User;
                   const isCurrentUser = u._id === user?._id || u.email === user?.email;
+                  const isParent = u.role === "parent";
                   return (
                     <TableRow key={`user-${u._id ?? u.id ?? u.email}`}>
                       <TableCell>
@@ -271,11 +313,23 @@ export default function UsersPage() {
                             {`${u.firstName?.[0] ?? ""}${u.lastName?.[0] ?? ""}`.toUpperCase() ||
                               u.email[0].toUpperCase()}
                           </div>
-                          <span className="font-medium">
-                            {u.firstName || u.lastName
-                              ? `${u.firstName} ${u.lastName}`.trim()
-                              : "—"}
-                          </span>
+                          {isParent ? (
+                            <button
+                              type="button"
+                              onClick={() => setParentDrawerUser(u)}
+                              className="font-medium text-left hover:underline underline-offset-4 decoration-primary/50 cursor-pointer"
+                            >
+                              {u.firstName || u.lastName
+                                ? `${u.firstName} ${u.lastName}`.trim()
+                                : "—"}
+                            </button>
+                          ) : (
+                            <span className="font-medium">
+                              {u.firstName || u.lastName
+                                ? `${u.firstName} ${u.lastName}`.trim()
+                                : "—"}
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{u.email}</TableCell>
@@ -334,19 +388,58 @@ export default function UsersPage() {
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+                title="First page"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
+                title="Previous page"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
+              {getPageNumbers(page, totalPages).map((p, idx) =>
+                p === "..." ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-sm text-muted-foreground">
+                    …
+                  </span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant={p === page ? "default" : "outline"}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </Button>
+                ),
+              )}
               <Button
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
+                title="Next page"
               >
                 <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+                title="Last page"
+              >
+                <ChevronsRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -371,6 +464,11 @@ export default function UsersPage() {
         onClose={() => setRemoveTarget(null)}
         onConfirm={handleRemoveConfirm}
         isPending={removeFromClub.isPending}
+      />
+
+      <ParentRegistrationsSheet
+        parent={parentDrawerUser}
+        onClose={() => setParentDrawerUser(null)}
       />
     </PageShell>
   );
@@ -584,5 +682,404 @@ function ConfirmRemoveDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Parent registrations drawer ──────────────────────────────────────────────
+
+const STATUS_BADGE: Record<string, string> = {
+  registered: "bg-success/10 text-success border-success/20",
+  offered: "bg-primary/10 text-primary border-primary/30",
+  waitlisted: "bg-warning/15 text-warning-foreground border-warning/30",
+  rejected: "bg-destructive/10 text-destructive border-destructive/30",
+  cancelled: "bg-muted text-muted-foreground border-border",
+};
+
+function tryoutName(reg: AdminRegistration): string {
+  const t = reg.tryoutId;
+  return typeof t === "string" ? "—" : t.name || "—";
+}
+
+function tryoutStatus(reg: AdminRegistration): string {
+  const t = reg.tryoutId;
+  return typeof t === "string" ? "" : t.status || "";
+}
+
+function swimmerName(reg: AdminRegistration): string {
+  if (typeof reg.swimmerId === "string") {
+    return `${reg.swimmerDetails.firstName} ${reg.swimmerDetails.lastName}`.trim();
+  }
+  return `${reg.swimmerId.firstName} ${reg.swimmerId.lastName}`.trim();
+}
+
+function slotLabel(reg: AdminRegistration): string {
+  const slot = reg.slotId;
+  const session = reg.sessionId;
+  const date =
+    typeof slot === "object" && slot.sessionDate
+      ? slot.sessionDate
+      : typeof session === "object" && session.date
+        ? session.date
+        : "";
+  const start =
+    typeof slot === "object" && slot.startTime
+      ? slot.startTime
+      : typeof session === "object" && session.startTime
+        ? session.startTime
+        : "";
+  const end =
+    typeof slot === "object" && slot.endTime
+      ? slot.endTime
+      : typeof session === "object" && session.endTime
+        ? session.endTime
+        : "";
+  const dateStr = date ? new Date(date).toLocaleDateString("en-GB", { timeZone: "UTC" }) : "";
+  const timeStr = start && end ? `${start}–${end}` : start;
+  return [dateStr, timeStr].filter(Boolean).join(" · ") || "—";
+}
+
+function ParentRegistrationsSheet({
+  parent,
+  onClose,
+}: {
+  parent: User | null;
+  onClose: () => void;
+}) {
+  const [selectedRegId, setSelectedRegId] = useState<string | null>(null);
+
+  // Reset detail selection whenever the drawer target changes
+  useEffect(() => {
+    setSelectedRegId(null);
+  }, [parent?._id]);
+
+  const parentId = parent?._id ?? parent?.id ?? null;
+  const list = useParentRegistrations(parentId);
+  const detail = useRegistrationDetail(selectedRegId);
+
+  const open = !!parent;
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent side="right" className="w-full sm:max-w-lg md:max-w-xl p-0 flex flex-col">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+          {selectedRegId ? (
+            <button
+              type="button"
+              onClick={() => setSelectedRegId(null)}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to kids
+            </button>
+          ) : (
+            <SheetDescription className="text-xs uppercase tracking-wide">
+              Parent registrations
+            </SheetDescription>
+          )}
+          <SheetTitle className="text-left">
+            {selectedRegId
+              ? "Registration details"
+              : parent
+                ? `${parent.firstName} ${parent.lastName}`.trim()
+                : ""}
+          </SheetTitle>
+          {parent && !selectedRegId && (
+            <p className="text-sm text-muted-foreground text-left">{parent.email}</p>
+          )}
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto">
+          {!selectedRegId ? (
+            <ParentKidsList
+              isLoading={list.isLoading}
+              isError={list.isError}
+              registrations={list.data ?? []}
+              onSelect={setSelectedRegId}
+            />
+          ) : (
+            <RegistrationDetailView
+              isLoading={detail.isLoading}
+              isError={detail.isError}
+              registration={detail.data}
+              onBack={() => setSelectedRegId(null)}
+            />
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function ParentKidsList({
+  isLoading,
+  isError,
+  registrations,
+  onSelect,
+}: {
+  isLoading: boolean;
+  isError: boolean;
+  registrations: AdminRegistration[];
+  onSelect: (id: string) => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
+        <XCircle className="h-8 w-8" />
+        <p className="text-sm">Failed to load registrations. Please try again.</p>
+      </div>
+    );
+  }
+
+  if (registrations.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground">
+        <p className="text-sm">No registrations found for this parent.</p>
+      </div>
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-border">
+      {registrations.map((reg) => {
+        const name = swimmerName(reg);
+        const total = reg.scores?.totalScore ?? calculateDetailedScoreTotal(reg.detailedScores);
+        return (
+          <li key={reg._id}>
+            <button
+              type="button"
+              onClick={() => onSelect(reg._id)}
+              className="w-full text-left px-6 py-4 hover:bg-muted/50 transition-colors flex items-center gap-3 cursor-pointer"
+            >
+              <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary to-aqua text-primary-foreground flex items-center justify-center text-xs font-semibold shrink-0">
+                {name.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium truncate">{name}</span>
+                  <Badge
+                    variant="outline"
+                    className={`capitalize text-[10px] px-1.5 py-0 ${STATUS_BADGE[reg.status] ?? ""}`}
+                  >
+                    {reg.status}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  {tryoutName(reg)} · {slotLabel(reg)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {typeof total === "number" && (
+                  <span className="text-xs font-medium text-muted-foreground">Score: {total}</span>
+                )}
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function RegistrationDetailView({
+  isLoading,
+  isError,
+  registration,
+  onBack,
+}: {
+  isLoading: boolean;
+  isError: boolean;
+  registration?: AdminRegistration;
+  onBack: () => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  if (isError || !registration) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+        <XCircle className="h-8 w-8" />
+        <p className="text-sm">Failed to load registration details.</p>
+        <Button variant="outline" size="sm" onClick={onBack}>
+          Back to kids
+        </Button>
+      </div>
+    );
+  }
+
+  const total =
+    registration.scores?.totalScore ?? calculateDetailedScoreTotal(registration.detailedScores);
+  const detailedEntries = Object.entries(registration.detailedScores ?? {});
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Swimmer summary */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-full bg-linear-to-br from-primary to-aqua text-primary-foreground flex items-center justify-center text-sm font-semibold shrink-0">
+            {swimmerName(registration).slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-semibold truncate">{swimmerName(registration)}</h3>
+            <p className="text-xs text-muted-foreground truncate">
+              {tryoutName(registration)}
+              {tryoutStatus(registration) ? ` · ${tryoutStatus(registration)}` : ""}
+            </p>
+          </div>
+          <Badge
+            variant="outline"
+            className={`capitalize ml-auto ${STATUS_BADGE[registration.status] ?? ""}`}
+          >
+            {registration.status}
+          </Badge>
+        </div>
+      </section>
+
+      {/* Tryout / slot info */}
+      <DetailSection title="Schedule">
+        <DetailRow label="Slot" value={slotLabel(registration)} />
+        <DetailRow label="Segment" value={registration.segmentId || "—"} />
+        <DetailRow
+          label="Registered at"
+          value={new Date(registration.registeredAt).toLocaleString()}
+        />
+        {registration.waitlistPosition != null && (
+          <DetailRow label="Waitlist position" value={String(registration.waitlistPosition)} />
+        )}
+      </DetailSection>
+
+      {/* Swimmer details */}
+      <DetailSection title="Swimmer details">
+        <DetailRow
+          label="Age on tryout day"
+          value={String(registration.swimmerDetails.ageOnTryoutDay)}
+        />
+        <DetailRow label="DOB" value={registration.swimmerDetails.dob || "—"} />
+        <DetailRow
+          label="USA membership"
+          value={registration.swimmerDetails.hasUsaMembership ? "Yes" : "No"}
+        />
+        {registration.swimmerDetails.hasUsaMembership && (
+          <DetailRow
+            label="USA membership ID"
+            value={registration.swimmerDetails.usaMembershipId || "—"}
+          />
+        )}
+        {registration.swimmerDetails.clubName && (
+          <DetailRow label="Club" value={registration.swimmerDetails.clubName} />
+        )}
+        <DetailRow label="Guardian" value={registration.swimmerDetails.guardianName} />
+        <DetailRow label="Guardian email" value={registration.swimmerDetails.guardianEmail} />
+        <DetailRow
+          label="USA verification"
+          value={(registration.usaVerificationStatus ?? "pending").replace(/_/g, " ")}
+        />
+      </DetailSection>
+
+      {/* Scores */}
+      <DetailSection title="Scores">
+        {typeof total === "number" ? (
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl font-semibold">{total}</span>
+            <span className="text-xs text-muted-foreground">total score</span>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground mb-3">No scores recorded yet.</p>
+        )}
+        {registration.scores && (
+          <div className="grid grid-cols-2 gap-2">
+            <ScoreChip label="Freestyle" value={registration.scores.freestyle} />
+            <ScoreChip label="Backstroke" value={registration.scores.backstroke} />
+            <ScoreChip label="Breaststroke" value={registration.scores.breaststroke} />
+            <ScoreChip label="Butterfly" value={registration.scores.butterfly} />
+          </div>
+        )}
+      </DetailSection>
+
+      {/* Detailed per-criterion scores */}
+      {detailedEntries.length > 0 && (
+        <DetailSection title="Detailed scores">
+          <div className="grid grid-cols-2 gap-2">
+            {detailedEntries.map(([key, value]) => (
+              <div
+                key={key}
+                className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-xs"
+              >
+                <span className="text-muted-foreground capitalize truncate mr-2">
+                  {key.replace(/_/g, " ")}
+                </span>
+                <span className="font-medium">{String(value)}</span>
+              </div>
+            ))}
+          </div>
+        </DetailSection>
+      )}
+
+      {/* Coach recommendation & notes */}
+      <DetailSection title="Coach notes">
+        <DetailRow label="Recommendation" value={registration.coachRecommendation || "—"} />
+        <DetailRow label="Notes" value={registration.notes || "—"} />
+      </DetailSection>
+
+      {/* Dynamic answers */}
+      {registration.dynamicAnswers && registration.dynamicAnswers.length > 0 && (
+        <DetailSection title="Registration answers">
+          {registration.dynamicAnswers.map((ans, i) => (
+            <DetailRow
+              key={i}
+              label={ans.label}
+              value={Array.isArray(ans.value) ? ans.value.join(", ") : String(ans.value)}
+            />
+          ))}
+        </DetailSection>
+      )}
+    </div>
+  );
+}
+
+function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h4>
+      <div className="rounded-lg border border-border bg-card divide-y divide-border">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 px-3 py-2.5 text-sm">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="font-medium text-right break-all">{value}</span>
+    </div>
+  );
+}
+
+function ScoreChip({ label, value }: { label: string; value?: number }) {
+  return (
+    <div className="rounded-md border border-border px-3 py-2 text-xs flex items-center justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value != null ? value : "—"}</span>
+    </div>
   );
 }

@@ -13,9 +13,12 @@ export class ClubController {
    * GET /clubs/pending
    * List clubs awaiting approval (super_admin only).
    */
-  getPending = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getPending = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
+      req.step?.("delegating to service");
       const clubs = await this.service.getPendingClubs();
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { clubs }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -26,9 +29,12 @@ export class ClubController {
    * GET /clubs
    * List all clubs (super_admin only).
    */
-  getAll = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
+      req.step?.("delegating to service");
       const clubs = await this.service.getAllClubs();
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { clubs }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -41,9 +47,13 @@ export class ClubController {
    */
   getMyClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const userId = req.user?.id;
       if (!userId) return next(new UnauthorizedError());
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const club = await this.service.getMyClub(userId);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { club }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -56,8 +66,11 @@ export class ClubController {
    */
   getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { clubId } = req.params;
+      req.step?.("delegating to service");
       const club = await this.service.getClubById(clubId!);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { club }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -70,8 +83,11 @@ export class ClubController {
    */
   approve = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { clubId } = req.params;
+      req.step?.("delegating to service");
       const club = await this.service.approveClub(clubId!);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { club }, MESSAGES.CLUB_APPROVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -84,9 +100,13 @@ export class ClubController {
    */
   reject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { clubId } = req.params;
       const { reason } = rejectClubSchema.parse(req.body);
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const club = await this.service.rejectClub(clubId!, reason);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { club }, MESSAGES.CLUB_REJECTED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -99,9 +119,13 @@ export class ClubController {
    */
   getCoaches = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const clubId = req.user?.clubId;
       if (!clubId) return next(new UnauthorizedError());
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const coaches = await this.service.getCoaches(clubId as string);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { coaches }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -112,9 +136,12 @@ export class ClubController {
    * GET /clubs/admin-state
    * Returns super-admin dashboard overview stats.
    */
-  getSuperAdminState = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getSuperAdminState = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
+      req.step?.("delegating to service");
       const state = await this.service.getSuperAdminState();
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, state, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -127,9 +154,13 @@ export class ClubController {
    */
   getClubState = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const clubId = req.user?.clubId;
       if (!clubId) return next(new UnauthorizedError());
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const state = await this.service.getClubState(clubId as string);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, state, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);

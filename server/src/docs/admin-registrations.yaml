@@ -1,0 +1,81 @@
+paths:
+  /admin/registrations/parent/{parentId}:
+    get:
+      tags: [Admin Registrations]
+      summary: List all registrations created by a parent
+      description: |
+        Returns every registration created by the given parent, newest first.
+        Each registration is populated with its tryout, swimmer, session and slot.
+
+        **admin** and **super_admin** only.
+      operationId: listRegistrationsByParent
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: parentId
+          required: true
+          schema: { type: string }
+          description: MongoDB ObjectId of the parent user
+          example: 6a594d7227844baaf89859f9
+      responses:
+        "200":
+          description: Registrations for the parent
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          registrations:
+                            type: array
+                            items: { $ref: "#/components/schemas/AdminRegistration" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/registrations/{id}:
+    get:
+      tags: [Admin Registrations]
+      summary: Get a single registration with full details
+      description: |
+        Returns a single registration by ID with all references populated
+        (tryout, swimmer, parent, session, slot) plus scores and detailed
+        per-criterion scores.
+
+        **admin** and **super_admin** only.
+      operationId: getRegistrationByIdAdmin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+          description: MongoDB ObjectId of the registration
+          example: 6a594daf27844baaf8985a7e
+      responses:
+        "200":
+          description: Registration detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          registration: { $ref: "#/components/schemas/AdminRegistration" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"

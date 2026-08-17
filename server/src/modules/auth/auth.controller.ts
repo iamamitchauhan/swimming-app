@@ -22,8 +22,12 @@ export class AuthController {
    */
   register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { email, firstName, lastName } = registerSchema.parse(req.body);
+      req.step?.("validated");
+      req.step?.("delegating to service");
       await this.service.register(email, firstName, lastName);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, null, MESSAGES.EMAIL_SENT, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -36,8 +40,12 @@ export class AuthController {
    */
   verifyEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { token } = verifyEmailSchema.parse(req.query);
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const result = await this.service.verifyEmail(token);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.OTP_VERIFIED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -50,8 +58,12 @@ export class AuthController {
    */
   login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { email } = loginSchema.parse(req.body);
+      req.step?.("validated");
+      req.step?.("delegating to service");
       await this.service.login(email);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, null, MESSAGES.OTP_SENT, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -65,8 +77,12 @@ export class AuthController {
    */
   verifyOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { email, otp } = verifyOtpSchema.parse(req.body);
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const result = await this.service.verifyOtp(email, otp);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.OTP_VERIFIED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -79,10 +95,14 @@ export class AuthController {
    */
   selectClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const user = req.user;
       if (!user) return next(new UnauthorizedError());
       const { clubId } = selectClubSchema.parse(req.body);
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const result = await this.service.selectClub(user.email, clubId);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.CLUB_SELECTED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -95,9 +115,13 @@ export class AuthController {
    */
   listMyClubs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const user = req.user;
       if (!user) return next(new UnauthorizedError());
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const clubs = await this.service.listMyClubs(user.email);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { clubs }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -108,8 +132,10 @@ export class AuthController {
    * POST /auth/logout
    * Stateless JWT logout — client is responsible for discarding the token.
    */
-  logout = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, null, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -122,9 +148,13 @@ export class AuthController {
    */
   getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const userId = req.user?.id;
       if (!userId) return next(new UnauthorizedError());
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const user = await this.service.getMe(userId);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { user }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);

@@ -3,3 +3,7 @@ landing/.env
 server/.env
 server/scripts/generate-token.ts
 landing/.env
+
+# Daily-rotated log files (pino-roll)
+server/logs/
+logs/

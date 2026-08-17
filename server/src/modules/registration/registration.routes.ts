@@ -48,4 +48,20 @@ registrationRouter.get("/my-tryouts", controller.listParentTryouts);
 registrationRouter.get("/:id", controller.getById);
 registrationRouter.put("/:id", controller.updateStatus);
 
-export { registrationRouter };
+/**
+ * Admin registration router — mounted at /api/v1/admin/registrations by app.ts
+ *
+ * Authentication required; restricted to admin & super_admin roles.
+ *
+ * GET /admin/registrations/parent/:parentId — list all registrations by a parent
+ * GET /admin/registrations/:id             — get a single registration detail
+ */
+const adminRegistrationRouter = Router();
+
+adminRegistrationRouter.use(authenticate);
+adminRegistrationRouter.use(authorize(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN));
+
+adminRegistrationRouter.get("/parent/:parentId", controller.listByParentAdmin);
+adminRegistrationRouter.get("/:id", controller.getByIdAdmin);
+
+export { registrationRouter, adminRegistrationRouter };

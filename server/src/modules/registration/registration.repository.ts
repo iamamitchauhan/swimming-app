@@ -129,6 +129,22 @@ export class RegistrationRepository {
       .exec();
   }
 
+  /**
+   * Returns a single registration with all references populated.
+   * Used by admin endpoints that need the full picture (tryout, swimmer,
+   * parent, session, slot) for a detail view.
+   */
+  async findByIdDetailed(id: string): Promise<PlainRegistration | null> {
+    return RegistrationModel.findById(id)
+      .populate("tryoutId", "name status location description theme bannerUrl createdAt startAt endAt")
+      .populate("swimmerId", "firstName lastName birthDate")
+      .populate("parentId", "firstName lastName email")
+      .populate("sessionId", "date startTime endTime label")
+      .populate("slotId", "sessionDate startTime endTime label slotIndex capacity")
+      .lean<PlainRegistration>()
+      .exec();
+  }
+
   async create(data: Omit<PlainRegistration, "_id" | "createdAt" | "updatedAt">): Promise<PlainRegistration> {
     const doc = await new RegistrationModel(data).save();
     const plain = await RegistrationModel.findById(doc._id)

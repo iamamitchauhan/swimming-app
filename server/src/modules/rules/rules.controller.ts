@@ -1,11 +1,11 @@
-import { Request, Response, NextFunction } from 'express';
-import { RulesService } from './rules.service';
-import { stateParamSchema, updateRuleSchema } from './rules.validation';
-import { HTTP_STATUS } from '../../shared/constants/httpStatus';
-import { MESSAGES } from '../../shared/constants/messages';
-import { sendSuccess } from '../../shared/utils/response';
-import { ForbiddenError, UnauthorizedError } from '../../shared/errors/domain.errors';
-import { ADMIN_ROLES, UserRole } from '../../shared/constants/roles';
+import { Request, Response, NextFunction } from "express";
+import { RulesService } from "./rules.service";
+import { stateParamSchema, updateRuleSchema } from "./rules.validation";
+import { HTTP_STATUS } from "../../shared/constants/httpStatus";
+import { MESSAGES } from "../../shared/constants/messages";
+import { sendSuccess } from "../../shared/utils/response";
+import { ForbiddenError, UnauthorizedError } from "../../shared/errors/domain.errors";
+import { ADMIN_ROLES, UserRole } from "../../shared/constants/roles";
 
 // ─── Role helpers ─────────────────────────────────────────────────────────────
 
@@ -32,9 +32,13 @@ export class RulesController {
    */
   getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const rules = await this.service.getAllRules();
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, rules, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -50,10 +54,15 @@ export class RulesController {
    */
   getByState = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
 
       const { state } = stateParamSchema.parse(req.params);
+      req.step?.("validated");
+
+      req.step?.("delegating to service");
       const rule = await this.service.getRuleByState(state);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, rule, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -70,16 +79,20 @@ export class RulesController {
    */
   updateRule = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
 
       if (!isAdminRole(req.user.role)) {
-        return next(new ForbiddenError('Only administrators may update state rules'));
+        return next(new ForbiddenError("Only administrators may update state rules"));
       }
 
       const { state } = stateParamSchema.parse(req.params);
       const body = updateRuleSchema.parse(req.body);
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const rule = await this.service.updateRule(state, body, req.user.id);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, rule, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);

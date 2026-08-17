@@ -543,6 +543,161 @@ const options: swaggerJsdoc.Options = {
             },
           },
         },
+        // ─── Admin Registration ───────────────────────────────────────────────
+        AdminRegistration: {
+          type: "object",
+          properties: {
+            _id: { type: "string", example: "6a594daf27844baaf8985a7e" },
+            tryoutId: {
+              oneOf: [
+                { type: "string" },
+                {
+                  type: "object",
+                  properties: {
+                    _id: { type: "string" },
+                    name: { type: "string", example: "Summer Swim Team Tryouts 2024" },
+                    status: { type: "string", example: "active" },
+                    location: { type: "string", example: "Main Pool" },
+                    description: { type: "string" },
+                    theme: { type: "string", example: "ocean" },
+                    bannerUrl: { type: "string", nullable: true },
+                    createdAt: { type: "string", format: "date-time" },
+                    startAt: { type: "string", format: "date-time", nullable: true },
+                    endAt: { type: "string", format: "date-time", nullable: true },
+                  },
+                },
+              ],
+            },
+            swimmerId: {
+              oneOf: [
+                { type: "string" },
+                {
+                  type: "object",
+                  properties: {
+                    _id: { type: "string" },
+                    firstName: { type: "string", example: "Dhruv" },
+                    lastName: { type: "string", example: "Gaddem" },
+                    birthDate: { type: "string", format: "date", nullable: true },
+                  },
+                },
+              ],
+            },
+            parentId: {
+              oneOf: [
+                { type: "string" },
+                {
+                  type: "object",
+                  properties: {
+                    _id: { type: "string" },
+                    firstName: { type: "string", example: "Sirisha" },
+                    lastName: { type: "string", example: "Gaddem" },
+                    email: { type: "string", format: "email", example: "gaddem.sirisha@gmail.com" },
+                  },
+                },
+              ],
+            },
+            sessionId: {
+              oneOf: [
+                { type: "string" },
+                {
+                  type: "object",
+                  properties: {
+                    _id: { type: "string" },
+                    date: { type: "string", format: "date" },
+                    startTime: { type: "string", example: "09:00" },
+                    endTime: { type: "string", example: "12:00" },
+                    label: { type: "string" },
+                  },
+                },
+              ],
+            },
+            slotId: {
+              oneOf: [
+                { type: "string" },
+                {
+                  type: "object",
+                  properties: {
+                    _id: { type: "string" },
+                    sessionDate: { type: "string", format: "date" },
+                    startTime: { type: "string", example: "09:00" },
+                    endTime: { type: "string", example: "09:30" },
+                    label: { type: "string" },
+                    slotIndex: { type: "integer" },
+                    capacity: { type: "integer" },
+                  },
+                },
+              ],
+            },
+            segmentId: { type: "string", example: "13&14" },
+            status: {
+              type: "string",
+              enum: ["registered", "waitlisted", "offered", "rejected", "cancelled"],
+              example: "registered",
+            },
+            waitlistPosition: { type: "integer", nullable: true },
+            registeredAt: { type: "string", format: "date-time" },
+            emailSent: { type: "boolean", example: false },
+            usaVerificationStatus: {
+              type: "string",
+              enum: ["pending", "needs_review", "verified", "rejected"],
+              example: "pending",
+            },
+            coachRecommendation: { type: "string", nullable: true },
+            notes: { type: "string", example: "" },
+            swimmerDetails: {
+              type: "object",
+              properties: {
+                firstName: { type: "string", example: "Dhruv" },
+                lastName: { type: "string", example: "Gaddem" },
+                dob: { type: "string", example: "2011-11-09" },
+                ageOnTryoutDay: { type: "integer", example: 14 },
+                hasUsaMembership: { type: "boolean", example: false },
+                usaMembershipId: { type: "string", example: "" },
+                clubName: { type: "string", example: "" },
+                guardianName: { type: "string", example: "Sirisha Gaddem" },
+                guardianEmail: { type: "string", format: "email", example: "gaddem.sirisha@gmail.com" },
+              },
+            },
+            dynamicAnswers: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  label: { type: "string" },
+                  value: { type: "string" },
+                },
+              },
+            },
+            scores: {
+              type: "object",
+              properties: {
+                safetyEntryExit: { type: "boolean", nullable: true },
+                safetyFloat: { type: "boolean", nullable: true },
+                freestyle: { type: "number", nullable: true },
+                backstroke: { type: "number", nullable: true },
+                breaststroke: { type: "number", nullable: true },
+                butterfly: { type: "number", nullable: true },
+                totalScore: { type: "number", example: 10, nullable: true },
+              },
+            },
+            detailedScores: {
+              type: "object",
+              description: "Per-criterion scoring map (criterion key -> yes/no or numeric score).",
+              additionalProperties: {
+                oneOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }],
+              },
+              example: {
+                circle_swim: "no",
+                ready_position: "no",
+                legs_straight: 2,
+                start_finish_back: "yes",
+                headfirst_dive: "yes",
+              },
+            },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
       },
       responses: {
         Unauthorized: {
@@ -629,6 +784,7 @@ const options: swaggerJsdoc.Options = {
       { name: "Groups", description: "Club group management" },
       { name: "Public", description: "Public endpoints for the landing page (no auth required)" },
       { name: "Parent Auth", description: "Parent authentication (registration, email verification, OTP login)" },
+      { name: "Admin Registrations", description: "Admin/super_admin registration lookup by parent" },
     ],
   },
   apis: ["./src/docs/**/*.yaml"],

@@ -1,11 +1,11 @@
-import { Request, Response, NextFunction } from 'express';
-import { UserService } from './user.service';
-import { HTTP_STATUS } from '../../shared/constants/httpStatus';
-import { MESSAGES } from '../../shared/constants/messages';
-import { sendSuccess } from '../../shared/utils/response';
-import { updateProfileSchema } from './user.validation';
-import { UnauthorizedError } from '../../shared/errors/domain.errors';
-import { UserRole } from '../../shared/constants/roles';
+import { Request, Response, NextFunction } from "express";
+import { UserService } from "./user.service";
+import { HTTP_STATUS } from "../../shared/constants/httpStatus";
+import { MESSAGES } from "../../shared/constants/messages";
+import { sendSuccess } from "../../shared/utils/response";
+import { updateProfileSchema } from "./user.validation";
+import { UnauthorizedError } from "../../shared/errors/domain.errors";
+import { UserRole } from "../../shared/constants/roles";
 
 export class UserController {
   constructor(private readonly service: UserService) {}
@@ -16,9 +16,13 @@ export class UserController {
    */
   getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const userId = req.user?.id;
       if (!userId) return next(new UnauthorizedError());
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const user = await this.service.getMe(userId);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { user }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -31,10 +35,14 @@ export class UserController {
    */
   updateMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const userId = req.user?.id;
       if (!userId) return next(new UnauthorizedError());
       const input = updateProfileSchema.parse(req.body);
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const user = await this.service.updateMe(userId, input);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { user }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -47,12 +55,15 @@ export class UserController {
    */
   listAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const role = req.query['role'] as UserRole | undefined;
-      const clubId = req.query['clubId'] as string | undefined;
-      const search = (req.query['search'] as string | undefined)?.trim() || undefined;
-      const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
-      const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
+      const role = req.query["role"] as UserRole | undefined;
+      const clubId = req.query["clubId"] as string | undefined;
+      const search = (req.query["search"] as string | undefined)?.trim() || undefined;
+      const page = Math.max(1, parseInt(req.query["page"] as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query["limit"] as string) || 20));
+      req.step?.("delegating to service");
       const result = await this.service.listAll({ role, clubId, search }, { page, limit });
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -65,8 +76,11 @@ export class UserController {
    */
   getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { userId } = req.params;
+      req.step?.("delegating to service");
       const user = await this.service.getById(userId!);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { user }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -79,13 +93,17 @@ export class UserController {
    */
   changeRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { userId } = req.params;
       const { role } = req.body;
-      if (!['admin', 'coach'].includes(role)) {
-        res.status(400).json({ message: 'Invalid role. Must be admin or coach.' });
+      if (!["admin", "coach"].includes(role)) {
+        res.status(400).json({ message: "Invalid role. Must be admin or coach." });
         return;
       }
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const user = await this.service.changeRole(userId!, role as UserRole);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { user }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -98,8 +116,11 @@ export class UserController {
    */
   removeFromClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { userId } = req.params;
+      req.step?.("delegating to service");
       await this.service.removeFromClub(userId!);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, null, MESSAGES.DELETED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -112,8 +133,11 @@ export class UserController {
    */
   getByClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { clubId } = req.params;
+      req.step?.("delegating to service");
       const result = await this.service.getByClub(clubId!);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);

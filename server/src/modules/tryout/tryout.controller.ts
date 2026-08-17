@@ -305,8 +305,10 @@ export class TryoutController {
    */
   list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const clubId = req.user?.clubId;
       if (!clubId) return next(new ForbiddenError("No club associated with user"));
+      req.step?.("validated");
 
       const page = Math.max(1, parseInt(req.query["page"] as string) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(req.query["limit"] as string) || 10));
@@ -321,6 +323,7 @@ export class TryoutController {
         | "updatedAt";
       const sortOrder = (req.query["sortOrder"] === "asc" ? "asc" : "desc") as "asc" | "desc";
 
+      req.step?.("delegating to service");
       const result = await this.service.listByClub(clubId, {
         page,
         limit,
@@ -333,6 +336,7 @@ export class TryoutController {
         isTest: isTestUser(req.user?.id),
       });
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -345,12 +349,16 @@ export class TryoutController {
    */
   getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const clubId = req.user?.clubId;
       if (!clubId) return next(new ForbiddenError("No club associated with user"));
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const tryout = await this.service.getById(id, clubId, isTestUser(req.user?.id));
       const sessions = await sessionRepo.findByTryout(id);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { tryout: { ...tryout, sessions } }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -363,9 +371,11 @@ export class TryoutController {
    */
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const clubId = req.user?.clubId;
       const userId = req.user?.id;
       if (!clubId || !userId) return next(new ForbiddenError("No club or user associated"));
+      req.step?.("validated");
 
       // Parse JSON fields from form data
       const slotDuration = parseInt(req.body.slotDuration) || 30;
@@ -385,6 +395,7 @@ export class TryoutController {
 
       const { startAt, endAt } = computeTryoutBounds(rawSessions);
 
+      req.step?.("delegating to service");
       const tryout = await this.service.create({
         name: req.body.name,
         location: req.body.location || "",
@@ -413,6 +424,7 @@ export class TryoutController {
 
       await syncSessionsAndSlots(tryout._id.toString(), rawSessions, slotDuration, swimmersPerSlot);
 
+      req.step?.("responding", { status: HTTP_STATUS.CREATED });
       sendSuccess(res, { tryout }, MESSAGES.CREATED, HTTP_STATUS.CREATED);
     } catch (err) {
       next(err);
@@ -425,9 +437,11 @@ export class TryoutController {
    */
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const clubId = req.user?.clubId;
       if (!clubId) return next(new ForbiddenError("No club associated with user"));
+      req.step?.("validated");
 
       // Parse JSON fields from form data if present
       const slotDuration = req.body.slotDuration !== undefined ? parseInt(req.body.slotDuration) : undefined;
@@ -449,6 +463,7 @@ export class TryoutController {
 
       const { startAt, endAt } = rawSessions !== undefined ? computeTryoutBounds(rawSessions) : { startAt: undefined, endAt: undefined };
 
+      req.step?.("delegating to service");
       const tryout = await this.service.update(id, clubId, {
         ...(req.body.name !== undefined && { name: req.body.name }),
         ...(req.body.location !== undefined && { location: req.body.location }),
@@ -481,6 +496,7 @@ export class TryoutController {
       }
 
       const sessions = await sessionRepo.findByTryout(id);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { tryout: { ...tryout, sessions } }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -493,11 +509,15 @@ export class TryoutController {
    */
   publish = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const clubId = req.user?.clubId;
       if (!clubId) return next(new ForbiddenError("No club associated with user"));
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const tryout = await this.service.update(id, clubId, { status: "open" });
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { tryout }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -510,11 +530,15 @@ export class TryoutController {
    */
   delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const clubId = req.user?.clubId;
       if (!clubId) return next(new ForbiddenError("No club associated with user"));
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       await this.service.delete(id, clubId);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, null, MESSAGES.DELETED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -527,8 +551,10 @@ export class TryoutController {
    */
   getSessions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const sessions = await sessionRepo.findByTryout(id);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { sessions }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -541,9 +567,11 @@ export class TryoutController {
    */
   getSlots = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const sessionId = req.query["sessionId"] as string | undefined;
       const slots = sessionId ? await slotRepo.findBySession(sessionId) : await slotRepo.findByTryout(id);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { slots }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -557,7 +585,9 @@ export class TryoutController {
    */
   getPublicById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
+      req.step?.("delegating to service");
       const tryout = await this.service.getPublicById(id, isTestUser(req.user?.id) ? undefined : false);
 
       const sessions = await sessionRepo.findByTryout(id);
@@ -574,6 +604,7 @@ export class TryoutController {
         }),
       );
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { ...tryout, sessions: sessionsWithSlots }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -586,6 +617,7 @@ export class TryoutController {
    */
   listPublic = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const page = Math.max(1, parseInt(req.query["page"] as string) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(req.query["limit"] as string) || 10));
       const search = (req.query["search"] as string | undefined)?.trim() || undefined;
@@ -598,6 +630,7 @@ export class TryoutController {
       const minAge = req.query["minAge"] !== undefined ? parseInt(req.query["minAge"] as string) : undefined;
       const maxAge = req.query["maxAge"] !== undefined ? parseInt(req.query["maxAge"] as string) : undefined;
 
+      req.step?.("delegating to service");
       const result = await this.service.listActive({
         page,
         limit,
@@ -610,6 +643,7 @@ export class TryoutController {
         isTest: isTestUser(req.user?.id) ? undefined : false,
       });
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -636,6 +670,7 @@ export class TryoutController {
    */
   getRegistrations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
 
       // ── Parse query params ────────────────────────────────────────────────
@@ -697,6 +732,7 @@ export class TryoutController {
       const registrations = await this.fetchRegistrationsPage(mongoFilter, sortBy, sortOrder as 1 | -1, page, limit);
 
       // ── Enrich with session/slot/segment data ─────────────────────────────
+      req.step?.("delegating to service");
       const tryout = await this.service.getById(id, req.user?.clubId ?? "");
 
       // ── Coach segment scoping ───────────────────────────────────────────
@@ -821,6 +857,7 @@ export class TryoutController {
         };
       });
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(
         res,
         {
@@ -844,6 +881,7 @@ export class TryoutController {
    */
   getLeaderboard = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const registrations = await RegistrationModel.find({
         tryoutId: id,
@@ -854,6 +892,7 @@ export class TryoutController {
         .lean()
         .exec();
 
+      req.step?.("delegating to service");
       const tryout = await this.service.getById(id, req.user?.clubId ?? "");
 
       // ── Coach segment scoping ───────────────────────────────────────────
@@ -906,6 +945,7 @@ export class TryoutController {
 
       data.sort((a: any, b: any) => parseFloat(String(b.total_score)) - parseFloat(String(a.total_score)));
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, data, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -918,11 +958,13 @@ export class TryoutController {
    */
   decision = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { regId } = req.params;
       const { status } = req.body;
       if (!["offered", "rejected"].includes(status)) {
         throw new BadRequestError("status must be offered or rejected");
       }
+      req.step?.("validated");
 
       const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: { status } }, { new: true }).lean().exec();
       if (!updated) throw new NotFoundError("Registration not found");
@@ -945,6 +987,7 @@ export class TryoutController {
           return;
         }
 
+        req.step?.("delegating to service");
         const [tryout, group, template, club, sender] = await Promise.all([
           this.service.getById(updated.tryoutId.toString(), clubId),
           groupId ? GroupModel.findById(groupId).lean().exec() : Promise.resolve(null),
@@ -1010,6 +1053,7 @@ export class TryoutController {
         }
       }
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -1022,11 +1066,13 @@ export class TryoutController {
    */
   promoteWaitlist = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { regId } = req.params;
       const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: { status: "registered", waitlistPosition: null } }, { new: true })
         .lean()
         .exec();
       if (!updated) throw new NotFoundError("Registration not found");
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -1039,12 +1085,14 @@ export class TryoutController {
    */
   verifyUsa = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { regId } = req.params;
       const { status } = req.body;
       const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: { usaVerificationStatus: status } }, { new: true })
         .lean()
         .exec();
       if (!updated) throw new NotFoundError("Registration not found");
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -1057,6 +1105,7 @@ export class TryoutController {
    */
   updateScore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { regId } = req.params;
       const body = req.body;
 
@@ -1105,6 +1154,7 @@ export class TryoutController {
 
       const updated = await RegistrationModel.findByIdAndUpdate(regId, { $set: scoreUpdate }, { new: true }).lean().exec();
       if (!updated) throw new NotFoundError("Registration not found");
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -1117,6 +1167,7 @@ export class TryoutController {
    */
   resetScore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { regId } = req.params;
 
       const updated = await RegistrationModel.findByIdAndUpdate(
@@ -1139,6 +1190,7 @@ export class TryoutController {
         .lean()
         .exec();
       if (!updated) throw new NotFoundError("Registration not found");
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -1151,9 +1203,11 @@ export class TryoutController {
    */
   getPublicRegistrationQuestions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const doc = await TryoutRegistrationQuestionModel.findOne({ tryoutId: id }).lean().exec();
       const questions = doc?.questions ?? [];
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { questions }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -1166,11 +1220,14 @@ export class TryoutController {
    */
   upsertRegistrationQuestions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const clubId = req.user?.clubId;
       if (!clubId) return next(new ForbiddenError("No club associated with user"));
+      req.step?.("validated");
 
       // Verify tryout belongs to user's club
+      req.step?.("delegating to service");
       const tryout = await this.service.getById(id, clubId);
       if (!tryout) return next(new NotFoundError("Tryout not found"));
 
@@ -1184,6 +1241,7 @@ export class TryoutController {
         .lean()
         .exec();
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { questions: doc?.questions ?? [] }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -1196,6 +1254,7 @@ export class TryoutController {
    */
   sendComms = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const { audience, subject, body } = req.body;
 
@@ -1214,6 +1273,7 @@ export class TryoutController {
         { $set: { lastCommunicationAt: new Date(), emailSent: true } },
       );
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { sentCount: registrations.length, audience, subject }, "Communication sent successfully", HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -1228,6 +1288,7 @@ export class TryoutController {
    */
   bulkEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = req.params;
       const clubId = req.user?.clubId;
       if (!clubId) return next(new ForbiddenError("No club associated with user"));
@@ -1252,7 +1313,9 @@ export class TryoutController {
         res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "subject and body are required" });
         return;
       }
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const tryout = await this.service.getById(id, clubId);
 
       const registrations = await RegistrationModel.find({
@@ -1320,6 +1383,7 @@ export class TryoutController {
         "bulk-email.recipients_final",
       );
 
+      req.step?.("responding", { status: 202 });
       sendSuccess(res, { queued: recipients.length }, "Bulk email queued", 202);
 
       setImmediate(async () => {
@@ -1349,11 +1413,14 @@ export class TryoutController {
    */
   getRegistrationDetail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id, regId } = req.params;
       const clubId = req.user?.clubId;
       if (!clubId) return next(new ForbiddenError("No club associated with user"));
+      req.step?.("validated");
 
       // Verify tryout belongs to user's club
+      req.step?.("delegating to service");
       const tryout = await this.service.getById(id, clubId);
 
       const registration = await RegistrationModel.findOne({ _id: regId, tryoutId: id })
@@ -1370,6 +1437,7 @@ export class TryoutController {
         throw new ForbiddenError("You do not have access to this registration");
       }
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { registration }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);

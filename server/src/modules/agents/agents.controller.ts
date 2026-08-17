@@ -1,15 +1,11 @@
-import { Request, Response, NextFunction } from 'express';
-import { AgentsService } from './agents.service';
-import {
-  agentIdParamSchema,
-  updateAgentConfigSchema,
-  agentActivityQuerySchema,
-} from './agents.validation';
-import { HTTP_STATUS } from '../../shared/constants/httpStatus';
-import { MESSAGES } from '../../shared/constants/messages';
-import { sendSuccess } from '../../shared/utils/response';
-import { ForbiddenError, UnauthorizedError } from '../../shared/errors/domain.errors';
-import { ADMIN_ROLES, UserRole } from '../../shared/constants/roles';
+import { Request, Response, NextFunction } from "express";
+import { AgentsService } from "./agents.service";
+import { agentIdParamSchema, updateAgentConfigSchema, agentActivityQuerySchema } from "./agents.validation";
+import { HTTP_STATUS } from "../../shared/constants/httpStatus";
+import { MESSAGES } from "../../shared/constants/messages";
+import { sendSuccess } from "../../shared/utils/response";
+import { ForbiddenError, UnauthorizedError } from "../../shared/errors/domain.errors";
+import { ADMIN_ROLES, UserRole } from "../../shared/constants/roles";
 
 // ─── Role helpers ─────────────────────────────────────────────────────────────
 
@@ -36,9 +32,13 @@ export class AgentsController {
    */
   getConfigs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const configs = await this.service.getAllAgentConfigs();
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, configs, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -55,10 +55,15 @@ export class AgentsController {
    */
   getActivity = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
 
       const { agentId, limit } = agentActivityQuerySchema.parse(req.query);
+      req.step?.("validated");
+
+      req.step?.("delegating to service");
       const activity = await this.service.getAgentActivity(agentId, limit);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, activity, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -75,16 +80,20 @@ export class AgentsController {
    */
   updateConfig = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       if (!req.user) return next(new UnauthorizedError());
 
       if (!isAdminRole(req.user.role)) {
-        return next(new ForbiddenError('Only administrators may update agent configurations'));
+        return next(new ForbiddenError("Only administrators may update agent configurations"));
       }
 
       const { agentId } = agentIdParamSchema.parse(req.params);
       const body = updateAgentConfigSchema.parse(req.body);
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const updated = await this.service.updateAgentConfig(agentId, body, req.user.id);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, updated, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);

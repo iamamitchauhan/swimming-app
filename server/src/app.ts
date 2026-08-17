@@ -7,6 +7,7 @@ import swaggerUi from "swagger-ui-express";
 import { config } from "./config/env";
 import { swaggerSpec } from "./config/swagger";
 import { requestId } from "./middleware/requestId.middleware";
+import { requestLogger } from "./middleware/requestLogger.middleware";
 import { errorHandler } from "./middleware/error.middleware";
 import { HTTP_STATUS } from "./shared/constants/httpStatus";
 import { MESSAGES } from "./shared/constants/messages";
@@ -19,7 +20,7 @@ import { invitationRouter } from "./modules/invitation/invitation.routes";
 import { userRouter } from "./modules/user/user.routes";
 import { tryoutRouter } from "./modules/tryout/tryout.routes";
 import { swimmerRouter } from "./modules/swimmer/swimmer.routes";
-import { registrationRouter } from "./modules/registration/registration.routes";
+import { registrationRouter, adminRegistrationRouter } from "./modules/registration/registration.routes";
 import { publicRouter } from "./modules/public/public.routes";
 import { parentRouter } from "./modules/parent/parent.routes";
 import { questionLibraryRouter } from "./modules/question-library/question-library.routes";
@@ -58,6 +59,7 @@ export function createApp(): express.Application {
   );
   app.use(express.json());
   app.use(requestId);
+  app.use(requestLogger);
   // app.use(rateLimiter);
 
   // Swagger UI — available in all environments for this project
@@ -116,6 +118,7 @@ export function createApp(): express.Application {
   app.use(`${API_PREFIX}/tryouts`, tryoutRouter);
   app.use(`${API_PREFIX}/swimmers`, swimmerRouter);
   app.use(`${API_PREFIX}/registrations`, registrationRouter);
+  app.use(`${API_PREFIX}/admin/registrations`, adminRegistrationRouter);
   app.use(`${API_PREFIX}/public`, publicRouter);
   app.use(`${API_PREFIX}/parent`, parentRouter);
   app.use(`${API_PREFIX}/question-library`, questionLibraryRouter);

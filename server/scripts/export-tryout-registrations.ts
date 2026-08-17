@@ -28,10 +28,13 @@ dotenv.config();
  *   Age On Tryout Day, Segment ID, Slot Time, Parent Name, Parent Email, Status,
  *   Waitlist Position, Registered At, USA Membership, USA Membership ID,
  *   Club Name, USA Verification Status, Email Sent, Last Communication At,
- *   Created At, Updated At, plus one column per dynamic answer label.
+ *   Created At, Updated At, plus one column per dynamic answer label,
+ *   Total Score, per-stroke scores (Freestyle, Backstroke, Breaststroke,
+ *   Butterfly, Safety EntryExit, SafetyFloat), one column per detailed-score
+ *   criterion, Coach Recommendation, and Notes.
  *
- * Dynamic answer columns are added on the fly so every answer is captured
- * even if only some registrations answered a given question.
+ * Dynamic answer and detailed-score columns are added on the fly so every
+ * answer/criterion is captured even if only some registrations have them.
  */
 
 async function main(): Promise<void> {
@@ -109,6 +112,20 @@ async function main(): Promise<void> {
       }
     }
 
+    // Collect the full set of detailed-score criterion keys across all
+    // registrations so we can build one column per criterion.
+    const detailedKeys: string[] = [];
+    const seenDetailed = new Set<string>();
+    for (const reg of registrations) {
+      const detailed = (reg as any).detailedScores ?? {};
+      for (const key of Object.keys(detailed)) {
+        if (!seenDetailed.has(key)) {
+          seenDetailed.add(key);
+          detailedKeys.push(key);
+        }
+      }
+    }
+
     // ─── Build the workbook ────────────────────────────────────────────────
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "Swimtryout Export Script";
@@ -152,7 +169,31 @@ async function main(): Promise<void> {
       width: Math.max(20, Math.min(60, label.length + 8)),
     }));
 
-    sheet.columns = [...fixedColumns, ...dynamicColumns];
+    // Score columns (from the structured `scores` object on the registration)
+    const scoreColumns: Partial<ExcelJS.Column>[] = [
+      { header: "Total Score", key: "totalScore", width: 12 },
+      { header: "Freestyle", key: "scoreFreestyle", width: 12 },
+      { header: "Backstroke", key: "scoreBackstroke", width: 12 },
+      { header: "Breaststroke", key: "scoreBreaststroke", width: 14 },
+      { header: "Butterfly", key: "scoreButterfly", width: 12 },
+      { header: "Safety Entry/Exit", key: "scoreSafetyEntryExit", width: 18 },
+      { header: "Safety Float", key: "scoreSafetyFloat", width: 14 },
+    ];
+
+    // Detailed per-criterion score columns (one per criterion key)
+    const detailedColumns: Partial<ExcelJS.Column>[] = detailedKeys.map((key) => ({
+      header: `DS: ${key}`,
+      key: `ds_${key}`,
+      width: Math.max(16, Math.min(40, key.length + 8)),
+    }));
+
+    // Notes column
+    const notesColumns: Partial<ExcelJS.Column>[] = [
+      { header: "Coach Recommendation", key: "coachRecommendation", width: 24 },
+      { header: "Notes", key: "notes", width: 40 },
+    ];
+
+    sheet.columns = [...fixedColumns, ...dynamicColumns, ...scoreColumns, ...detailedColumns, ...notesColumns];
 
     // Style the header row
     const headerRow = sheet.getRow(1);
@@ -232,6 +273,26 @@ async function main(): Promise<void> {
       }
       row.registrationDetailMetaAnswers = metaParts.join(" | ");
 
+      // Structured scores
+      const scores = (reg as any).scores ?? {};
+      row.totalScore = scores.totalScore ?? "";
+      row.scoreFreestyle = scores.freestyle ?? "";
+      row.scoreBackstroke = scores.backstroke ?? "";
+      row.scoreBreaststroke = scores.breaststroke ?? "";
+      row.scoreButterfly = scores.butterfly ?? "";
+      row.scoreSafetyEntryExit = scores.safetyEntryExit ?? "";
+      row.scoreSafetyFloat = scores.safetyFloat ?? "";
+
+      // Detailed per-criterion scores — one column per criterion key
+      const detailed = (reg as any).detailedScores ?? {};
+      for (const key of detailedKeys) {
+        row[`ds_${key}`] = key in detailed ? fmt(detailed[key]) : "";
+      }
+
+      // Coach recommendation + notes
+      row.coachRecommendation = fmt((reg as any).coachRecommendation);
+      row.notes = (reg as any).notes ?? "";
+
       sheet.addRow(row);
     }
 
@@ -262,6 +323,7 @@ async function main(): Promise<void> {
     console.log(`  Tryout ID     : ${tryoutId}`);
     console.log(`  Registrations : ${registrations.length}`);
     console.log(`  Dynamic Qs    : ${dynamicLabels.length}`);
+    console.log(`  Detailed keys : ${detailedKeys.length}`);
     console.log(`  Output file   : ${outPath}`);
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 

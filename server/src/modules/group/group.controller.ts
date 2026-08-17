@@ -15,10 +15,14 @@ export class GroupController {
 
   listByClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const clubId = req.user?.clubId;
       if (!clubId) throw new BadRequestError("clubId is required");
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const data = await this.service.listByClub(clubId);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { groups: data }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -35,7 +39,10 @@ export class GroupController {
 
   getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
+      req.step?.("delegating to service");
       const data = await this.service.getById(req.params["id"]!);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { group: data }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -44,10 +51,13 @@ export class GroupController {
 
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { userId, clubId } = this.getUserIds(req);
       const { name, color, description } = req.body as { name?: string; color?: string; description?: string };
       if (!name?.trim()) throw new BadRequestError("name is required");
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const data = await this.service.create(clubId, userId, name, color ?? "", description ?? "");
 
       // save email template
@@ -61,6 +71,7 @@ export class GroupController {
         createdBy: userId,
         updatedBy: userId,
       });
+      req.step?.("responding", { status: HTTP_STATUS.CREATED });
       sendSuccess(res, { group: data }, "Group created", HTTP_STATUS.CREATED);
     } catch (err) {
       next(err);
@@ -69,10 +80,13 @@ export class GroupController {
 
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { userId, clubId } = this.getUserIds(req);
       const { name, color, description } = req.body as { name?: string; color?: string; description?: string };
       if (!name?.trim()) throw new BadRequestError("name is required");
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const data = await this.service.update(req.params["id"]!, userId, name, color ?? "", description ?? "");
 
       const groupId = data._id.toString();
@@ -90,6 +104,7 @@ export class GroupController {
         });
       }
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { group: data }, "Group updated", HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -98,8 +113,13 @@ export class GroupController {
 
   delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { userId } = this.getUserIds(req);
+      req.step?.("validated");
+
+      req.step?.("delegating to service");
       await this.service.delete(req.params["id"]!, userId);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, null, "Group deleted", HTTP_STATUS.OK);
     } catch (err) {
       next(err);

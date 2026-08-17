@@ -16,11 +16,15 @@ export class PublicController {
    */
   listTryouts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const params = publicTryoutListParamsSchema.parse(req.query);
+      req.step?.("validated");
 
       // Only show open tryouts to the public
+      req.step?.("delegating to service");
       const result = await this.tryoutRepo.findByStatus("open", { ...params, isTest: isTestUser(req.user?.id) ? undefined : false });
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -33,8 +37,11 @@ export class PublicController {
    */
   getTryoutById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const { id } = publicTryoutIdSchema.parse(req.params);
+      req.step?.("validated");
 
+      req.step?.("delegating to service");
       const tryout = await this.tryoutRepo.findById(id, isTestUser(req.user?.id) ? undefined : false);
       if (!tryout) throw new NotFoundError("Tryout not found");
 
@@ -53,6 +60,7 @@ export class PublicController {
         },
       };
 
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, response, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -65,7 +73,10 @@ export class PublicController {
    */
   getClubs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
+      req.step?.("delegating to service");
       const clubs = await this.tryoutRepo.findDistinctClubs(isTestUser(req.user?.id) ? undefined : false);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { clubs }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -78,7 +89,10 @@ export class PublicController {
    */
   getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
+      req.step?.("delegating to service");
       const stats = await this.tryoutRepo.getPlatformStats(isTestUser(req.user?.id) ? undefined : false);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, stats, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);

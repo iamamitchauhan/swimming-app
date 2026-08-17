@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import { OnboardingService } from './onboarding.service';
-import { HTTP_STATUS } from '../../shared/constants/httpStatus';
-import { MESSAGES } from '../../shared/constants/messages';
-import { sendSuccess } from '../../shared/utils/response';
-import { step1Schema, step2Schema } from './onboarding.validation';
-import { UnauthorizedError } from '../../shared/errors/domain.errors';
+import { Request, Response, NextFunction } from "express";
+import { OnboardingService } from "./onboarding.service";
+import { HTTP_STATUS } from "../../shared/constants/httpStatus";
+import { MESSAGES } from "../../shared/constants/messages";
+import { sendSuccess } from "../../shared/utils/response";
+import { step1Schema, step2Schema } from "./onboarding.validation";
+import { UnauthorizedError } from "../../shared/errors/domain.errors";
 
 export class OnboardingController {
   constructor(private readonly service: OnboardingService) {}
@@ -15,9 +15,13 @@ export class OnboardingController {
    */
   getStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const userId = req.user?.id;
       if (!userId) return next(new UnauthorizedError());
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const status = await this.service.getStatus(userId);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, status, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -30,10 +34,14 @@ export class OnboardingController {
    */
   saveStep1 = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const userId = req.user?.id;
       if (!userId) return next(new UnauthorizedError());
       const input = step1Schema.parse(req.body);
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const club = await this.service.saveStep1(userId, input);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { club }, MESSAGES.ONBOARDING_STEP_SAVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -46,10 +54,14 @@ export class OnboardingController {
    */
   saveStep2 = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const userId = req.user?.id;
       if (!userId) return next(new UnauthorizedError());
       const { coachEmails } = step2Schema.parse(req.body);
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const result = await this.service.saveStep2(userId, coachEmails);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.ONBOARDING_STEP_SAVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
@@ -62,9 +74,13 @@ export class OnboardingController {
    */
   submitClub = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const userId = req.user?.id;
       if (!userId) return next(new UnauthorizedError());
+      req.step?.("validated");
+      req.step?.("delegating to service");
       const club = await this.service.submitClub(userId);
+      req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { club }, MESSAGES.CLUB_SUBMITTED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);

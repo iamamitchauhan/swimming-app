@@ -6,7 +6,7 @@
 import { create } from "zustand";
 import { tokenStorage } from "./api/client";
 
-export type UserRole = "super_admin" | "admin" | "coach";
+export type UserRole = "super_admin" | "admin" | "coach" | "parent";
 
 export interface AuthUser {
   _id: string;

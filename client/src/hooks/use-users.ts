@@ -8,15 +8,25 @@
  * useUser(id)         → GET  /users/:userId        (super_admin)
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, type User, type ClubUserItem, type PaginatedUsersResponse } from "../lib/api/users.api";
+import {
+  usersApi,
+  type User,
+  type ClubUserItem,
+  type PaginatedUsersResponse,
+} from "../lib/api/users.api";
 import type { UserRole } from "../lib/auth.store";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
 export const userKeys = {
   me: ["users", "me"] as const,
-  all: (params?: { role?: UserRole; clubId?: string; search?: string; page?: number; limit?: number }) =>
-    ["users", "all", params] as const,
+  all: (params?: {
+    role?: UserRole;
+    clubId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) => ["users", "all", params] as const,
   byClub: (clubId: string) => ["users", "club", clubId] as const,
   detail: (id: string) => ["users", id] as const,
 };
@@ -34,11 +44,18 @@ export function useCurrentUser() {
   });
 }
 
-export function useAllUsers(params?: { role?: UserRole; clubId?: string; search?: string; page?: number; limit?: number }) {
+export function useAllUsers(params?: {
+  role?: UserRole;
+  clubId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
   return useQuery<PaginatedUsersResponse>({
     queryKey: userKeys.all(params),
     queryFn: () => usersApi.listAll(params),
     staleTime: 2 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 }
 
