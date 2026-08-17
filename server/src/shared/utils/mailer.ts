@@ -96,7 +96,7 @@ const ACCENT: Record<AccentColor, { header: string; button: string }> = {
 // callouts, and tables always look and behave the same way.
 
 /** Wraps inner content in the standard document shell (header + card + footer). */
-function renderLayout(opts: { accent?: AccentColor; bodyHtml: string; brandName?: string }): string {
+export function renderLayout(opts: { accent?: AccentColor; bodyHtml: string; brandName?: string }): string {
   const accent = ACCENT[opts.accent ?? "primary"];
   const year = new Date().getFullYear();
   // Falls back to config.SES_FROM_NAME everywhere except the two templates
@@ -703,8 +703,37 @@ export interface BulkEmailRecipient {
   note: string;
 }
 
-function interpolateTemplate(template: string, vars: Record<string, string>): string {
+export function interpolateTemplate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
+}
+
+/**
+ * Renders a templated email exactly as sendBulkTemplateEmail would, but
+ * WITHOUT sending. Returns the interpolated subject, plain-text body, and
+ * full HTML (wrapped in renderLayout) so the client can show a faithful
+ * preview of what will actually be sent.
+ */
+export function previewTemplateEmail(opts: { recipient: BulkEmailRecipient; subjectTemplate: string; bodyTemplate: string }): {
+  subject: string;
+  text: string;
+  html: string;
+} {
+  const r = opts.recipient;
+  const vars: Record<string, string> = {
+    swimmer_name: r.swimmer_name,
+    parent_name: r.parent_name,
+    parent_email: r.parent_email,
+    club_name: r.club_name,
+    tryout_name: r.tryout_name,
+    group_name: r.group_name,
+    sender_name: r.sender_name,
+    note: r.note,
+  };
+  const subject = interpolateTemplate(opts.subjectTemplate, vars);
+  const bodyText = interpolateTemplate(opts.bodyTemplate, vars);
+  const bodyHtml = `<div style="font-size:15px;line-height:24px;color:${THEME.text};">${bodyText.replace(/\n/g, "<br/>")}</div>`;
+  const html = renderLayout({ bodyHtml });
+  return { subject, text: bodyText, html };
 }
 
 export async function sendBulkTemplateEmail(opts: {

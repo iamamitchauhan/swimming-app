@@ -7,6 +7,7 @@ import {
   ChevronUp,
   ClipboardList,
   Loader2,
+  Mail,
   RotateCcw,
   UserCog,
   X,
@@ -42,6 +43,8 @@ import {
 import { useGroups } from "@/hooks/use-groups";
 import { useAuthStore } from "@/lib/auth.store";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
+import { DecisionConfirmDialog } from "./DecisionConfirmDialog";
+import { SentEmailPreviewDialog } from "./SentEmailPreviewDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -183,6 +186,10 @@ export function RosterTab({ tryoutId }: Props) {
   const [pendingRegId, setPendingRegId] = useState<string | null>(null);
   const [manageCoachesOpen, setManageCoachesOpen] = useState(false);
   const [resetConfirmRegId, setResetConfirmRegId] = useState<string | null>(null);
+  const [sentEmailPreview, setSentEmailPreview] = useState<{
+    regId: string;
+    action: "offered" | "rejected";
+  } | null>(null);
 
   const user = useAuthStore((state) => state.user);
   const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
@@ -198,7 +205,7 @@ export function RosterTab({ tryoutId }: Props) {
     if (missing.length > 0) {
       const names = missing.map((r) => r.swimmer_name).join(", ");
       toast.error("Coach recommendation required", {
-        description: `Please assign a coach recommendation before proceeding: ${names}`,
+        description: `Please assign a coach recommendation before proceeding`,
         duration: 6000,
       });
       return false;
@@ -565,7 +572,7 @@ export function RosterTab({ tryoutId }: Props) {
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       {r.status !== "registered" || !canManageCoaches ? (
-                        <span className="text-gray-400">—</span>
+                        <span className="text-gray-400"></span>
                       ) : (
                         (() => {
                           const isComplete = avg(r);
@@ -650,6 +657,23 @@ export function RosterTab({ tryoutId }: Props) {
                           );
                         })()
                       )}
+                      {/* view sent email preview — shown for rows where a
+                          decision email has already been sent (offered/rejected),
+                          regardless of whether the Offer/Reject action cell is
+                          visible to this user. */}
+                      {(r.status === "offered" || r.status === "rejected") && (
+                        <button
+                          onClick={() =>
+                            setSentEmailPreview({
+                              regId: r.id,
+                              action: r.status as "offered" | "rejected",
+                            })
+                          }
+                          className="text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <Mail className="h-3.5 w-3.5" /> View sent email
+                        </button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -678,6 +702,11 @@ export function RosterTab({ tryoutId }: Props) {
           <button
             onClick={() => {
               if (!validateCoachRecommendation()) return;
+              // When exactly one swimmer is selected, treat it as a single
+              // action so the email preview can be fetched for that swimmer.
+              if (selectedIds.size === 1) {
+                setPendingRegId(Array.from(selectedIds)[0]);
+              }
               setBulkAction("offered");
               setConfirmOpen(true);
             }}
@@ -688,6 +717,9 @@ export function RosterTab({ tryoutId }: Props) {
           <button
             onClick={() => {
               if (!validateCoachRecommendation()) return;
+              if (selectedIds.size === 1) {
+                setPendingRegId(Array.from(selectedIds)[0]);
+              }
               setBulkAction("rejected");
               setConfirmOpen(true);
             }}
@@ -713,7 +745,7 @@ export function RosterTab({ tryoutId }: Props) {
       )}
 
       {/* ── Pagination ────────────────────────────────────────────────────── */}
-      {totalPages > 1 && (
+      {total > 0 && (
         <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
           <span>
             Showing{" "}
@@ -724,6 +756,29 @@ export function RosterTab({ tryoutId }: Props) {
             of <span className="font-medium">{total}</span> results
           </span>
           <div className="flex items-center gap-2">
+            {/* Page size selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
+                  {rosterParams.limit ?? 20}
+                  <span className="text-gray-500">/ page</span>
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {[5, 10, 20, 50, 100].map((size) => (
+                  <DropdownMenuItem
+                    key={size}
+                    onClick={() => onParamsChange({ limit: size, page: 1 })}
+                  >
+                    {size}
+                    {(rosterParams.limit ?? 20) === size && (
+                      <CheckCircle2 className="h-4 w-4 ml-auto text-green-600" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               size="sm"
@@ -747,43 +802,22 @@ export function RosterTab({ tryoutId }: Props) {
         </div>
       )}
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Confirm {bulkAction === "offered" ? "Offer" : "Reject"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingRegId
-                ? `Are you sure you want to ${bulkAction === "offered" ? "offer" : "reject"} this swimmer?`
-                : `Are you sure you want to ${bulkAction === "offered" ? "offer" : "reject"} the ${selectedIds.size} selected swimmers?`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setConfirmOpen(false);
-                setBulkAction(null);
-                setPendingRegId(null);
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirm}
-              disabled={sendDecision.isPending}
-              className={
-                bulkAction === "offered"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
-              }
-            >
-              {sendDecision.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DecisionConfirmDialog
+        open={confirmOpen}
+        onOpenChange={(v) => {
+          setConfirmOpen(v);
+          if (!v) {
+            setBulkAction(null);
+            setPendingRegId(null);
+          }
+        }}
+        action={bulkAction}
+        onConfirm={handleConfirm}
+        isPending={sendDecision.isPending}
+        tryoutId={tryoutId}
+        regId={pendingRegId}
+        selectedCount={selectedIds.size}
+      />
 
       <AlertDialog
         open={resetConfirmRegId !== null}
@@ -832,6 +866,16 @@ export function RosterTab({ tryoutId }: Props) {
         tryoutId={tryoutId}
         open={manageCoachesOpen}
         onOpenChange={setManageCoachesOpen}
+      />
+
+      <SentEmailPreviewDialog
+        open={sentEmailPreview !== null}
+        onOpenChange={(v) => {
+          if (!v) setSentEmailPreview(null);
+        }}
+        tryoutId={tryoutId}
+        regId={sentEmailPreview?.regId ?? null}
+        action={sentEmailPreview?.action ?? "offered"}
       />
     </div>
   );

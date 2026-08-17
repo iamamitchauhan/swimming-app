@@ -313,6 +313,23 @@ export const tryoutsApi = {
     ).then((res) => res.registration),
 
   /**
+   * GET /tryouts/:id/registrations/:regId/email-preview?status=offered|rejected
+   * Returns a preview of the email that would be sent (subject, text, html)
+   * WITHOUT actually sending anything. Uses the exact same template lookup
+   * and interpolation as the real decision endpoint.
+   */
+  getEmailPreview: (
+    tryoutId: string,
+    regId: string,
+    status: "offered" | "rejected",
+  ): Promise<EmailPreview> =>
+    api<EmailPreview>(
+      apiClient.get(`/tryouts/${tryoutId}/registrations/${regId}/email-preview`, {
+        params: { status },
+      }),
+    ),
+
+  /**
    * POST /tryouts/:id/bulk-email
    * Sends a templated bulk email to the specified registration IDs.
    * Returns 202 immediately; emails are sent in the background on the server.
@@ -461,8 +478,17 @@ export interface RegistrationDetail {
   waitlistPosition?: number;
   registeredAt?: string;
   emailSent?: boolean;
+  notes?: string;
+  coachRecommendation?: string | null;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface EmailPreview {
+  subject: string;
+  text: string;
+  html: string;
+  isCustom: boolean;
 }
 
 // ─── Waitlist ─────────────────────────────────────────────────────────────────

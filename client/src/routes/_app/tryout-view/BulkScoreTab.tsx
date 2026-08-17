@@ -215,7 +215,10 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
         await saveScoreMutation.mutateAsync({
           regId,
           edits: {
-            detailed_scores: scores[regId],
+            // Only include detailed_scores when there are actual score edits,
+            // otherwise undefined would clobber existing scores in the
+            // optimistic update (and unnecessarily on the server too).
+            ...(scores[regId] ? { detailed_scores: scores[regId] } : {}),
             notes: notesByReg[regId] ?? "",
           } as Partial<Registration>,
         });

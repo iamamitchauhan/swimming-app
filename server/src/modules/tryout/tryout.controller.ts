@@ -16,7 +16,7 @@ import { TryoutRegistrationQuestionModel } from "../../models/tryout-registratio
 import { EmailTemplateModel } from "../../models/email-template.model";
 import { GroupModel } from "../../models/group.model";
 import { ClubModel } from "../../models/club.model";
-import { sendRegistrationOffer, sendRegistrationReject, sendBulkTemplateEmail } from "../../shared/utils/mailer";
+import { sendRegistrationOffer, sendRegistrationReject, sendBulkTemplateEmail, previewTemplateEmail } from "../../shared/utils/mailer";
 import { UserService } from "../user/user.service";
 import { TryoutSlotModel } from "../../models/tryout-slot.model";
 import logger from "../../shared/utils/logger";
@@ -1055,6 +1055,120 @@ export class TryoutController {
 
       req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * GET /tryouts/:id/registrations/:regId/email-preview?status=offered|rejected
+   * Returns a preview of the email that would be sent for an offer/reject
+   * decision — subject, plain-text body, and full HTML — WITHOUT actually
+   * sending anything. Uses the exact same template lookup, interpolation, and
+   * renderLayout() as the real decision handler.
+   */
+  emailPreview = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      req.step?.("received", { params: req.params, query: req.query });
+      const { id, regId } = req.params;
+      const status = String(req.query.status ?? "");
+      if (!["offered", "rejected"].includes(status)) {
+        throw new BadRequestError("status query param must be 'offered' or 'rejected'");
+      }
+      const clubId = req.user?.clubId;
+      if (!clubId) {
+        return next(new ForbiddenError("No club associated with user"));
+      }
+      req.step?.("validated");
+
+      // Verify tryout belongs to user's club
+      req.step?.("delegating to service");
+      const tryout = await this.service.getById(id, clubId);
+
+      const registration = await RegistrationModel.findOne({ _id: regId, tryoutId: id })
+        .populate("swimmerId", "firstName lastName birthDate")
+        .populate("parentId", "firstName lastName email")
+        .lean()
+        .exec();
+      if (!registration) throw new NotFoundError("Registration not found");
+
+      // Coach segment scoping
+      const coachSegmentIds = this.getCoachSegmentIds(tryout, req.user);
+      if (coachSegmentIds !== null && !coachSegmentIds.includes(registration.segmentId)) {
+        throw new ForbiddenError("You do not have access to this registration");
+      }
+
+      const user = registration.parentId as any;
+      if (!user) {
+        sendSuccess(res, { subject: "", text: "", html: "", isCustom: false }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
+        return;
+      }
+
+      const emailType = status === "offered" ? "offered" : "rejected";
+      let groupId: string | null = null;
+      if (status === "offered" && registration.coachRecommendation && mongoose.Types.ObjectId.isValid(registration.coachRecommendation)) {
+        groupId = registration.coachRecommendation;
+      }
+
+      const [group, template, club, sender] = await Promise.all([
+        groupId ? GroupModel.findById(groupId).lean().exec() : Promise.resolve(null),
+        EmailTemplateModel.findOne({ clubId, groupId, type: emailType }).lean().exec(),
+        clubId ? ClubModel.findById(clubId).lean().exec() : Promise.resolve(null),
+        req.user?.id ? UserModel.findById(req.user.id).lean().exec() : Promise.resolve(null),
+      ]);
+
+      const swimmerName = `${registration.swimmerDetails.firstName} ${registration.swimmerDetails.lastName}`.trim();
+      const parentName = `${user.firstName} ${user.lastName}`.trim();
+      const parentEmail = user.email;
+      const senderName = sender ? `${sender.firstName ?? ""} ${sender.lastName ?? ""}`.trim() : "";
+
+      // If a custom template exists, preview it with the exact same code path
+      // as sendBulkTemplateEmail. Otherwise return a flag so the client knows
+      // to use its own fallback rendering.
+      if (template) {
+        const preview = previewTemplateEmail({
+          recipient: {
+            to: parentEmail,
+            swimmer_name: swimmerName,
+            parent_name: parentName,
+            parent_email: parentEmail,
+            club_name: club?.name ?? "",
+            tryout_name: tryout.name,
+            group_name: group?.name ?? "",
+            sender_name: senderName,
+            note: registration.notes ?? "",
+          },
+          subjectTemplate: template.subject,
+          bodyTemplate: template.body,
+        });
+        req.step?.("responding", { status: HTTP_STATUS.OK });
+        sendSuccess(res, { ...preview, isCustom: true }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
+        return;
+      }
+
+      // No custom template — return the interpolation variables so the client
+      // can render the default template (which is defined client-side for the
+      // fallback case). We also return the interpolated default from the
+      // server's DEFAULT_EMAIL_TEMPLATES for convenience.
+      const { DEFAULT_EMAIL_TEMPLATES } = await import("../../shared/constants/email-templates");
+      const defaultTpl = DEFAULT_EMAIL_TEMPLATES[emailType as keyof typeof DEFAULT_EMAIL_TEMPLATES];
+      const preview = previewTemplateEmail({
+        recipient: {
+          to: parentEmail,
+          swimmer_name: swimmerName,
+          parent_name: parentName,
+          parent_email: parentEmail,
+          club_name: club?.name ?? "",
+          tryout_name: tryout.name,
+          group_name: group?.name ?? "",
+          sender_name: senderName,
+          note: registration.notes ?? "",
+        },
+        subjectTemplate: defaultTpl.subject,
+        bodyTemplate: defaultTpl.body,
+      });
+      req.step?.("responding", { status: HTTP_STATUS.OK });
+      sendSuccess(res, { ...preview, isCustom: false }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

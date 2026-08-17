@@ -1047,6 +1047,94 @@ paths:
         "429":
           $ref: "#/components/responses/TooManyRequests"
 
+  /tryouts/{id}/registrations/{regId}/email-preview:
+    get:
+      tags: [Tryouts]
+      summary: Preview the offer/reject email for a swimmer
+      description: |
+        Returns a preview of the email that would be sent if the given
+        registration were offered or rejected — including the interpolated
+        subject, plain-text body, and full HTML (wrapped in the standard
+        email layout). **No email is actually sent.**
+
+        Uses the exact same template lookup, interpolation, and
+        `renderLayout()` as the real `decision` endpoint, so the preview
+        is faithful to what the parent would receive.
+
+        Template selection:
+        - For `status=offered`: uses the template matching the swimmer's
+          `coachRecommendation` group.
+        - For `status=rejected`: uses the club-wide rejection template
+          (groupId = null).
+        - If no custom template exists, the server's default template is
+          used and `isCustom` is `false`.
+      operationId: registrationEmailPreview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tryout ID
+          schema:
+            type: string
+        - name: regId
+          in: path
+          required: true
+          description: Registration ID
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: true
+          description: Which decision email to preview
+          schema:
+            type: string
+            enum: [offered, rejected]
+      responses:
+        "200":
+          description: Email preview (not sent)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          subject:
+                            type: string
+                            description: Interpolated email subject line
+                          text:
+                            type: string
+                            description: Interpolated plain-text body
+                          html:
+                            type: string
+                            description: Full HTML email (wrapped in renderLayout)
+                          isCustom:
+                            type: boolean
+                            description: Whether a custom club template was used (vs default)
+              example:
+                success: true
+                message: Retrieved
+                data:
+                  subject: "Congratulations – Team Offer for Ansh Shah"
+                  text: "Hi Pritesh Shah,\n\nI am pleased to officially offer Ansh Shah a spot…"
+                  html: "<!DOCTYPE html><html>…"
+                  isCustom: true
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
   /tryouts/{id}/bulk-email:
     post:
       tags: [Tryouts]

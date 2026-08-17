@@ -26,6 +26,7 @@ const controller = new TryoutController(service);
  * GET  /:id/registrations        — get all registrations for a tryout (admin, coach)
  * GET  /:id/leaderboard          — get scored leaderboard (admin, coach)
  * GET  /:id/registrations/:regId — get single registration detail (admin, coach)
+ * GET  /:id/registrations/:regId/email-preview — preview offer/reject email (admin, coach)
  * PUT  /:id/registrations/:regId/decision — update status to offered/rejected
  * PUT  /:id/registrations/:regId/promote  — promote from waitlist
  * PUT  /:id/registrations/:regId/verify   — update USA-S verification
@@ -49,6 +50,7 @@ tryoutRouter.get("/:id/slots", authenticate, authorize(USER_ROLES.ADMIN, USER_RO
 tryoutRouter.get("/:id/registrations", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getRegistrations);
 tryoutRouter.get("/:id/leaderboard", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getLeaderboard);
 tryoutRouter.get("/:id/registrations/:regId", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getRegistrationDetail);
+tryoutRouter.get("/:id/registrations/:regId/email-preview", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.emailPreview);
 tryoutRouter.get("/:id", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.getById);
 
 tryoutRouter.post("/", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), upload.single("banner"), controller.create);

@@ -21,6 +21,7 @@ import {
   type Registration,
   type WaitlistListParams,
   type WaitlistListResult,
+  type EmailPreview,
 } from "../lib/api/tryouts.api";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
@@ -33,6 +34,8 @@ export const tryoutDashboardKeys = {
   leaderboard: (id: string) => ["tryouts", id, "leaderboard"] as const,
   waitlist: (id: string, params: WaitlistListParams) =>
     ["tryouts", id, "waitlist", params] as const,
+  emailPreview: (id: string, regId: string, status: string) =>
+    ["tryouts", id, "registration", regId, "email-preview", status] as const,
 };
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
@@ -76,6 +79,26 @@ export function useWaitlistByTryout(id: string, params: WaitlistListParams = {})
     enabled: !!id,
     staleTime: 30_000,
     placeholderData: (prev) => prev,
+  });
+}
+
+/**
+ * Fetches a preview of the offer/reject email for a single registration.
+ * The server uses the exact same template lookup, interpolation, and
+ * renderLayout() as the real decision endpoint — so the preview is
+ * faithful to what the parent would actually receive. No email is sent.
+ */
+export function useEmailPreview(
+  tryoutId: string,
+  regId: string | null,
+  status: "offered" | "rejected" | null,
+  enabled = true,
+) {
+  return useQuery<EmailPreview>({
+    queryKey: tryoutDashboardKeys.emailPreview(tryoutId, regId ?? "", status ?? ""),
+    queryFn: () => tryoutsApi.getEmailPreview(tryoutId, regId!, status!),
+    enabled: !!tryoutId && !!regId && !!status && enabled,
+    staleTime: 60_000,
   });
 }
 
@@ -128,7 +151,13 @@ export function useSaveScore(tryoutId: string) {
         queryKey: ["tryouts", tryoutId, "roster"],
       });
 
-      // Patch every matching roster query (merge detailed_scores, don't replace)
+      // Patch every matching roster query (merge detailed_scores, don't replace).
+      // Strip undefined values from edits so they don't clobber existing fields
+      // (e.g. a notes-only save must not wipe detailed_scores from the cache).
+      const definedEdits = Object.fromEntries(
+        Object.entries(edits).filter(([, v]) => v !== undefined),
+      ) as Partial<Registration>;
+
       qc.getQueriesData<RegistrationListResult>({
         queryKey: ["tryouts", tryoutId, "roster"],
       }).forEach(([key, data]) => {
@@ -137,9 +166,9 @@ export function useSaveScore(tryoutId: string) {
             ...data,
             registrations: data.registrations.map((r) => {
               if (r.id !== regId) return r;
-              const next = { ...r, ...edits } as Registration;
-              if (edits.detailed_scores) {
-                next.detailed_scores = { ...r.detailed_scores, ...edits.detailed_scores };
+              const next = { ...r, ...definedEdits } as Registration;
+              if (definedEdits.detailed_scores) {
+                next.detailed_scores = { ...r.detailed_scores, ...definedEdits.detailed_scores };
               }
               return next;
             }),
@@ -160,9 +189,16 @@ export function useSaveScore(tryoutId: string) {
       toast.error("Failed to save score.");
     },
 
-    // On success, silently invalidate in background (no loading flicker)
-    onSuccess: () => {
+    // On success, silently invalidate in background (no loading flicker).
+    // Also invalidate any cached email-preview for this registration — the
+    // preview interpolates coach_recommendation (and scores) into the body,
+    // so it must be refetched the next time the dialog opens, otherwise the
+    // user would see a stale preview for up to staleTime (60s).
+    onSuccess: (_data, { regId }) => {
       qc.invalidateQueries({ queryKey: ["tryouts", tryoutId, "leaderboard"] });
+      qc.invalidateQueries({
+        queryKey: ["tryouts", tryoutId, "registration", regId, "email-preview"],
+      });
       toast.success("Saved.", { id: "score-toast-success" });
     },
   });
@@ -219,9 +255,12 @@ export function useResetScore(tryoutId: string) {
       toast.error("Failed to reset score.");
     },
 
-    onSuccess: () => {
+    onSuccess: (_data, regId) => {
       qc.invalidateQueries({ queryKey: ["tryouts", tryoutId, "roster"] });
       qc.invalidateQueries({ queryKey: ["tryouts", tryoutId, "leaderboard"] });
+      qc.invalidateQueries({
+        queryKey: ["tryouts", tryoutId, "registration", regId, "email-preview"],
+      });
       toast.success("Score reset.");
     },
   });

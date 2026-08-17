@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CheckCircle2, ChevronDown, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, Loader2, Mail, XCircle } from "lucide-react";
 import { useTryoutLeaderboard, useSendDecision, useSaveScore } from "@/hooks/use-tryout-dashboard";
 import { useGroups } from "@/hooks/use-groups";
 import {
@@ -20,20 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import type { LeaderboardEntry, Registration } from "@/lib/api/tryouts.api";
 import { calculateDetailedScoreTotal } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth.store";
 import { toast } from "sonner";
+import { DecisionConfirmDialog } from "./DecisionConfirmDialog";
+import { SentEmailPreviewDialog } from "./SentEmailPreviewDialog";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -68,6 +60,10 @@ export function LeaderboardTab({ tryoutId }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
   const [pendingRegId, setPendingRegId] = useState<string | null>(null);
+  const [sentEmailPreview, setSentEmailPreview] = useState<{
+    regId: string;
+    action: "offered" | "rejected";
+  } | null>(null);
 
   const user = useAuthStore((state) => state.user);
   const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
@@ -304,6 +300,24 @@ export function LeaderboardTab({ tryoutId }: Props) {
                         {l.status === "registered" && canManageCoaches && <OfferReject l={l} />}
                       </div>
                     )}
+
+                    {/* View sent email — shown for rows where a decision email
+                        has already been sent (offered/rejected). */}
+                    {(l.status === "offered" || l.status === "rejected") && (
+                      <div className="pt-1 border-t border-gray-50">
+                        <button
+                          onClick={() =>
+                            setSentEmailPreview({
+                              regId: l.registration_id,
+                              action: l.status as "offered" | "rejected",
+                            })
+                          }
+                          className="text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <Mail className="h-3.5 w-3.5" /> View sent email
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -370,6 +384,18 @@ export function LeaderboardTab({ tryoutId }: Props) {
                         <TableCell className="text-right align-middle px-4 py-3 w-36 min-w-36 max-w-36">
                           {l.status === "registered" && canManageCoaches ? (
                             <OfferReject l={l} />
+                          ) : l.status === "offered" || l.status === "rejected" ? (
+                            <button
+                              onClick={() =>
+                                setSentEmailPreview({
+                                  regId: l.registration_id,
+                                  action: l.status as "offered" | "rejected",
+                                })
+                              }
+                              className="text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1 ml-auto"
+                            >
+                              <Mail className="h-3.5 w-3.5" /> View sent email
+                            </button>
                           ) : (
                             <span className="text-gray-400 text-xs">—</span>
                           )}
@@ -384,41 +410,32 @@ export function LeaderboardTab({ tryoutId }: Props) {
         })}
       </div>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Confirm {bulkAction === "offered" ? "Offer" : "Reject"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to {bulkAction === "offered" ? "offer" : "reject"} this swimmer?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setConfirmOpen(false);
-                setBulkAction(null);
-                setPendingRegId(null);
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirm}
-              disabled={decision.isPending}
-              className={
-                bulkAction === "offered"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
-              }
-            >
-              {decision.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DecisionConfirmDialog
+        open={confirmOpen}
+        onOpenChange={(v) => {
+          setConfirmOpen(v);
+          if (!v) {
+            setBulkAction(null);
+            setPendingRegId(null);
+          }
+        }}
+        action={bulkAction}
+        onConfirm={handleConfirm}
+        isPending={decision.isPending}
+        tryoutId={tryoutId}
+        regId={pendingRegId}
+        selectedCount={0}
+      />
+
+      <SentEmailPreviewDialog
+        open={sentEmailPreview !== null}
+        onOpenChange={(v) => {
+          if (!v) setSentEmailPreview(null);
+        }}
+        tryoutId={tryoutId}
+        regId={sentEmailPreview?.regId ?? null}
+        action={sentEmailPreview?.action ?? "offered"}
+      />
     </>
   );
 }
