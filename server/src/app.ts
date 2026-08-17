@@ -111,6 +111,26 @@ export function createApp(): express.Application {
     });
   });
 
+  // TEMPORARY: Sentry verification route — remove once an error is confirmed in Sentry.
+  // Exercises the real init path (instrument.ts -> Sentry.init) by capturing an exception
+  // from within the running app, then returns 200 so the Express error handler isn't involved.
+  // Pass ?message=<unique> to make the error identifiable in Sentry's stream, e.g.
+  //   /api/v1/debug-sentry?message=Sentry%20test%20abc123
+  app.get(`${API_PREFIX}/debug-sentry`, (req: Request, res: Response) => {
+    const marker = (req.query.message as string | undefined)?.trim() || `Sentry test error ${Date.now()}`;
+    try {
+      throw new Error(marker);
+    } catch (e) {
+      Sentry.captureException(e);
+    }
+    res.status(HTTP_STATUS.OK).json({
+      success: true,
+      message: "Sentry test error captured — check your Sentry issues",
+      data: { marker },
+      error: null,
+    });
+  });
+
   // Module routes
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/onboarding`, onboardingRouter);
