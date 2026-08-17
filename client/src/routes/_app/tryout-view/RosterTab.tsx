@@ -611,56 +611,51 @@ export function RosterTab({ tryoutId }: Props) {
                         <span className="text-gray-400"></span>
                       ) : (
                         (() => {
-                          const isComplete = avg(r);
+                          const isRejected = r.coach_recommendation === REJECTED_VALUE;
+                          const offerDisabled =
+                            !r.coach_recommendation || isRejected;
+                          const offerTooltip = isRejected
+                            ? "Cannot offer — coach recommendation is set to Reject."
+                            : "Cannot offer — please assign a coach recommendation first.";
+                          const rejectDisabled = !isRejected;
+                          const rejectTooltip = !r.coach_recommendation
+                            ? "Cannot reject — please assign a coach recommendation of Reject first."
+                            : "Cannot reject — coach recommendation is not set to Reject.";
 
                           const offerBtn = (
                             <button
-                              disabled={
-                                !isComplete ||
-                                !r.coach_recommendation ||
-                                r.coach_recommendation === REJECTED_VALUE
-                              }
                               onClick={() => {
-                                if (!r.coach_recommendation) {
-                                  toast.error("Coach recommendation required", {
-                                    description: `Please assign a coach recommendation for ${r.swimmer_name} before proceeding.`,
+                                if (offerDisabled) {
+                                  toast.error("Cannot offer", {
+                                    description: offerTooltip,
                                     duration: 6000,
                                   });
                                   return;
                                 }
                                 openDecisionDialog(r.id, "offered");
                               }}
-                              className="text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                              className={`text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 ${offerDisabled ? "opacity-40 cursor-not-allowed" : ""}`}
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" /> Offer
                             </button>
                           );
                           const rejectBtn = (
                             <button
-                              disabled={!isComplete}
                               onClick={() => {
-                                if (!r.coach_recommendation) {
-                                  toast.error("Coach recommendation required", {
-                                    description: `Please assign a coach recommendation for ${r.swimmer_name} before proceeding.`,
+                                if (rejectDisabled) {
+                                  toast.error("Cannot reject", {
+                                    description: rejectTooltip,
                                     duration: 6000,
                                   });
                                   return;
                                 }
                                 openDecisionDialog(r.id, "rejected");
                               }}
-                              className="text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                              className={`text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1 ${rejectDisabled ? "opacity-40 cursor-not-allowed" : ""}`}
                             >
                               <XCircle className="h-3.5 w-3.5" /> Reject
                             </button>
                           );
-                          const isRejected = r.coach_recommendation === REJECTED_VALUE;
-                          const offerDisabled =
-                            !isComplete || !r.coach_recommendation || isRejected;
-                          const offerTooltip = isRejected
-                            ? "Cannot offer — coach recommendation is set to Reject."
-                            : !r.coach_recommendation
-                              ? "Cannot offer — please assign a coach recommendation first."
-                              : "Cannot offer until scoring is 100% complete.";
                           return (
                             <div className="flex items-center gap-2">
                               {offerDisabled ? (
@@ -675,19 +670,17 @@ export function RosterTab({ tryoutId }: Props) {
                               ) : (
                                 offerBtn
                               )}
-                              {isComplete ? (
-                                rejectBtn
-                              ) : (
+                              {rejectDisabled ? (
                                 <TooltipProvider delayDuration={0}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span className="block">{rejectBtn}</span>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">
-                                      Cannot reject until scoring is 100% complete.
-                                    </TooltipContent>
+                                    <TooltipContent side="top">{rejectTooltip}</TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
+                              ) : (
+                                rejectBtn
                               )}
                             </div>
                           );
