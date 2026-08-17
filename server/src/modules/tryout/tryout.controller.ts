@@ -23,6 +23,7 @@ import { UserService } from "../user/user.service";
 import { TryoutSlotModel } from "../../models/tryout-slot.model";
 import logger from "../../shared/utils/logger";
 import { isTestUser } from "../../shared/constants/testUsers";
+import { config } from "../../config/env";
 
 // ─── Email audit logging helper ──────────────────────────────────────────────
 
@@ -1215,12 +1216,49 @@ export class TryoutController {
       }
 
       const user = registration.parentId as any;
-      if (!user) {
-        sendSuccess(res, { subject: "", text: "", html: "", isCustom: false }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
+      const emailType = status === "offered" ? "offered" : "rejected";
+
+      // ── First, try to return the actual last-sent email from the audit log.
+      // This makes the "Sent Email Preview" faithful to what the parent
+      // actually received (including the exact template version at send time),
+      // rather than a fresh re-render of the current template. If no email has
+      // been sent yet (pre-send preview), fall through to template rendering.
+      const lastSent = await EmailAuditLogModel.findOne({
+        registrationId: regId,
+        action: emailType,
+        status: "sent",
+      })
+        .sort({ sentAt: -1 })
+        .lean()
+        .exec();
+
+      if (lastSent) {
+        sendSuccess(
+          res,
+          {
+            subject: lastSent.subject,
+            text: lastSent.body,
+            html: lastSent.html,
+            isCustom: lastSent.templateType === "custom",
+            fromName: config.SES_FROM_NAME,
+            fromEmail: config.SES_FROM_EMAIL,
+            sentAt: lastSent.sentAt,
+          },
+          MESSAGES.RETRIEVED,
+          HTTP_STATUS.OK,
+        );
         return;
       }
 
-      const emailType = status === "offered" ? "offered" : "rejected";
+      if (!user) {
+        sendSuccess(
+          res,
+          { subject: "", text: "", html: "", isCustom: false, fromName: config.SES_FROM_NAME, fromEmail: config.SES_FROM_EMAIL },
+          MESSAGES.RETRIEVED,
+          HTTP_STATUS.OK,
+        );
+        return;
+      }
       let groupId: string | null = null;
       if (status === "offered" && registration.coachRecommendation && mongoose.Types.ObjectId.isValid(registration.coachRecommendation)) {
         groupId = registration.coachRecommendation;
@@ -1258,7 +1296,12 @@ export class TryoutController {
           bodyTemplate: template.body,
         });
         req.step?.("responding", { status: HTTP_STATUS.OK });
-        sendSuccess(res, { ...preview, isCustom: true }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
+        sendSuccess(
+          res,
+          { ...preview, isCustom: true, fromName: config.SES_FROM_NAME, fromEmail: config.SES_FROM_EMAIL },
+          MESSAGES.RETRIEVED,
+          HTTP_STATUS.OK,
+        );
         return;
       }
 
@@ -1284,7 +1327,12 @@ export class TryoutController {
         bodyTemplate: defaultTpl.body,
       });
       req.step?.("responding", { status: HTTP_STATUS.OK });
-      sendSuccess(res, { ...preview, isCustom: false }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
+      sendSuccess(
+        res,
+        { ...preview, isCustom: false, fromName: config.SES_FROM_NAME, fromEmail: config.SES_FROM_EMAIL },
+        MESSAGES.RETRIEVED,
+        HTTP_STATUS.OK,
+      );
     } catch (err) {
       next(err);
     }

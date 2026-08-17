@@ -213,6 +213,42 @@ export function RosterTab({ tryoutId }: Props) {
     return true;
   }
 
+  // Offer validation: no selected swimmer may have coach recommendation set
+  // to "rejected" — they must be assigned to a group first.
+  function validateOfferCoachRecommendation(): boolean {
+    if (!validateCoachRecommendation()) return false;
+    const rejectedOnes = registrations.filter(
+      (r) => selectedIds.has(r.id) && r.coach_recommendation === REJECTED_VALUE,
+    );
+    if (rejectedOnes.length > 0) {
+      const names = rejectedOnes.map((r) => r.swimmer_name).join(", ");
+      toast.error("Cannot offer — coach recommendation is set to Reject", {
+        description: `Please change coach recommendation to a group before offering.`,
+        duration: 6000,
+      });
+      return false;
+    }
+    return true;
+  }
+
+  // Reject validation: every selected swimmer must have coach recommendation
+  // set to "rejected" before bulk reject is allowed.
+  function validateRejectCoachRecommendation(): boolean {
+    if (!validateCoachRecommendation()) return false;
+    const notRejected = registrations.filter(
+      (r) => selectedIds.has(r.id) && r.coach_recommendation !== REJECTED_VALUE,
+    );
+    if (notRejected.length > 0) {
+      const names = notRejected.map((r) => r.swimmer_name).join(", ");
+      toast.error("Coach recommendation must be set to Reject", {
+        description: `Please change coach recommendation to Reject before rejecting.`,
+        duration: 6000,
+      });
+      return false;
+    }
+    return true;
+  }
+
   useEffect(() => {
     setSelectedIds(new Set());
   }, [rosterResult]);
@@ -701,7 +737,7 @@ export function RosterTab({ tryoutId }: Props) {
           <div className="h-4 w-px bg-gray-600" />
           <button
             onClick={() => {
-              if (!validateCoachRecommendation()) return;
+              if (!validateOfferCoachRecommendation()) return;
               // When exactly one swimmer is selected, treat it as a single
               // action so the email preview can be fetched for that swimmer.
               if (selectedIds.size === 1) {
@@ -716,7 +752,7 @@ export function RosterTab({ tryoutId }: Props) {
           </button>
           <button
             onClick={() => {
-              if (!validateCoachRecommendation()) return;
+              if (!validateRejectCoachRecommendation()) return;
               if (selectedIds.size === 1) {
                 setPendingRegId(Array.from(selectedIds)[0]);
               }

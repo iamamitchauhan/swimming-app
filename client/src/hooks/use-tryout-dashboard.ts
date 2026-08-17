@@ -98,7 +98,7 @@ export function useEmailPreview(
     queryKey: tryoutDashboardKeys.emailPreview(tryoutId, regId ?? "", status ?? ""),
     queryFn: () => tryoutsApi.getEmailPreview(tryoutId, regId!, status!),
     enabled: !!tryoutId && !!regId && !!status && enabled,
-    staleTime: 60_000,
+    staleTime: 0,
   });
 }
 

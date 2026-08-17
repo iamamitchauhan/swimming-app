@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { useEmailPreview } from "@/hooks/use-tryout-dashboard";
 import type { EmailPreview } from "@/lib/api/tryouts.api";
+import { formatDateTimeWithRelative } from "@/lib/utils";
 
 interface SentEmailPreviewDialogProps {
   open: boolean;
@@ -118,6 +119,25 @@ function EmailPreviewBody({
 
   return (
     <div className="my-2 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
+      {preview.fromName || preview.fromEmail ? (
+        <div className="px-4 py-3 border-b border-gray-200 bg-white">
+          <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">From</div>
+          <div className="text-sm font-semibold text-gray-800 wrap-break-word">
+            {preview.fromName ? preview.fromName : ""}
+            {preview.fromEmail ? ` <${preview.fromEmail}>` : ""}
+          </div>
+        </div>
+      ) : null}
+
+      {preview.sentAt ? (
+        <div className="px-4 py-3 border-b border-gray-200 bg-white">
+          <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">Sent</div>
+          <div className="text-sm font-semibold text-gray-800 wrap-break-word">
+            {formatDateTimeWithRelative(preview.sentAt)}
+          </div>
+        </div>
+      ) : null}
+
       <div className="px-4 py-3 border-b border-gray-200 bg-white">
         <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">Subject</div>
         <div className="text-sm font-semibold text-gray-800 wrap-break-word">{preview.subject}</div>

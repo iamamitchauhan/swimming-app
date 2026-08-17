@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useEmailPreview } from "@/hooks/use-tryout-dashboard";
+import type { EmailPreview } from "@/lib/api/tryouts.api";
 
 interface DecisionConfirmDialogProps {
   open: boolean;
@@ -101,6 +102,7 @@ export function DecisionConfirmDialog({
     ? `Are you sure you want to ${stableAction === "offered" ? "offer" : "reject"} this swimmer?`
     : `Are you sure you want to ${stableAction === "offered" ? "offer" : "reject"} the ${selectedCount} selected swimmers?`;
 
+  const stableActionText = stableAction === "offered" ? "Offer" : "Reject";
   // Bulk mode (>1 swimmer): no per-swimmer email preview is available.
   // Show a dedicated heading + info card instead of the single-swimmer copy.
   const isBulk = !isSingle;
@@ -115,12 +117,12 @@ export function DecisionConfirmDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>
             {isBulk
-              ? "Email Preview Not Available"
-              : `Confirm ${stableAction === "offered" ? "Offer" : "Reject"}`}
+              ? "Email Preview Not Available for bulk action"
+              : `Email Preview for ${stableActionText}`}
           </AlertDialogTitle>
-          <AlertDialogDescription>
+          {/* <AlertDialogDescription>
             {isBulk ? "Multiple swimmers are selected." : description}
-          </AlertDialogDescription>
+          </AlertDialogDescription> */}
         </AlertDialogHeader>
 
         {isSingle && <EmailPreviewSection preview={preview} loading={previewLoading} />}
@@ -144,7 +146,7 @@ export function DecisionConfirmDialog({
             }
           >
             {isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-            {isBulk ? "Send Now" : "Confirm"}
+            Send Now
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -168,7 +170,10 @@ function BulkNoPreviewSection({ action }: { action: "offered" | "rejected" | nul
             To preview a {label} email, click the <span className="font-semibold">{verb}</span>{" "}
             button on an individual swimmer&rsquo;s row.
           </p>
-          <p>You can still send the {label} to all selected swimmers in bulk.</p>
+          <p>
+            You can still send the {label} to all selected swimmers in bulk by pressing the{" "}
+            <span className="font-semibold">Send Now</span> button.
+          </p>
         </div>
       </div>
     </div>
@@ -181,7 +186,7 @@ function EmailPreviewSection({
   preview,
   loading,
 }: {
-  preview: { subject: string; text: string; html: string; isCustom: boolean } | undefined;
+  preview: EmailPreview | undefined;
   loading: boolean;
 }) {
   if (loading) {
@@ -216,6 +221,16 @@ function EmailPreviewSection({
           {preview.isCustom ? "Custom template" : "Default template"}
         </span>
       </div> */}
+
+      {preview.fromName || preview.fromEmail ? (
+        <div className="px-4 py-3 border-b border-gray-200 bg-white">
+          <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">From</div>
+          <div className="text-sm font-semibold text-gray-800 wrap-break-word">
+            {preview.fromName ? preview.fromName : ""}
+            {preview.fromEmail ? ` <${preview.fromEmail}>` : ""}
+          </div>
+        </div>
+      ) : null}
 
       <div className="px-4 py-3 border-b border-gray-200 bg-white">
         <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">Subject</div>

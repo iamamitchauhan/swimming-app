@@ -489,6 +489,12 @@ export interface EmailPreview {
   text: string;
   html: string;
   isCustom: boolean;
+  /** Sender display name (SES_FROM_NAME). */
+  fromName?: string;
+  /** Sender email address (SES_FROM_EMAIL). */
+  fromEmail?: string;
+  /** ISO timestamp of the last actually-sent email (from audit log). Absent for pre-send previews. */
+  sentAt?: string | null;
 }
 
 // ─── Waitlist ─────────────────────────────────────────────────────────────────
