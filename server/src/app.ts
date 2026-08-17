@@ -27,6 +27,7 @@ import { questionLibraryRouter } from "./modules/question-library/question-libra
 import { waitlistRouter } from "./modules/waitlist/waitlist.routes";
 import { emailTemplateRouter } from "./modules/email-template/email-template.routes";
 import { groupRouter } from "./modules/group/group.routes";
+import { emailAuditLogRouter } from "./modules/email-audit-log/email-audit-log.routes";
 
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -125,6 +126,7 @@ export function createApp(): express.Application {
   app.use(`${API_PREFIX}/waitlist`, waitlistRouter);
   app.use(`${API_PREFIX}/email-templates`, emailTemplateRouter);
   app.use(`${API_PREFIX}/groups`, groupRouter);
+  app.use(`${API_PREFIX}/email-audit-logs`, emailAuditLogRouter);
 
   // Global error handler — must be last
   app.use(errorHandler);

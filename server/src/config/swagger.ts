@@ -781,6 +781,7 @@ const options: swaggerJsdoc.Options = {
       { name: "Users", description: "User profile and listing" },
       { name: "Tryouts", description: "Swim tryout management for clubs and public registration" },
       { name: "Email Templates", description: "Per-group email template configuration" },
+      { name: "Email Audit Logs", description: "Audit trail of offer/reject email sends (single and bulk)" },
       { name: "Groups", description: "Club group management" },
       { name: "Public", description: "Public endpoints for the landing page (no auth required)" },
       { name: "Parent Auth", description: "Parent authentication (registration, email verification, OTP login)" },

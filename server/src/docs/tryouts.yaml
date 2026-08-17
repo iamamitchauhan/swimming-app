@@ -991,6 +991,10 @@ paths:
         `coachRecommendation` group. For `rejected`, the club-wide rejection
         template is used. If no matching template exists, a default email is
         sent.
+
+        Every send attempt (custom template or default fallback) is recorded
+        as a row in the `email_audit_logs` collection and is viewable via
+        `GET /email-audit-logs`.
       operationId: registrationDecision
       security:
         - bearerAuth: []
@@ -1146,6 +1150,10 @@ paths:
         `{{club_name}}`, `{{tryout_name}}`, `{{group_name}}`, `{{note}}`.
         `{{group_name}}` is resolved from the registration's `coachRecommendation` field.
         `{{note}}` is resolved from the registration's `notes` field.
+
+        Every per-recipient send attempt is recorded as a row in the
+        `email_audit_logs` collection (mode = `bulk`) and is viewable via
+        `GET /email-audit-logs`.
       operationId: sendBulkEmail
       security:
         - bearerAuth: []

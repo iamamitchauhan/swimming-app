@@ -35,7 +35,7 @@ interface MailOptions {
 
 // ─── Core send function ───────────────────────────────────────────────────────
 
-export async function sendMail(options: MailOptions): Promise<void> {
+export async function sendMail(options: MailOptions): Promise<string | undefined> {
   const transporter = getTransporter();
   const from = `"${config.SES_FROM_NAME}" <${config.SES_FROM_EMAIL}>`;
 
@@ -48,6 +48,7 @@ export async function sendMail(options: MailOptions): Promise<void> {
       text: options.text ?? options.html.replace(/<[^>]*>/g, ""),
     });
     logger.info({ to: options.to, subject: options.subject, messageId: info.messageId }, "email.sent");
+    return info.messageId;
   } catch (err) {
     logger.error({ err, to: options.to, subject: options.subject }, "email.send.failed");
     throw err;
@@ -465,6 +466,13 @@ export async function sendInvitation(opts: { to: string; inviterName: string; cl
   });
 }
 
+export interface SentEmailResult {
+  subject: string;
+  body: string;
+  html: string;
+  messageId?: string;
+}
+
 export async function sendRegistrationOffer(opts: {
   to: string;
   swimmerName: string;
@@ -475,7 +483,8 @@ export async function sendRegistrationOffer(opts: {
   startTime: string;
   endTime: string;
   clubName: string;
-}) {
+}): Promise<SentEmailResult> {
+  const subject = `Congratulations — Team Spot Offered`;
   const bodyHtml = `
     <p style="font-size:15px;line-height:24px;">Hi ${opts.parentName},</p>
     <p style="font-size:15px;line-height:24px;">
@@ -505,12 +514,9 @@ export async function sendRegistrationOffer(opts: {
     </p>
     ${renderSignOff(opts.clubName)}
   `;
-
-  await sendMail({
-    to: opts.to,
-    subject: `Congratulations — Team Spot Offered`,
-    html: renderLayout({ accent: "success", bodyHtml }),
-  });
+  const html = renderLayout({ accent: "success", bodyHtml });
+  const messageId = await sendMail({ to: opts.to, subject, html });
+  return { subject, body: bodyHtml.replace(/<[^>]*>/g, ""), html, messageId };
 }
 
 export async function sendRegistrationReject(opts: {
@@ -520,7 +526,8 @@ export async function sendRegistrationReject(opts: {
   tryoutName: string;
   sessionDate: string;
   clubName: string;
-}) {
+}): Promise<SentEmailResult> {
+  const subject = `Tryout Result for ${opts.swimmerName} | ${config.SES_FROM_NAME}`;
   const bodyHtml = `
     ${renderIcon("📋")}
     ${renderHeading("Tryout Evaluation Update", { center: true })}
@@ -549,12 +556,9 @@ export async function sendRegistrationReject(opts: {
     })}
     ${renderSignOff(opts.clubName)}
   `;
-
-  await sendMail({
-    to: opts.to,
-    subject: `Tryout Result for ${opts.swimmerName} | ${config.SES_FROM_NAME}`,
-    html: renderLayout({ accent: "danger", bodyHtml }),
-  });
+  const html = renderLayout({ accent: "danger", bodyHtml });
+  const messageId = await sendMail({ to: opts.to, subject, html });
+  return { subject, body: bodyHtml.replace(/<[^>]*>/g, ""), html, messageId };
 }
 
 export async function sendRegistrationReceivedEmail(opts: {
@@ -701,6 +705,24 @@ export interface BulkEmailRecipient {
   group_name: string;
   sender_name: string;
   note: string;
+  registrationId?: string;
+}
+
+/**
+ * Optional context for writing one audit-log row per recipient inside
+ * `sendBulkTemplateEmail`. When provided, a row is written to the
+ * `email_audit_logs` collection for every send attempt (sent or failed).
+ * Audit writes are wrapped in their own try/catch so a logging failure
+ * never breaks the email flow.
+ */
+export interface BulkEmailAuditContext {
+  clubId: string;
+  tryoutId: string;
+  action: "offered" | "rejected";
+  mode: "single" | "bulk";
+  templateType: "custom" | "default";
+  senderId?: string;
+  senderName?: string;
 }
 
 export function interpolateTemplate(template: string, vars: Record<string, string>): string {
@@ -740,9 +762,12 @@ export async function sendBulkTemplateEmail(opts: {
   recipients: BulkEmailRecipient[];
   subjectTemplate: string;
   bodyTemplate: string;
-}): Promise<{ sent: number; failed: number }> {
+  auditContext?: BulkEmailAuditContext;
+}): Promise<{ sent: number; failed: number; sentRegistrationIds: string[]; failedRegistrationIds: string[] }> {
   let sent = 0;
   let failed = 0;
+  const sentRegistrationIds: string[] = [];
+  const failedRegistrationIds: string[] = [];
 
   await Promise.all(
     opts.recipients.map(async (r) => {
@@ -759,14 +784,52 @@ export async function sendBulkTemplateEmail(opts: {
       const subject = interpolateTemplate(opts.subjectTemplate, vars);
       const bodyText = interpolateTemplate(opts.bodyTemplate, vars);
       const bodyHtml = `<div style="font-size:15px;line-height:24px;color:${THEME.text};">${bodyText.replace(/\n/g, "<br/>")}</div>`;
+      const html = renderLayout({ bodyHtml });
+      let status: "sent" | "failed" = "sent";
+      let errorMessage: string | undefined;
+      let messageId: string | undefined;
       try {
-        await sendMail({ to: r.to, subject, html: renderLayout({ bodyHtml }), text: bodyText });
+        messageId = await sendMail({ to: r.to, subject, html, text: bodyText });
         sent++;
-      } catch {
+        if (r.registrationId) sentRegistrationIds.push(r.registrationId);
+      } catch (err: any) {
         failed++;
+        status = "failed";
+        errorMessage = err?.message ?? String(err);
+        if (r.registrationId) failedRegistrationIds.push(r.registrationId);
+      }
+
+      // ── Audit log (best-effort) ────────────────────────────────────────────
+      if (opts.auditContext) {
+        try {
+          // Lazy import to avoid a hard circular dependency at module load time.
+          const { EmailAuditLogModel } = await import("../../models/email-audit-log.model");
+          await EmailAuditLogModel.create({
+            clubId: opts.auditContext.clubId,
+            tryoutId: opts.auditContext.tryoutId,
+            registrationId: r.registrationId,
+            recipientEmail: r.to,
+            swimmerName: r.swimmer_name,
+            parentName: r.parent_name,
+            action: opts.auditContext.action,
+            mode: opts.auditContext.mode,
+            templateType: opts.auditContext.templateType,
+            subject,
+            body: bodyText,
+            html,
+            status,
+            errorMessage,
+            messageId,
+            senderId: opts.auditContext.senderId,
+            senderName: opts.auditContext.senderName,
+            sentAt: new Date(),
+          });
+        } catch (auditErr) {
+          logger.error({ err: auditErr, recipient: r.to, subject }, "email.audit_log.write_failed");
+        }
       }
     }),
   );
 
-  return { sent, failed };
+  return { sent, failed, sentRegistrationIds, failedRegistrationIds };
 }

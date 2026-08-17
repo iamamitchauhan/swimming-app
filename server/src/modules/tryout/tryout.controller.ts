@@ -17,10 +17,56 @@ import { EmailTemplateModel } from "../../models/email-template.model";
 import { GroupModel } from "../../models/group.model";
 import { ClubModel } from "../../models/club.model";
 import { sendRegistrationOffer, sendRegistrationReject, sendBulkTemplateEmail, previewTemplateEmail } from "../../shared/utils/mailer";
+import type { SentEmailResult } from "../../shared/utils/mailer";
+import { EmailAuditLogModel } from "../../models/email-audit-log.model";
 import { UserService } from "../user/user.service";
 import { TryoutSlotModel } from "../../models/tryout-slot.model";
 import logger from "../../shared/utils/logger";
 import { isTestUser } from "../../shared/constants/testUsers";
+
+// ─── Email audit logging helper ──────────────────────────────────────────────
+
+/**
+ * Best-effort write of a single audit-log row for the default-fallback
+ * offer/reject email path. Never throws — failures are logged only.
+ */
+async function writeSingleAuditLog(args: {
+  clubId: string;
+  tryoutId: string;
+  registrationId: string;
+  recipientEmail: string;
+  swimmerName: string;
+  parentName: string;
+  action: "offered" | "rejected";
+  templateType: "custom" | "default";
+  senderId?: string;
+  senderName?: string;
+  result: SentEmailResult;
+}): Promise<void> {
+  try {
+    await EmailAuditLogModel.create({
+      clubId: args.clubId,
+      tryoutId: args.tryoutId,
+      registrationId: args.registrationId,
+      recipientEmail: args.recipientEmail,
+      swimmerName: args.swimmerName,
+      parentName: args.parentName,
+      action: args.action,
+      mode: "single",
+      templateType: args.templateType,
+      subject: args.result.subject,
+      body: args.result.body,
+      html: args.result.html,
+      status: "sent",
+      messageId: args.result.messageId,
+      senderId: args.senderId,
+      senderName: args.senderName,
+      sentAt: new Date(),
+    });
+  } catch (err) {
+    logger.error({ err, recipient: args.recipientEmail, action: args.action }, "decision.audit_log.write_failed");
+  }
+}
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
@@ -1004,8 +1050,9 @@ export class TryoutController {
         logger.info({ regId, swimmerName, parentEmail, templateSubject: template?.subject, templateBody: template?.body }, "decision.email_sending");
 
         try {
+          let emailSentSuccessfully = false;
           if (template) {
-            await sendBulkTemplateEmail({
+            const result = await sendBulkTemplateEmail({
               recipients: [
                 {
                   to: parentEmail,
@@ -1017,16 +1064,27 @@ export class TryoutController {
                   group_name: group?.name ?? "",
                   sender_name: senderName,
                   note: updated.notes ?? "",
+                  registrationId: regId,
                 },
               ],
               subjectTemplate: template.subject,
               bodyTemplate: template.body,
+              auditContext: {
+                clubId,
+                tryoutId: updated.tryoutId.toString(),
+                action: emailType as "offered" | "rejected",
+                mode: "single",
+                templateType: "custom",
+                senderId: req.user?.id,
+                senderName,
+              },
             });
+            emailSentSuccessfully = result.sent > 0;
           } else {
             // Fallback to default emails when no saved template exists
             if (status === "offered") {
               const slot = await TryoutSlotModel.findById({ _id: updated.slotId }).lean();
-              await sendRegistrationOffer({
+              const result = await sendRegistrationOffer({
                 to: parentEmail,
                 swimmerName,
                 parentName,
@@ -1037,8 +1095,21 @@ export class TryoutController {
                 endTime: slot?.endTime || "",
                 clubName: club?.name ?? "",
               });
+              await writeSingleAuditLog({
+                clubId,
+                tryoutId: updated.tryoutId.toString(),
+                registrationId: regId,
+                recipientEmail: parentEmail,
+                swimmerName,
+                parentName,
+                action: "offered",
+                templateType: "default",
+                senderId: req.user?.id,
+                senderName,
+                result,
+              });
             } else {
-              await sendRegistrationReject({
+              const result = await sendRegistrationReject({
                 to: parentEmail,
                 swimmerName,
                 parentName,
@@ -1046,10 +1117,55 @@ export class TryoutController {
                 sessionDate: "",
                 clubName: club?.name ?? "",
               });
+              await writeSingleAuditLog({
+                clubId,
+                tryoutId: updated.tryoutId.toString(),
+                registrationId: regId,
+                recipientEmail: parentEmail,
+                swimmerName,
+                parentName,
+                action: "rejected",
+                templateType: "default",
+                senderId: req.user?.id,
+                senderName,
+                result,
+              });
             }
+            // Default-path functions throw on failure, so reaching here means success
+            emailSentSuccessfully = true;
           }
-        } catch (emailErr) {
+
+          // Only mark the registration as emailed on a successful send
+          if (emailSentSuccessfully) {
+            await RegistrationModel.updateOne({ _id: regId }, { $set: { emailSent: true, lastCommunicationAt: new Date() } });
+            logger.info({ regId }, "decision.email_sent.registration_updated");
+          }
+        } catch (emailErr: any) {
           logger.error({ err: emailErr, regId, status }, "decision.email.failed");
+          // Best-effort audit row for the failed default-path send
+          try {
+            await EmailAuditLogModel.create({
+              clubId,
+              tryoutId: updated.tryoutId,
+              registrationId: regId,
+              recipientEmail: parentEmail,
+              swimmerName,
+              parentName,
+              action: emailType as "offered" | "rejected",
+              mode: "single",
+              templateType: "default",
+              subject: "",
+              body: "",
+              html: "",
+              status: "failed",
+              errorMessage: emailErr?.message ?? String(emailErr),
+              senderId: req.user?.id,
+              senderName,
+              sentAt: new Date(),
+            });
+          } catch (auditErr) {
+            logger.error({ err: auditErr, regId }, "decision.audit_log.write_failed");
+          }
         }
       }
 
@@ -1488,6 +1604,7 @@ export class TryoutController {
             group_name: groupName,
             sender_name: senderName,
             note: reg.notes ?? "",
+            registrationId: String(reg._id),
           };
         })
         .filter((r) => !!r.to);
@@ -1506,11 +1623,23 @@ export class TryoutController {
             recipients,
             subjectTemplate: subject,
             bodyTemplate: body,
+            auditContext: {
+              clubId,
+              tryoutId: id,
+              action,
+              mode: "bulk",
+              templateType: "custom",
+              senderId: req.user!.id,
+              senderName,
+            },
           });
-          await RegistrationModel.updateMany(
-            { _id: { $in: registrationIds } },
-            { $set: { status: action, emailSent: true, lastCommunicationAt: new Date() } },
-          );
+          // Only update registrations whose email was actually sent successfully
+          if (result.sentRegistrationIds.length > 0) {
+            await RegistrationModel.updateMany(
+              { _id: { $in: result.sentRegistrationIds } },
+              { $set: { status: action, emailSent: true, lastCommunicationAt: new Date() } },
+            );
+          }
           logger.info({ tryoutId: id, ...result }, "bulk-email.completed");
         } catch (err) {
           logger.error({ err, tryoutId: id }, "bulk-email.background.failed");
