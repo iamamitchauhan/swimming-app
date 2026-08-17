@@ -58,22 +58,36 @@ export function DecisionConfirmDialog({
   const lastAction = useRef<"offered" | "rejected">(action ?? "offered");
   const [stableRegId, setStableRegId] = useState<string | null>(regId);
   const [stableAction, setStableAction] = useState<"offered" | "rejected" | null>(action);
+  // Track whether the current/last open was a single-swimmer action. This
+  // must be derived from the live props while the dialog is open (so bulk
+  // mode is detected correctly) and frozen during the close animation so
+  // the layout doesn't flip.
+  const [stableIsSingle, setStableIsSingle] = useState<boolean>(!!regId || selectedCount === 1);
 
   useEffect(() => {
-    if (open && regId) {
-      lastRegId.current = regId;
-      if (action) lastAction.current = action;
-      setStableRegId(regId);
-      setStableAction(action);
+    if (open) {
+      const isSingle = !!regId || selectedCount === 1;
+      setStableIsSingle(isSingle);
+      // Always track the current action so bulk mode (regId null) still
+      // shows the correct title/button color. For single mode, also persist
+      // regId so the email-preview query key stays stable.
+      if (action) {
+        lastAction.current = action;
+        setStableAction(action);
+      }
+      if (regId) {
+        lastRegId.current = regId;
+        setStableRegId(regId);
+      }
     } else if (!open) {
       // After close, reset to the last valid values so the body keeps showing
       // the previous preview during the exit animation instead of the empty state.
       setStableRegId(lastRegId.current);
       setStableAction(lastAction.current);
     }
-  }, [open, regId, action]);
+  }, [open, regId, action, selectedCount]);
 
-  const isSingle = !!stableRegId || selectedCount === 1;
+  const isSingle = stableIsSingle;
 
   // Fetch the email preview from the backend (only for single-swimmer actions)
   const { data: preview, isLoading: previewLoading } = useEmailPreview(
@@ -83,7 +97,7 @@ export function DecisionConfirmDialog({
     open && isSingle,
   );
 
-  const description = stableRegId
+  const description = isSingle
     ? `Are you sure you want to ${stableAction === "offered" ? "offer" : "reject"} this swimmer?`
     : `Are you sure you want to ${stableAction === "offered" ? "offer" : "reject"} the ${selectedCount} selected swimmers?`;
 

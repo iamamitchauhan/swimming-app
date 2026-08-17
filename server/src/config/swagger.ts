@@ -637,6 +637,12 @@ const options: swaggerJsdoc.Options = {
             waitlistPosition: { type: "integer", nullable: true },
             registeredAt: { type: "string", format: "date-time" },
             emailSent: { type: "boolean", example: false },
+            lastCommunicationAt: {
+              type: "string",
+              format: "date-time",
+              nullable: true,
+              description: "Timestamp of the last successful email communication",
+            },
             usaVerificationStatus: {
               type: "string",
               enum: ["pending", "needs_review", "verified", "rejected"],
