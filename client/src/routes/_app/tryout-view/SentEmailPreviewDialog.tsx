@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Mail } from "lucide-react";
+import { Clock, Loader2, Mail, User } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -121,7 +121,10 @@ function EmailPreviewBody({
     <div className="my-2 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
       {preview.fromName || preview.fromEmail ? (
         <div className="px-4 py-3 border-b border-gray-200 bg-white">
-          <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">From</div>
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">
+            <User className="h-3 w-3" />
+            From
+          </div>
           <div className="text-sm font-semibold text-gray-800 wrap-break-word">
             {preview.fromName ? preview.fromName : ""}
             {preview.fromEmail ? ` <${preview.fromEmail}>` : ""}
@@ -129,19 +132,25 @@ function EmailPreviewBody({
         </div>
       ) : null}
 
+      <div className="px-4 py-3 border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">
+          <Mail className="h-3 w-3" />
+          Subject
+        </div>
+        <div className="text-sm font-semibold text-gray-800 wrap-break-word">{preview.subject}</div>
+      </div>
+
       {preview.sentAt ? (
         <div className="px-4 py-3 border-b border-gray-200 bg-white">
-          <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">Sent</div>
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">
+            <Clock className="h-3 w-3" />
+            Sent
+          </div>
           <div className="text-sm font-semibold text-gray-800 wrap-break-word">
             {formatDateTimeWithRelative(preview.sentAt)}
           </div>
         </div>
       ) : null}
-
-      <div className="px-4 py-3 border-b border-gray-200 bg-white">
-        <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">Subject</div>
-        <div className="text-sm font-semibold text-gray-800 wrap-break-word">{preview.subject}</div>
-      </div>
 
       <div className="px-4 py-3 bg-white">
         <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1.5">Body</div>
