@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import swaggerUi from "swagger-ui-express";
+import * as Sentry from "@sentry/node";
 import { config } from "./config/env";
 import { swaggerSpec } from "./config/swagger";
 import { requestId } from "./middleware/requestId.middleware";
@@ -127,6 +128,13 @@ export function createApp(): express.Application {
   app.use(`${API_PREFIX}/email-templates`, emailTemplateRouter);
   app.use(`${API_PREFIX}/groups`, groupRouter);
   app.use(`${API_PREFIX}/email-audit-logs`, emailAuditLogRouter);
+
+  // Sentry Express error handler — captures 5xx errors (and unhandled exceptions)
+  // Placed after all routes so it sees framework errors, and before the custom
+  // errorHandler so Sentry captures the error first, then errorHandler formats the
+  // response. The Sentry handler calls next(err), so the response is still produced
+  // by the custom handler below.
+  Sentry.setupExpressErrorHandler(app);
 
   // Global error handler — must be last
   app.use(errorHandler);

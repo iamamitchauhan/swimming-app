@@ -420,9 +420,9 @@ export function RosterTab({ tryoutId }: Props) {
       </div>
 
       {/* ── Table ─────────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-gray-200 overflow-hidden mt-4">
+      <div className="rounded-xl border border-gray-200 mt-4 [&>div]:overflow-visible">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-20 rounded-t-xl">
             <TableRow>
               <TableHead className="w-10 px-4">
                 <Checkbox
@@ -782,7 +782,7 @@ export function RosterTab({ tryoutId }: Props) {
 
       {/* ── Pagination ────────────────────────────────────────────────────── */}
       {total > 0 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+        <div className="sticky bottom-0 z-20 flex items-center justify-between mt-4 text-sm text-gray-600 bg-white/95 backdrop-blur border-t border-gray-100 py-3 -mx-0.5 px-0.5">
           <span>
             Showing{" "}
             <span className="font-medium">

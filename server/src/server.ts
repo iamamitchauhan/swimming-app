@@ -1,5 +1,7 @@
+import './instrument'; // Sentry — must be the first import so it loads before all other modules
 import { config } from './config/env';
 import logger from './shared/utils/logger';
+import * as Sentry from '@sentry/node';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { createApp } from './app';
 
@@ -48,8 +50,10 @@ function registerShutdownHandlers(
     }, SHUTDOWN_TIMEOUT_MS);
     forceExit.unref();
 
-    server.close(() => {
+    server.close(async () => {
       clearTimeout(forceExit);
+      // Flush buffered Sentry events before exiting (2s timeout)
+      await Sentry.close(2000);
       disconnectDatabase()
         .then(() => { logger.info('Server shut down cleanly'); process.exit(0); })
         .catch((err: unknown) => { logger.error({ err }, 'Error during shutdown'); process.exit(1); });

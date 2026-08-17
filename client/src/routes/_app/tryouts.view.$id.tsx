@@ -152,7 +152,7 @@ export default function TryoutViewPage() {
         />
       </div>
 
-      <div className="overflow-hidden">
+      <div>
         {tab === "roster" && <RosterTab tryoutId={id} />}
         {tab === "slots" && <SlotsTab tryoutId={id} />}
         {tab === "waitlist" && <WaitlistTab tryoutId={id} />}
