@@ -348,6 +348,13 @@ export function RosterTab({ tryoutId }: Props) {
     ? rosterParams.status.charAt(0).toUpperCase() + rosterParams.status.slice(1)
     : "All status";
 
+  const emailSentLabel =
+    rosterParams.emailSent === true
+      ? "With email sent"
+      : rosterParams.emailSent === false
+        ? "Without email sent"
+        : "All registrations";
+
   return (
     <div>
       {/* ── Filters ───────────────────────────────────────────────────────── */}
@@ -415,6 +422,32 @@ export function RosterTab({ tryoutId }: Props) {
           selected={rosterParams.coachRecommendations ?? []}
           onChange={(next) => onParamsChange({ coachRecommendations: next.length ? next : undefined, page: 1 })}
         />
+
+        {/* Email-sent filter — three states:
+            - All emails        → no filter
+            - Email sent        → only registrations with ≥1 email_audit_logs row
+            - Remaining to send → only registrations with no email_audit_logs row
+            Resolved server-side from email_audit_logs. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
+              <Mail className="h-3.5 w-3.5 text-gray-500" />
+              {emailSentLabel}
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => onParamsChange({ emailSent: undefined, page: 1 })}>
+              All registrations
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onParamsChange({ emailSent: true, page: 1 })}>
+              With email sent
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onParamsChange({ emailSent: false, page: 1 })}>
+              Without email sent
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {canManageCoaches && (
           <Button
@@ -695,16 +728,17 @@ export function RosterTab({ tryoutId }: Props) {
                           );
                         })()
                       )}
-                      {/* view sent email preview — shown for rows where a
-                          decision email has already been sent (offered/rejected),
-                          regardless of whether the Offer/Reject action cell is
-                          visible to this user. */}
-                      {(r.status === "offered" || r.status === "rejected") && (
+                      {/* view sent email preview — shown for rows that have at
+                          least one entry in email_info (i.e. an email was
+                          actually sent and recorded in email_audit_logs).
+                          The action (offer/reject) is taken from the most
+                          recent email_info entry. */}
+                      {r.email_info && r.email_info.length > 0 && (
                         <button
                           onClick={() =>
                             setSentEmailPreview({
                               regId: r.id,
-                              action: r.status as "offered" | "rejected",
+                              action: r.email_info![r.email_info!.length - 1].action,
                             })
                           }
                           className="text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1"

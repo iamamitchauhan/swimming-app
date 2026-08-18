@@ -298,6 +298,9 @@ export const tryoutsApi = {
     if (params.registerIds?.length) query.set("registerIds", params.registerIds.join(","));
     if (params.sortBy) query.set("sortBy", params.sortBy);
     if (params.sortOrder) query.set("sortOrder", params.sortOrder);
+    if (params.includeEmailBody) query.set("includeEmailBody", "true");
+    if (params.emailSent === true) query.set("emailSent", "true");
+    else if (params.emailSent === false) query.set("emailSent", "false");
     const qs = query.toString();
     return api<RegistrationListResult>(
       apiClient.get(`/tryouts/${id}/registrations${qs ? `?${qs}` : ""}`),
@@ -429,7 +432,32 @@ export interface Registration {
   age_segment?: string;
   notes?: string;
   detailed_scores?: Record<string, string | number | boolean | null>;
+  /** Audit-log rows from email_audit_logs for this registration (oldest → newest). */
+  email_info?: EmailAuditLogInfo[];
   coach_recommendation?: string | null;
+}
+
+/** Summary of a single email_audit_logs row, returned inside Registration.email_info. */
+export interface EmailAuditLogInfo {
+  id: string;
+  action: "offered" | "rejected";
+  mode: "single" | "bulk";
+  template_type: "custom" | "default";
+  subject: string;
+  status: "sent" | "failed";
+  error_message?: string | null;
+  message_id?: string | null;
+  recipient_email: string;
+  swimmer_name?: string | null;
+  parent_name?: string | null;
+  sender_id?: string | null;
+  sender_name?: string | null;
+  sent_at?: string | null;
+  created_at?: string | null;
+  /** Only present when the request passes includeEmailBody=true. */
+  body?: string;
+  /** Only present when the request passes includeEmailBody=true. */
+  html?: string;
 }
 
 export interface LeaderboardEntry {
@@ -553,6 +581,18 @@ export interface RegistrationListParams {
   registerIds?: string[];
   sortBy?: RegistrationSortField;
   sortOrder?: SortOrder;
+  /**
+   * When true, each registration's `email_info` entries include the full
+   * `body` and `html` payloads. Off by default.
+   */
+  includeEmailBody?: boolean;
+  /**
+   * Filter by whether any email has been sent for the registration.
+   * - `true`  → only registrations with at least one email_audit_logs row
+   * - `false` → only registrations with NO email_audit_logs row
+   * Omit to disable the filter.
+   */
+  emailSent?: boolean;
 }
 
 export interface RegistrationListResult {

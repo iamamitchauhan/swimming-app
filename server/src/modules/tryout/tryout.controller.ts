@@ -347,6 +347,100 @@ export class TryoutController {
   }
 
   /**
+   * Batch-fetches email audit log entries for a set of registration IDs and
+   * returns a Map keyed by the registration's ObjectId string. Each value is
+   * an array of audit-log summaries (sorted oldest → newest by `sentAt`).
+   *
+   * The heavy `body` and `html` payloads are excluded by default to keep the
+   * list response small; pass `includeBody=true` to include them.
+   */
+  private async fetchEmailInfoForRegistrations(
+    registrationIds: Array<string | mongoose.Types.ObjectId>,
+    includeBody = false,
+  ): Promise<Map<string, any[]>> {
+    const ids = registrationIds
+      .filter(Boolean)
+      .map((id) => (id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(String(id))));
+    if (ids.length === 0) return new Map();
+
+    const projection: Record<string, number> = {
+      clubId: 1,
+      tryoutId: 1,
+      registrationId: 1,
+      recipientEmail: 1,
+      swimmerName: 1,
+      parentName: 1,
+      action: 1,
+      mode: 1,
+      templateType: 1,
+      subject: 1,
+      status: 1,
+      errorMessage: 1,
+      messageId: 1,
+      senderId: 1,
+      senderName: 1,
+      sentAt: 1,
+      createdAt: 1,
+    };
+    if (includeBody) {
+      projection.body = 1;
+      projection.html = 1;
+    }
+
+    const logs = await EmailAuditLogModel.find({ registrationId: { $in: ids } })
+      .select(projection)
+      .sort({ sentAt: 1, createdAt: 1 })
+      .lean()
+      .exec();
+
+    const map = new Map<string, any[]>();
+    for (const log of logs) {
+      const key = log.registrationId ? String(log.registrationId) : "";
+      if (!key) continue;
+      const arr = map.get(key) ?? [];
+      arr.push({
+        id: log._id?.toString(),
+        action: log.action,
+        mode: log.mode,
+        template_type: log.templateType,
+        subject: log.subject,
+        status: log.status,
+        error_message: log.errorMessage ?? null,
+        message_id: log.messageId ?? null,
+        recipient_email: log.recipientEmail,
+        swimmer_name: log.swimmerName ?? null,
+        parent_name: log.parentName ?? null,
+        sender_id: log.senderId ? String(log.senderId) : null,
+        sender_name: log.senderName ?? null,
+        sent_at: log.sentAt ?? null,
+        created_at: log.createdAt ?? null,
+        ...(includeBody ? { body: log.body, html: log.html } : {}),
+      });
+      map.set(key, arr);
+    }
+    return map;
+  }
+
+  /**
+   * Resolves the set of registration IDs (as ObjectIds) for a tryout that
+   * have at least one row in `email_audit_logs`. Used to power the
+   * `emailSent` query filter on the registrations list endpoint.
+   *
+   * Returns `null` when there are no audit-log rows for the tryout, so the
+   * caller can short-circuit (e.g. `emailSent=true` → empty result).
+   */
+  private async fetchRegistrationIdsWithEmails(tryoutId: string): Promise<Set<mongoose.Types.ObjectId> | null> {
+    const rows = await EmailAuditLogModel.find({ tryoutId: new mongoose.Types.ObjectId(tryoutId) })
+      .distinct("registrationId")
+      .exec();
+    const ids = (rows as any[])
+      .filter(Boolean)
+      .map((id) => (id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(String(id))));
+    if (ids.length === 0) return null;
+    return new Set(ids);
+  }
+
+  /**
    * GET /tryouts
    * Lists tryouts for the authenticated user's club with pagination, filters, and sort.
    */
@@ -716,6 +810,17 @@ export class TryoutController {
    *   sortBy      — swimmer_name | swimmer_age | status | session_time (default: swimmer_name)
    *                 session_time sorts by the slot's sessionDate + startTime (ascending = earliest first).
    *   sortOrder   — asc | desc (default: asc)
+   *   includeEmailBody — when "true", each registration's `email_info` entries
+   *                 include the full `body` and `html` payloads from
+   *                 email_audit_logs. Off by default to keep the list small.
+   *   emailSent   — "true" returns only registrations that have at least one
+   *                 row in email_audit_logs; "false" returns only those with
+   *                 none. Omit to disable the filter. Resolved via a single
+   *                 distinct() query on email_audit_logs for this tryout.
+   *
+   * Each registration in the response includes an `email_info` array — the
+   * audit-log rows from `email_audit_logs` for that registration (oldest →
+   * newest), looked up in a single batched query for the current page.
    */
   getRegistrations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -739,6 +844,16 @@ export class TryoutController {
         .filter((value) => mongoose.Types.ObjectId.isValid(value));
       const sortBy = (req.query["sortBy"] as string) || "swimmer_name";
       const sortOrder = req.query["sortOrder"] === "desc" ? -1 : 1;
+      // When true, each registration's `email_info` entries include the full
+      // `body` and `html` payloads from email_audit_logs. Off by default to
+      // keep the list payload small.
+      const includeEmailBody = String(req.query["includeEmailBody"] ?? "").toLowerCase() === "true";
+      // "true"  → only registrations that have at least one email_audit_logs row
+      // "false" → only registrations that have NO email_audit_logs row
+      // omitted  → no email-sent filtering
+      const emailSentParam = String(req.query["emailSent"] ?? "").toLowerCase();
+      const emailSentFilter: boolean | null =
+        emailSentParam === "true" ? true : emailSentParam === "false" ? false : null;
 
       // ── Build MongoDB filter ──────────────────────────────────────────────
       const mongoFilter: Record<string, any> = { tryoutId: id };
@@ -776,6 +891,51 @@ export class TryoutController {
           // Also allow the full string to match guardianEmail
           mongoFilter["$or"] = [{ "swimmerDetails.guardianEmail": { $regex: search, $options: "i" } }, { $and: mongoFilter["$and"] }];
           delete mongoFilter["$and"];
+        }
+      }
+
+      // ── Email-sent filter ─────────────────────────────────────────────────
+      // Resolved from email_audit_logs (distinct registrationId for this tryout).
+      // `emailSent=true`  → only registrations with at least one audit-log row.
+      // `emailSent=false` → only registrations with NO audit-log row.
+      if (emailSentFilter !== null) {
+        const emailedIds = await this.fetchRegistrationIdsWithEmails(id);
+        if (emailSentFilter === true) {
+          // No emails at all for this tryout → nothing matches.
+          if (emailedIds === null || emailedIds.size === 0) {
+            sendSuccess(res, { registrations: [], total: 0, page, limit, totalPages: 0 }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+            return;
+          }
+          const emailedIdArray = Array.from(emailedIds);
+          // Merge with any pre-existing _id filter (e.g. registerId / registerIds).
+          const existing = mongoFilter["_id"];
+          if (!existing) {
+            mongoFilter["_id"] = { $in: emailedIdArray };
+          } else if (existing instanceof mongoose.Types.ObjectId) {
+            mongoFilter["_id"] = emailedIdArray.includes(existing) ? existing : new mongoose.Types.ObjectId("000000000000000000000000");
+          } else if (Array.isArray(existing["$in"])) {
+            mongoFilter["_id"] = { $in: existing["$in"].filter((v: any) => emailedIds!.has(v)) };
+          } else {
+            // Some other shape — intersect conservatively.
+            mongoFilter["_id"] = { $in: emailedIdArray };
+          }
+        } else {
+          // emailSent === false → exclude any registration that has an audit log.
+          const excludeIds = emailedIds ? Array.from(emailedIds) : [];
+          if (excludeIds.length > 0) {
+            const existing = mongoFilter["_id"];
+            if (!existing) {
+              mongoFilter["_id"] = { $nin: excludeIds };
+            } else if (existing instanceof mongoose.Types.ObjectId) {
+              mongoFilter["_id"] = excludeIds.some((id) => id.equals(existing))
+                ? new mongoose.Types.ObjectId("000000000000000000000000")
+                : existing;
+            } else if (Array.isArray(existing["$in"])) {
+              mongoFilter["_id"] = { $in: existing["$in"], $nin: excludeIds };
+            } else {
+              mongoFilter["_id"] = { ...(existing as any), $nin: excludeIds };
+            }
+          }
         }
       }
 
@@ -817,6 +977,11 @@ export class TryoutController {
         const segmentMap = new Map((tryout.segments || []).map((s: any) => [s.id || s.name, s.name]));
         const sessionMap = new Map(sessions.map((s) => [s._id.toString(), s]));
         const slotMap = new Map(slots.map((s) => [s._id.toString(), s]));
+        // ── Email audit log lookup ──────────────────────────────────────────
+        const scopedEmailInfoMap = await this.fetchEmailInfoForRegistrations(
+          scopedRegistrations.map((r: any) => r._id),
+          includeEmailBody,
+        );
         const scopedData = scopedRegistrations.map((r: any) => {
           const swimmer = r.swimmerId as any;
           const parent = r.parentId as any;
@@ -854,6 +1019,7 @@ export class TryoutController {
             butterfly: scores.butterfly ?? null,
             total_score: scores.totalScore ?? null,
             detailed_scores: r.detailedScores || {},
+            email_info: scopedEmailInfoMap.get(r._id.toString()) ?? [],
             coach_recommendation: r.coachRecommendation || null,
           };
         });
@@ -872,6 +1038,12 @@ export class TryoutController {
       const segmentMap = new Map((tryout.segments || []).map((s: any) => [s.id || s.name, s.name]));
       const sessionMap = new Map(sessions.map((s) => [s._id.toString(), s]));
       const slotMap = new Map(slots.map((s) => [s._id.toString(), s]));
+
+      // ── Email audit log lookup ────────────────────────────────────────────
+      const emailInfoMap = await this.fetchEmailInfoForRegistrations(
+        registrations.map((r: any) => r._id),
+        includeEmailBody,
+      );
 
       const data = registrations.map((r: any) => {
         const swimmer = r.swimmerId as any;
@@ -911,6 +1083,7 @@ export class TryoutController {
           butterfly: scores.butterfly ?? null,
           total_score: scores.totalScore ?? null,
           detailed_scores: r.detailedScores || {},
+          email_info: emailInfoMap.get(r._id.toString()) ?? [],
           coach_recommendation: r.coachRecommendation || null,
         };
       });

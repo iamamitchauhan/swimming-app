@@ -638,6 +638,17 @@ paths:
         `sessionDate` + `startTime` (ascending = earliest first) and is
         resolved server-side via a `$lookup` to the `tryout_slots` collection.
         Default sort is `swimmer_name` ascending.
+
+        **Email audit info:** Each registration in the response includes an
+        `email_info` array — the rows from `email_audit_logs` for that
+        registration (oldest → newest), looked up in a single batched query
+        for the current page. By default the heavy `body` and `html` payloads
+        are omitted; pass `includeEmailBody=true` to include them.
+
+        **Email-sent filter:** Pass `emailSent=true` to return only
+        registrations that have at least one row in `email_audit_logs`, or
+        `emailSent=false` to return only those with none. Resolved via a
+        single `distinct()` query on `email_audit_logs` for this tryout.
       operationId: listTryoutRegistrations
       parameters:
         - name: id
@@ -713,9 +724,109 @@ paths:
             type: string
             enum: [asc, desc]
             default: asc
+        - name: includeEmailBody
+          in: query
+          required: false
+          description: |
+            When `true`, each registration's `email_info` entries include the
+            full `body` and `html` payloads from `email_audit_logs`. Off by
+            default to keep the list payload small.
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "false"
+        - name: emailSent
+          in: query
+          required: false
+          description: |
+            Filter by whether any email has been sent for the registration.
+            - `true`  → only registrations with at least one `email_audit_logs` row
+            - `false` → only registrations with NO `email_audit_logs` row
+            Omit to disable the filter. Resolved via a single `distinct()`
+            query on `email_audit_logs` for this tryout.
+          schema:
+            type: string
+            enum: ["true", "false"]
       responses:
         "200":
           description: Registrations returned successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          registrations:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/TryoutRegistrationItem"
+                          total:
+                            type: integer
+                          page:
+                            type: integer
+                          limit:
+                            type: integer
+                          totalPages:
+                            type: integer
+              example:
+                success: true
+                message: Success
+                data:
+                  registrations:
+                    - id: "6a59572d27844baaf898610d"
+                      swimmer_name: "Cameron Blalock"
+                      swimmer_age: 8
+                      segment_name: "8&U"
+                      segment_id: "8&U"
+                      session_date: "2026-08-15"
+                      slot_id:
+                        _id: "6a58f0c1ee4b9b989c93f965"
+                        startTime: "09:00"
+                        endTime: "09:15"
+                      startTime: "09:00"
+                      endTime: "09:15"
+                      usa_membership_id: null
+                      usa_verification_status: "pending"
+                      club_name: null
+                      guardian_name: "Curtina Blalock"
+                      guardian_email: "misstina04@gmail.com"
+                      parent_name: "Curtina Blalock"
+                      parent_email: "misstina04@gmail.com"
+                      status: "offered"
+                      notes: null
+                      safety_entry_exit: null
+                      safety_float: null
+                      freestyle: null
+                      backstroke: null
+                      breaststroke: null
+                      butterfly: null
+                      total_score: 13
+                      detailed_scores: {}
+                      email_info:
+                        - id: "6a5a1f2c27844baaf8987777"
+                          action: "offered"
+                          mode: "single"
+                          template_type: "default"
+                          subject: "Tryout Offer — Blue Dolphins"
+                          status: "sent"
+                          error_message: null
+                          message_id: "<msg-id@example.com>"
+                          recipient_email: "misstina04@gmail.com"
+                          swimmer_name: "Cameron Blalock"
+                          parent_name: "Curtina Blalock"
+                          sender_id: "6a5499b323709ced7a116edc"
+                          sender_name: "Coach Pat"
+                          sent_at: "2026-08-16T14:03:21.000Z"
+                          created_at: "2026-08-16T14:03:21.103Z"
+                      coach_recommendation: "6a7f3bbee7302c5e57e80233"
+                  total: 1
+                  page: 1
+                  limit: 10
+                  totalPages: 1
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
