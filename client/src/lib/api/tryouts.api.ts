@@ -293,6 +293,7 @@ export const tryoutsApi = {
     if (params.search) query.set("search", params.search);
     if (params.status) query.set("status", params.status);
     if (params.segmentId) query.set("segmentId", params.segmentId);
+    if (params.coachRecommendations?.length) query.set("coachRecommendations", params.coachRecommendations.join(","));
     if (params.registerId) query.set("registerId", params.registerId);
     if (params.registerIds?.length) query.set("registerIds", params.registerIds.join(","));
     if (params.sortBy) query.set("sortBy", params.sortBy);
@@ -547,6 +548,7 @@ export interface RegistrationListParams {
   search?: string;
   status?: string;
   segmentId?: string;
+  coachRecommendations?: string[];
   registerId?: string;
   registerIds?: string[];
   sortBy?: RegistrationSortField;

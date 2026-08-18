@@ -50,6 +50,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -171,6 +172,7 @@ export function RosterTab({ tryoutId }: Props) {
   const { registrations = [], total = 0, page = 1, totalPages = 0 } = rosterResult ?? {};
   const sendDecision = useSendDecision(tryoutId);
   const resetScore = useResetScore(tryoutId);
+  const { data: groups } = useGroups();
 
   function onParamsChange(params: Partial<RegistrationListParams>) {
     setRosterParams((prev) => ({ ...prev, ...params }));
@@ -406,6 +408,13 @@ export function RosterTab({ tryoutId }: Props) {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Coach Recommendation Filter */}
+        <CoachRecommendationFilter
+          groups={groups ?? []}
+          selected={rosterParams.coachRecommendations ?? []}
+          onChange={(next) => onParamsChange({ coachRecommendations: next.length ? next : undefined, page: 1 })}
+        />
 
         {canManageCoaches && (
           <Button
@@ -913,6 +922,97 @@ export function RosterTab({ tryoutId }: Props) {
 // ─── Coach Recommendation Dropdown ─────────────────────────────────────────────
 
 const REJECTED_VALUE = "__rejected__";
+
+// ─── Coach Recommendation Filter (multi-select) ───────────────────────────────
+
+interface CoachRecommendationFilterProps {
+  groups: { _id: string; name: string; color?: string }[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}
+
+function CoachRecommendationFilter({ groups, selected, onChange }: CoachRecommendationFilterProps) {
+  const allOptions = [...groups.map((g) => g._id), REJECTED_VALUE];
+  // `selected = []` (no filter) is treated as "all selected" visually.
+  // This keeps unassigned registrations (null recommendation) visible,
+  // since no filter is sent to the backend.
+  const isAllSelected = selected.length === 0;
+  const selectedSet = new Set(isAllSelected ? allOptions : selected);
+
+  function toggle(value: string) {
+    if (isAllSelected) {
+      // Currently showing all — unchecking one filters to everything except it
+      onChange(allOptions.filter((v) => v !== value));
+      return;
+    }
+    const next = new Set(selected);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    // If all options are checked again, collapse back to no filter (= show all)
+    if (next.size === allOptions.length) {
+      onChange([]);
+    } else {
+      onChange(Array.from(next));
+    }
+  }
+
+  const groupName = (id: string) => (id === REJECTED_VALUE ? "Reject" : groups.find((g) => g._id === id)?.name ?? id);
+  const triggerLabel = isAllSelected
+    ? "All recommendations"
+    : selected.length <= 2
+      ? selected.map(groupName).join(", ")
+      : `${selected.slice(0, 2).map(groupName).join(", ")} +${selected.length - 2} more`;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer w-56 justify-between">
+          <span className="truncate">{triggerLabel}</span>
+          <ChevronDown className="h-4 w-4 text-gray-500 shrink-0" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem
+          onSelect={() => onChange([])}
+          className="cursor-pointer"
+        >
+          All recommendations
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {groups.map((group) => (
+          <DropdownMenuCheckboxItem
+            key={group._id}
+            checked={selectedSet.has(group._id)}
+            onCheckedChange={() => toggle(group._id)}
+            onSelect={(e) => e.preventDefault()}
+            className="cursor-pointer flex items-center gap-2"
+          >
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: group.color || "#e5e7eb" }}
+              aria-hidden="true"
+            />
+            {group.name}
+          </DropdownMenuCheckboxItem>
+        ))}
+        {groups.length > 0 && <DropdownMenuSeparator />}
+        <DropdownMenuCheckboxItem
+          checked={selectedSet.has(REJECTED_VALUE)}
+          onCheckedChange={() => toggle(REJECTED_VALUE)}
+          onSelect={(e) => e.preventDefault()}
+          className="cursor-pointer flex items-center gap-2"
+        >
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: "#ef4444" }}
+            aria-hidden="true"
+          />
+          Reject
+        </DropdownMenuCheckboxItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 function CoachRecommendationSelect({
   tryoutId,

@@ -711,6 +711,8 @@ export class TryoutController {
    *   search      — swimmer name or parent/guardian email (case-insensitive)
    *   status      — one of: registered | waitlisted | offered | rejected | cancelled
    *   segmentId   — filter by segmentId value
+   *   coachRecommendations — comma-separated list of coach recommendation values
+   *                  (group ObjectId strings and/or the "__rejected__" sentinel)
    *   sortBy      — swimmer_name | swimmer_age | status | session_time (default: swimmer_name)
    *                 session_time sorts by the slot's sessionDate + startTime (ascending = earliest first).
    *   sortOrder   — asc | desc (default: asc)
@@ -726,6 +728,10 @@ export class TryoutController {
       const search = ((req.query["search"] as string) || "").trim().toLowerCase();
       const statusFilter = (req.query["status"] as string) || "";
       const segmentIdFilter = (req.query["segmentId"] as string) || "";
+      const coachRecommendationFilter = ((req.query["coachRecommendations"] as string) || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
       const registerId = ((req.query["registerId"] as string) || "").trim();
       const registerIds = ((req.query["registerIds"] as string) || "")
         .split(",")
@@ -738,6 +744,11 @@ export class TryoutController {
       const mongoFilter: Record<string, any> = { tryoutId: id };
       if (statusFilter) mongoFilter["status"] = statusFilter;
       if (segmentIdFilter) mongoFilter["segmentId"] = segmentIdFilter;
+      if (coachRecommendationFilter.length > 0) {
+        // Values may be group ObjectId strings and/or the "__rejected__" sentinel.
+        // Both are stored verbatim on the registration's `coachRecommendation` field.
+        mongoFilter["coachRecommendation"] = { $in: coachRecommendationFilter };
+      }
       if (registerId && mongoose.Types.ObjectId.isValid(registerId)) {
         mongoFilter["_id"] = new mongoose.Types.ObjectId(registerId);
       } else if (registerIds.length > 0) {

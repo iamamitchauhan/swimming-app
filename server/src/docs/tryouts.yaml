@@ -686,6 +686,18 @@ paths:
           description: Filter by segment ID.
           schema:
             type: string
+        - name: coachRecommendations
+          in: query
+          required: false
+          description: |
+            Comma-separated list of coach recommendation values to filter by.
+            Values may be group ObjectId strings and/or the `__rejected__`
+            sentinel (which represents a "Reject" recommendation). A
+            registration matches if its `coach_recommendation` field equals
+            any of the supplied values.
+          schema:
+            type: string
+          example: 6a5499b323709ced7a116edc,__rejected__
         - name: sortBy
           in: query
           required: false
