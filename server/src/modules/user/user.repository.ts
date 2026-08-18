@@ -35,11 +35,17 @@ export class UserRepository {
   }
 
   async findAll(
-    filters: { role?: UserRole; clubId?: string; search?: string } = {},
+    filters: { role?: UserRole; roles?: UserRole[]; statuses?: string[]; clubId?: string; search?: string } = {},
     pagination: { page: number; limit: number } = { page: 1, limit: 20 },
   ): Promise<{ users: PlainUser[]; total: number; page: number; limit: number; totalPages: number }> {
     const match: Record<string, unknown> = { status: { $ne: 'suspended' } };
     if (filters.role) match['role'] = filters.role;
+    if (filters.roles && filters.roles.length > 0) match['role'] = { $in: filters.roles };
+    // When explicit statuses are provided, override the default "not suspended"
+    // exclusion so the caller can include suspended users if desired.
+    if (filters.statuses && filters.statuses.length > 0) {
+      match['status'] = { $in: filters.statuses };
+    }
     if (filters.clubId) match['clubId'] = new mongoose.Types.ObjectId(filters.clubId);
     if (filters.search) {
       const re = new RegExp(filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');

@@ -120,9 +120,30 @@ paths:
           required: false
           schema:
             type: string
-            enum: [super_admin, admin, coach]
-          description: Filter by role
+            enum: [super_admin, admin, coach, parent]
+          description: Filter by a single role (legacy). Prefer `roles` for multi-select.
           example: coach
+        - in: query
+          name: roles
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of roles to filter by (multi-select).
+            A user matches if their role equals any of the supplied values.
+            When omitted, no role filter is applied.
+          example: admin,coach
+        - in: query
+          name: statuses
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of user statuses to filter by (multi-select).
+            Allowed values: `active`, `pending_verification`, `suspended`.
+            When omitted, suspended users are excluded by default; supplying
+            this parameter overrides that default.
+          example: active,pending_verification
         - in: query
           name: clubId
           required: false

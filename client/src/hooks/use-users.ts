@@ -22,6 +22,8 @@ export const userKeys = {
   me: ["users", "me"] as const,
   all: (params?: {
     role?: UserRole;
+    roles?: UserRole[];
+    statuses?: string[];
     clubId?: string;
     search?: string;
     page?: number;
@@ -46,6 +48,8 @@ export function useCurrentUser() {
 
 export function useAllUsers(params?: {
   role?: UserRole;
+  roles?: UserRole[];
+  statuses?: string[];
   clubId?: string;
   search?: string;
   page?: number;

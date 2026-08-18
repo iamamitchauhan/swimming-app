@@ -51,18 +51,26 @@ export class UserController {
 
   /**
    * GET /users
-   * Lists all users (super_admin only). Supports ?role= and ?clubId= filters.
+   * Lists all users (super_admin only). Supports ?role=, ?roles=, ?statuses=, and ?clubId= filters.
    */
   listAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       req.step?.("received", { params: req.params, query: req.query, body: req.body });
       const role = req.query["role"] as UserRole | undefined;
+      const roles = ((req.query["roles"] as string) || "")
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean) as UserRole[];
+      const statuses = ((req.query["statuses"] as string) || "")
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
       const clubId = req.query["clubId"] as string | undefined;
       const search = (req.query["search"] as string | undefined)?.trim() || undefined;
       const page = Math.max(1, parseInt(req.query["page"] as string) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(req.query["limit"] as string) || 20));
       req.step?.("delegating to service");
-      const result = await this.service.listAll({ role, clubId, search }, { page, limit });
+      const result = await this.service.listAll({ role, roles, statuses, clubId, search }, { page, limit });
       req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, result, MESSAGES.SUCCESS, HTTP_STATUS.OK);
     } catch (err) {

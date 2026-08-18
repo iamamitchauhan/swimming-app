@@ -41,9 +41,27 @@ export const usersApi = {
   updateMe: (input: UpdateProfileInput) =>
     api<{ user: AuthUser }>(apiClient.put("/users/me", input)),
 
-  /** GET /users?role=&clubId=&search=&page=&limit= (super_admin) */
-  listAll: (params?: { role?: UserRole; clubId?: string; search?: string; page?: number; limit?: number }) =>
-    api<PaginatedUsersResponse>(apiClient.get("/users", { params })),
+  /** GET /users?role=&roles=&statuses=&clubId=&search=&page=&limit= (super_admin) */
+  listAll: (params?: {
+    role?: UserRole;
+    roles?: UserRole[];
+    statuses?: string[];
+    clubId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.role) query.set("role", params.role);
+    if (params?.roles?.length) query.set("roles", params.roles.join(","));
+    if (params?.statuses?.length) query.set("statuses", params.statuses.join(","));
+    if (params?.clubId) query.set("clubId", params.clubId);
+    if (params?.search) query.set("search", params.search);
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    const qs = query.toString();
+    return api<PaginatedUsersResponse>(apiClient.get(`/users${qs ? `?${qs}` : ""}`));
+  },
 
   /** GET /users/club/:clubId */
   listByClub: (clubId: string) =>

@@ -29,10 +29,9 @@ import {
 } from "@/components/ui/table";
 import {
   ArrowLeft,
-  ChevronLeft,
+  CheckCircle2,
+  ChevronDown,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Loader2,
   MoreHorizontal,
   Plus,
@@ -41,6 +40,7 @@ import {
   UserPlus,
   XCircle,
 } from "lucide-react";
+import type { UserRole } from "@/lib/auth.store";
 import { useAllUsers, useChangeRole, useRemoveFromClub, useUsersByClub } from "@/hooks/use-users";
 import {
   useSendInvitation,
@@ -49,8 +49,10 @@ import {
 } from "@/hooks/use-invitations";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -69,29 +71,8 @@ import type { User, ClubUserItem } from "@/lib/api/users.api";
 import type { InvitationRole, Invitation } from "@/lib/api/invitations.api";
 import { ROLE_LABEL, calculateDetailedScoreTotal } from "@/lib/utils";
 
-/**
- * Returns a compact list of page numbers (and "..." gaps) to render in the
- * paginator. Always shows the first and last page, the current page, and one
- * neighbour on each side; collapses the rest into ellipses.
- *
- * Example: page=5, totalPages=10 -> [1, "...", 4, 5, 6, "...", 10]
- */
-function getPageNumbers(page: number, totalPages: number): Array<number | "..."> {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, i) => i + 1);
-  }
-
-  const pages: Array<number | "..."> = [1];
-  const start = Math.max(2, page - 1);
-  const end = Math.min(totalPages - 1, page + 1);
-
-  if (start > 2) pages.push("...");
-  for (let p = start; p <= end; p++) pages.push(p);
-  if (end < totalPages - 1) pages.push("...");
-  pages.push(totalPages);
-
-  return pages;
-}
+const ALL_ROLES: UserRole[] = ["super_admin", "admin", "coach", "parent"];
+const ALL_STATUSES = ["active", "pending_verification", "suspended"] as const;
 
 export default function UsersPage() {
   const user = useAuthStore((s) => s.user);
@@ -103,10 +84,20 @@ export default function UsersPage() {
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 10;
+  const [limit, setLimit] = useState(10);
+  const [roles, setRoles] = useState<UserRole[]>([]);
+  const [statuses, setStatuses] = useState<string[]>([]);
 
   const allUsers = useAllUsers(
-    isSuperAdmin ? { page, limit: PAGE_SIZE, search: search.trim() || undefined } : undefined,
+    isSuperAdmin
+      ? {
+          page,
+          limit,
+          search: search.trim() || undefined,
+          roles: roles.length ? roles : undefined,
+          statuses: statuses.length ? statuses : undefined,
+        }
+      : undefined,
   );
   const clubUsers = useUsersByClub(clubId);
   const changeRole = useChangeRole(clubId);
@@ -176,6 +167,30 @@ export default function UsersPage() {
             className="w-lg"
             debounceMs={350}
           />
+          {isSuperAdmin && (
+            <MultiSelectFilter
+              label="All roles"
+              options={ALL_ROLES}
+              optionLabel={(r) => ROLE_LABEL[r] ?? r}
+              selected={roles}
+              onChange={(next) => {
+                setRoles(next as UserRole[]);
+                setPage(1);
+              }}
+            />
+          )}
+          {isSuperAdmin && (
+            <MultiSelectFilter
+              label="All statuses"
+              options={[...ALL_STATUSES]}
+              optionLabel={(s) => s.replace(/_/g, " ")}
+              selected={statuses}
+              onChange={(next) => {
+                setStatuses(next);
+                setPage(1);
+              }}
+            />
+          )}
         </div>
         {canInvite && (
           <Button onClick={() => setInviteOpen(true)}>
@@ -211,6 +226,7 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead className="text-white">Name</TableHead>
                   <TableHead className="text-white">Email</TableHead>
+                  {isSuperAdmin && <TableHead className="text-white">Club</TableHead>}
                   <TableHead className="text-white">Role</TableHead>
                   <TableHead className="text-white">Status</TableHead>
                   {(isAdmin || isSuperAdmin) && (
@@ -221,7 +237,7 @@ export default function UsersPage() {
               <TableBody>
                 {displayItems.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
+                    <TableCell colSpan={isSuperAdmin ? 6 : 5} className="text-center text-muted-foreground py-10">
                       No users found.
                     </TableCell>
                   </TableRow>
@@ -241,9 +257,7 @@ export default function UsersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{inv.email}</TableCell>
-                        {/* <TableCell>
-                          <span className="font-medium text-muted-foreground">{inv.club?.name || '—'}</span>
-                        </TableCell> */}
+                        {isSuperAdmin && <TableCell className="text-muted-foreground">—</TableCell>}
                         <TableCell>
                           <Badge variant="secondary" className="capitalize">
                             {inv.role}
@@ -333,6 +347,11 @@ export default function UsersPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                      {isSuperAdmin && (
+                        <TableCell className="text-muted-foreground">
+                          {u.club?.name ?? "—"}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge variant="secondary" className="capitalize">
                           {ROLE_LABEL[u.role] ?? u.role}
@@ -378,68 +397,60 @@ export default function UsersPage() {
             </Table>
           </div>
         )}
-        {!isLoading && !isError && isSuperAdmin && totalPages > 1 && (
-          <div className="p-4 border-t border-border flex items-center justify-between gap-2">
-            <span className="text-sm text-muted-foreground">
-              Page {page} of {totalPages}
+        {!isLoading && !isError && isSuperAdmin && total > 0 && (
+          <div className="sticky bottom-0 z-20 flex items-center justify-between gap-2 text-sm text-gray-600 bg-white/95 backdrop-blur border-t border-gray-100 py-3 px-4">
+            <span>
+              Showing{" "}
+              <span className="font-medium">
+                {(page - 1) * limit + 1}–{Math.min(page * limit, total)}
+              </span>{" "}
+              of <span className="font-medium">{total}</span> results
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
+              {/* Page size selector */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
+                    {limit}
+                    <span className="text-gray-500">/ page</span>
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {[5, 10, 20, 50, 100].map((size) => (
+                    <DropdownMenuItem
+                      key={size}
+                      onClick={() => {
+                        setLimit(size);
+                        setPage(1);
+                      }}
+                    >
+                      {size}
+                      {limit === size && (
+                        <CheckCircle2 className="h-4 w-4 ml-auto text-green-600" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setPage(1)}
-                disabled={page === 1}
-                title="First page"
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
+                size="sm"
+                disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                title="Previous page"
               >
-                <ChevronLeft className="h-4 w-4" />
+                Previous
               </Button>
-              {getPageNumbers(page, totalPages).map((p, idx) =>
-                p === "..." ? (
-                  <span key={`ellipsis-${idx}`} className="px-2 text-sm text-muted-foreground">
-                    …
-                  </span>
-                ) : (
-                  <Button
-                    key={p}
-                    variant={p === page ? "default" : "outline"}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setPage(p)}
-                  >
-                    {p}
-                  </Button>
-                ),
-              )}
+              <span className="text-xs text-gray-500">
+                Page {page} of {totalPages}
+              </span>
               <Button
                 variant="outline"
-                size="icon"
-                className="h-8 w-8"
+                size="sm"
+                disabled={page >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                title="Next page"
               >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setPage(totalPages)}
-                disabled={page === totalPages}
-                title="Last page"
-              >
-                <ChevronsRight className="h-4 w-4" />
+                Next
               </Button>
             </div>
           </div>
@@ -1081,5 +1092,72 @@ function ScoreChip({ label, value }: { label: string; value?: number }) {
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium">{value != null ? value : "—"}</span>
     </div>
+  );
+}
+
+// ─── Multi-select filter dropdown ─────────────────────────────────────────────
+
+interface MultiSelectFilterProps {
+  label: string;
+  options: string[];
+  optionLabel: (value: string) => string;
+  selected: string[];
+  onChange: (next: string[]) => void;
+}
+
+function MultiSelectFilter({ label, options, optionLabel, selected, onChange }: MultiSelectFilterProps) {
+  const selectedSet = new Set(selected);
+  // `selected = []` is treated as "all selected" visually so that no filter
+  // is sent to the backend (which keeps results unfiltered by this dimension).
+  const isAllSelected = selected.length === 0;
+  const checkedSet = new Set(isAllSelected ? options : selected);
+
+  function toggle(value: string) {
+    if (isAllSelected) {
+      onChange(options.filter((v) => v !== value));
+      return;
+    }
+    const next = new Set(selected);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    if (next.size === options.length) {
+      onChange([]);
+    } else {
+      onChange(Array.from(next));
+    }
+  }
+
+  const triggerLabel = isAllSelected
+    ? label
+    : selected.length <= 2
+      ? selected.map(optionLabel).join(", ")
+      : `${selected.slice(0, 2).map(optionLabel).join(", ")} +${selected.length - 2} more`;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer w-56 justify-between">
+          <span className="truncate capitalize">{triggerLabel}</span>
+          <ChevronDown className="h-4 w-4 text-gray-500 shrink-0" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem onSelect={() => onChange([])} className="cursor-pointer">
+          {label}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {options.map((opt) => (
+          <DropdownMenuCheckboxItem
+            key={opt}
+            checked={checkedSet.has(opt)}
+            onCheckedChange={() => toggle(opt)}
+            onSelect={(e) => e.preventDefault()}
+            className="cursor-pointer capitalize"
+          >
+            {optionLabel(opt)}
+          </DropdownMenuCheckboxItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

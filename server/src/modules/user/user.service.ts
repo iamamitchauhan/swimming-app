@@ -35,7 +35,7 @@ export class UserService {
    * Super admin only.
    */
   async listAll(
-    filters: { role?: UserRole; clubId?: string; search?: string } = {},
+    filters: { role?: UserRole; roles?: UserRole[]; statuses?: string[]; clubId?: string; search?: string } = {},
     pagination: { page: number; limit: number } = { page: 1, limit: 20 },
   ): Promise<{ users: PlainUser[]; total: number; page: number; limit: number; totalPages: number }> {
     return this.repo.findAll(filters, pagination);
