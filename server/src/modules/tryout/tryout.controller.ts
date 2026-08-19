@@ -1376,6 +1376,11 @@ export class TryoutController {
       if (!["offered", "rejected"].includes(status)) {
         throw new BadRequestError("status query param must be 'offered' or 'rejected'");
       }
+      // `fresh=true` skips the audit-log short-circuit below and always renders
+      // a fresh preview from the current registration data. Used by the resend
+      // flow so the admin sees the email that *will* be sent with the updated
+      // coach_recommendation, not the email that *was* sent last time.
+      const fresh = String(req.query.fresh ?? "").toLowerCase() === "true";
       const clubId = req.user?.clubId;
       if (!clubId) {
         return next(new ForbiddenError("No club associated with user"));
@@ -1406,15 +1411,19 @@ export class TryoutController {
       // This makes the "Sent Email Preview" faithful to what the parent
       // actually received (including the exact template version at send time),
       // rather than a fresh re-render of the current template. If no email has
-      // been sent yet (pre-send preview), fall through to template rendering.
-      const lastSent = await EmailAuditLogModel.findOne({
-        registrationId: regId,
-        action: emailType,
-        status: "sent",
-      })
-        .sort({ sentAt: -1 })
-        .lean()
-        .exec();
+      // been sent yet (pre-send preview), or `fresh=true` was requested (resend
+      // flow — admin wants to see what *will* be sent with the current
+      // coach_recommendation), fall through to template rendering.
+      const lastSent = !fresh
+        ? await EmailAuditLogModel.findOne({
+            registrationId: regId,
+            action: emailType,
+            status: "sent",
+          })
+          .sort({ sentAt: -1 })
+          .lean()
+          .exec()
+        : null;
 
       if (lastSent) {
         sendSuccess(

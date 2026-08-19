@@ -9,6 +9,7 @@ import {
   Loader2,
   Mail,
   RotateCcw,
+  Send,
   UserCog,
   X,
   XCircle,
@@ -734,18 +735,76 @@ export function RosterTab({ tryoutId }: Props) {
                           The action (offer/reject) is taken from the most
                           recent email_info entry. */}
                       {r.email_info && r.email_info.length > 0 && (
-                        <button
-                          onClick={() =>
-                            setSentEmailPreview({
-                              regId: r.id,
-                              action: r.email_info![r.email_info!.length - 1].action,
-                            })
-                          }
-                          className="text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          <Mail className="h-3.5 w-3.5" /> View sent email
-                        </button>
+                        (() => {
+                          const lastEmail = r.email_info![r.email_info!.length - 1];
+                          const lastAction = lastEmail.action;
+                          // Resend uses the same decision endpoint, which
+                          // re-reads coach_recommendation from the DB at send
+                          // time — so an admin can update the recommendation
+                          // and resend to reflect the new value. Validate the
+                          // current recommendation is compatible with the
+                          // action being resent (same rules as the offer /
+                          // reject buttons above).
+                          const isRejected = r.coach_recommendation === REJECTED_VALUE;
+                          const resendDisabled =
+                            lastAction === "offered"
+                              ? !r.coach_recommendation || isRejected
+                              : !isRejected;
+                          const resendTooltip =
+                            lastAction === "offered"
+                              ? isRejected
+                                ? "Cannot resend offer — coach recommendation is set to Reject."
+                                : "Cannot resend offer — please assign a coach recommendation first."
+                              : "Cannot resend rejection — coach recommendation is not set to Reject.";
+
+                          const resendBtn = (
+                            <button
+                              onClick={() => {
+                                if (resendDisabled) {
+                                  toast.error("Cannot resend", {
+                                    description: resendTooltip,
+                                    duration: 6000,
+                                  });
+                                  return;
+                                }
+                                openDecisionDialog(r.id, lastAction);
+                              }}
+                              className={`text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1 ${resendDisabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                            >
+                              <Send className="h-3.5 w-3.5" /> Resend email
+                            </button>
+                          );
+
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <button
+                                onClick={() =>
+                                  setSentEmailPreview({
+                                    regId: r.id,
+                                    action: lastAction,
+                                  })
+                                }
+                                className="text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                              >
+                                <Mail className="h-3.5 w-3.5" /> View sent email
+                              </button>
+                              {resendDisabled ? (
+                                <TooltipProvider delayDuration={0}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="block">{resendBtn}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">{resendTooltip}</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : (
+                                resendBtn
+                              )}
+                            </div>
+                          );
+                        })()
                       )}
+                      {/* Resend email */}
                     </TableCell>
                   </TableRow>
                 );

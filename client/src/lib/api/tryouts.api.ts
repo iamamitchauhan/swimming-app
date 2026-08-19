@@ -321,15 +321,23 @@ export const tryoutsApi = {
    * Returns a preview of the email that would be sent (subject, text, html)
    * WITHOUT actually sending anything. Uses the exact same template lookup
    * and interpolation as the real decision endpoint.
+   *
+   * By default, if an email has already been sent for this registration +
+   * status, the *historical* sent email is returned (faithful to what the
+   * parent received). Pass `fresh: true` to skip the audit-log lookup and
+   * always render a fresh preview from the current registration data — used
+   * by the resend flow so the admin sees what *will* be sent with the
+   * updated coach_recommendation.
    */
   getEmailPreview: (
     tryoutId: string,
     regId: string,
     status: "offered" | "rejected",
+    fresh?: boolean,
   ): Promise<EmailPreview> =>
     api<EmailPreview>(
       apiClient.get(`/tryouts/${tryoutId}/registrations/${regId}/email-preview`, {
-        params: { status },
+        params: { status, ...(fresh ? { fresh: "true" } : {}) },
       }),
     ),
 

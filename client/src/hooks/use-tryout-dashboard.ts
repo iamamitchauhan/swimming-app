@@ -34,8 +34,8 @@ export const tryoutDashboardKeys = {
   leaderboard: (id: string) => ["tryouts", id, "leaderboard"] as const,
   waitlist: (id: string, params: WaitlistListParams) =>
     ["tryouts", id, "waitlist", params] as const,
-  emailPreview: (id: string, regId: string, status: string) =>
-    ["tryouts", id, "registration", regId, "email-preview", status] as const,
+  emailPreview: (id: string, regId: string, status: string, fresh: boolean) =>
+    ["tryouts", id, "registration", regId, "email-preview", status, fresh ? "fresh" : "historical"] as const,
 };
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
@@ -87,16 +87,22 @@ export function useWaitlistByTryout(id: string, params: WaitlistListParams = {})
  * The server uses the exact same template lookup, interpolation, and
  * renderLayout() as the real decision endpoint — so the preview is
  * faithful to what the parent would actually receive. No email is sent.
+ *
+ * By default the server returns the *historical* sent email (from the audit
+ * log) if one exists. Pass `fresh: true` to always render a fresh preview
+ * from the current registration data — used by the resend flow so the admin
+ * sees what *will* be sent with the updated coach_recommendation.
  */
 export function useEmailPreview(
   tryoutId: string,
   regId: string | null,
   status: "offered" | "rejected" | null,
   enabled = true,
+  fresh = false,
 ) {
   return useQuery<EmailPreview>({
-    queryKey: tryoutDashboardKeys.emailPreview(tryoutId, regId ?? "", status ?? ""),
-    queryFn: () => tryoutsApi.getEmailPreview(tryoutId, regId!, status!),
+    queryKey: tryoutDashboardKeys.emailPreview(tryoutId, regId ?? "", status ?? "", fresh),
+    queryFn: () => tryoutsApi.getEmailPreview(tryoutId, regId!, status!, fresh),
     enabled: !!tryoutId && !!regId && !!status && enabled,
     staleTime: 0,
   });

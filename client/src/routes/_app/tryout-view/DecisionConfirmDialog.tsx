@@ -91,12 +91,17 @@ export function DecisionConfirmDialog({
 
   const isSingle = stableIsSingle;
 
-  // Fetch the email preview from the backend (only for single-swimmer actions)
+  // Fetch the email preview from the backend (only for single-swimmer actions).
+  // `fresh: true` forces the server to render a fresh preview from the current
+  // registration data (skipping the audit-log short-circuit) — important for
+  // the resend flow, where the admin may have updated the coach_recommendation
+  // and needs to see what *will* be sent, not what *was* sent last time.
   const { data: preview, isLoading: previewLoading } = useEmailPreview(
     tryoutId,
     stableRegId,
     stableAction,
     open && isSingle,
+    true,
   );
 
   const description = isSingle

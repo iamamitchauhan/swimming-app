@@ -1186,14 +1186,19 @@ paths:
         **No email is actually sent by this endpoint.**
 
         Resolution order:
-        1. If an email has already been sent for this registration + status
-           (per the email audit log), the actual sent subject/body/html and
-           `sentAt` timestamp are returned — faithful to what the parent
-           received at send time.
-        2. Otherwise, the endpoint renders a fresh preview using the same
-           template lookup, interpolation, and `renderLayout()` as the real
-           `decision` endpoint, so the preview is faithful to what the parent
-           would receive.
+        1. Unless `fresh=true` is passed, if an email has already been sent
+           for this registration + status (per the email audit log), the
+           actual sent subject/body/html and `sentAt` timestamp are returned
+           — faithful to what the parent received at send time.
+        2. Otherwise (no prior send, or `fresh=true`), the endpoint renders a
+           fresh preview using the same template lookup, interpolation, and
+           `renderLayout()` as the real `decision` endpoint, so the preview is
+           faithful to what the parent would receive.
+
+        `fresh=true` is used by the resend flow: an admin may update the
+        swimmer's `coachRecommendation` and resend the offer/reject email, so
+        the preview must reflect the *current* recommendation rather than the
+        previously-sent email.
 
         Template selection (for fresh previews):
         - For `status=offered`: uses the template matching the swimmer's
@@ -1225,6 +1230,18 @@ paths:
           schema:
             type: string
             enum: [offered, rejected]
+        - name: fresh
+          in: query
+          required: false
+          description: >
+            When `true`, skip the audit-log lookup and always render a fresh
+            preview from the current registration data. Used by the resend
+            flow so the admin sees what *will* be sent (with the current
+            `coachRecommendation`), not what *was* sent last time. Defaults
+            to `false` (return the historical sent email if one exists).
+          schema:
+            type: boolean
+            example: false
       responses:
         "200":
           description: Email preview (not sent)
