@@ -8,8 +8,8 @@ import {
   ClipboardList,
   Loader2,
   Mail,
+  MoreVertical,
   RotateCcw,
-  Send,
   UserCog,
   X,
   XCircle,
@@ -265,13 +265,13 @@ export function RosterTab({ tryoutId }: Props) {
     if (allRegisteredSelected) {
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        registeredRows.forEach((r) => next.delete(r.id));
+        registrations.forEach((r) => next.delete(r.id));
         return next;
       });
     } else {
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        registeredRows.forEach((r) => next.add(r.id));
+        registrations.forEach((r) => next.add(r.id));
         return next;
       });
     }
@@ -536,14 +536,12 @@ export function RosterTab({ tryoutId }: Props) {
                     className={`hover:bg-gray-50 transition ${selectedIds.has(r.id) ? "bg-blue-50" : ""}`}
                   >
                     <TableCell className="w-10 px-4 py-3">
-                      {r.status === "registered" && (
                         <Checkbox
                           checked={selectedIds.has(r.id)}
                           onCheckedChange={() => toggleRow(r.id)}
                           aria-label={`Select ${r.swimmer_name}`}
                           className="cursor-pointer"
                         />
-                      )}
                     </TableCell>
                     <TableCell
                       className="text-blue-700 cursor-pointer hover:underline px-4 py-3"
@@ -738,45 +736,18 @@ export function RosterTab({ tryoutId }: Props) {
                         (() => {
                           const lastEmail = r.email_info![r.email_info!.length - 1];
                           const lastAction = lastEmail.action;
-                          // Resend uses the same decision endpoint, which
-                          // re-reads coach_recommendation from the DB at send
-                          // time — so an admin can update the recommendation
-                          // and resend to reflect the new value. Validate the
-                          // current recommendation is compatible with the
-                          // action being resent (same rules as the offer /
-                          // reject buttons above).
                           const isRejected = r.coach_recommendation === REJECTED_VALUE;
-                          const resendDisabled =
-                            lastAction === "offered"
-                              ? !r.coach_recommendation || isRejected
-                              : !isRejected;
-                          const resendTooltip =
-                            lastAction === "offered"
-                              ? isRejected
-                                ? "Cannot resend offer — coach recommendation is set to Reject."
-                                : "Cannot resend offer — please assign a coach recommendation first."
-                              : "Cannot resend rejection — coach recommendation is not set to Reject.";
-
-                          const resendBtn = (
-                            <button
-                              onClick={() => {
-                                if (resendDisabled) {
-                                  toast.error("Cannot resend", {
-                                    description: resendTooltip,
-                                    duration: 6000,
-                                  });
-                                  return;
-                                }
-                                openDecisionDialog(r.id, lastAction);
-                              }}
-                              className={`text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1 ${resendDisabled ? "opacity-40 cursor-not-allowed" : ""}`}
-                            >
-                              <Send className="h-3.5 w-3.5" /> Resend email
-                            </button>
-                          );
+                          const offerDisabled = !r.coach_recommendation || isRejected;
+                          const rejectDisabled = !isRejected;
+                          const offerTooltip = isRejected
+                            ? "Cannot resend offer — coach recommendation is set to Reject."
+                            : "Cannot resend offer — please assign a coach recommendation first.";
+                          const rejectTooltip = !r.coach_recommendation
+                            ? "Cannot resend rejection — please assign a coach recommendation of Reject first."
+                            : "Cannot resend rejection — coach recommendation is not set to Reject.";
 
                           return (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
                               <button
                                 onClick={() =>
                                   setSentEmailPreview({
@@ -788,18 +759,49 @@ export function RosterTab({ tryoutId }: Props) {
                               >
                                 <Mail className="h-3.5 w-3.5" /> View sent email
                               </button>
-                              {resendDisabled ? (
-                                <TooltipProvider delayDuration={0}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="block">{resendBtn}</span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top">{resendTooltip}</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : (
-                                resendBtn
-                              )}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="text-gray-500 hover:text-gray-700 cursor-pointer flex items-center">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                                    RESEND COMMUNICATION
+                                  </DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      if (offerDisabled) {
+                                        toast.error("Cannot resend offer", {
+                                          description: offerTooltip,
+                                          duration: 6000,
+                                        });
+                                        return;
+                                      }
+                                      openDecisionDialog(r.id, "offered");
+                                    }}
+                                    className={`cursor-pointer flex items-center gap-2 ${offerDisabled ? "opacity-40" : ""}`}
+                                  >
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Resend as Offer
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      if (rejectDisabled) {
+                                        toast.error("Cannot resend rejection", {
+                                          description: rejectTooltip,
+                                          duration: 6000,
+                                        });
+                                        return;
+                                      }
+                                      openDecisionDialog(r.id, "rejected");
+                                    }}
+                                    className={`cursor-pointer flex items-center gap-2 ${rejectDisabled ? "opacity-40" : ""}`}
+                                  >
+                                    <XCircle className="h-3.5 w-3.5 text-red-500" /> Resend as Reject
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           );
                         })()
