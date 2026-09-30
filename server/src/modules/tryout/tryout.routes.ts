@@ -32,6 +32,7 @@ const controller = new TryoutController(service);
  * PUT  /:id/registrations/:regId/verify   — update USA-S verification
  * PUT  /:id/registrations/:regId/score    — update scores
  * DELETE /:id/registrations/:regId/score — reset (clear) scores
+ * POST /:id/registrations/check-in — bulk check-in / un-check registrations
  * POST /:id/comms                — send bulk communication
  * POST /                         — create tryout (admin, coach)
  * PUT  /:id                      — update tryout (admin, coach)
@@ -72,6 +73,9 @@ tryoutRouter.put("/:id/registrations/:regId/verify", authenticate, authorize(USE
 tryoutRouter.put("/:id/registrations/:regId/score", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.updateScore);
 
 tryoutRouter.delete("/:id/registrations/:regId/score", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.resetScore);
+
+// Bulk check-in / un-check. A single check-in is an array of one.
+tryoutRouter.post("/:id/registrations/check-in", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.checkIn);
 
 tryoutRouter.put("/:id/registration-questions", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.upsertRegistrationQuestions);
 

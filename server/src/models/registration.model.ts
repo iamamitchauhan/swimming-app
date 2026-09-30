@@ -62,6 +62,11 @@ export interface IRegistration extends Document {
   emailSent: boolean;
   lastCommunicationAt?: Date;
 
+  // Roster check-in: set when a swimmer arrives at the tryout. Both are cleared
+  // on un-check, so this holds the latest check-in (time + acting staff member).
+  checkedInAt?: Date | null;
+  checkedInBy?: mongoose.Types.ObjectId | null;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -124,6 +129,15 @@ const registrationSchema = new Schema<IRegistration>(
     },
     lastCommunicationAt: {
       type: Date,
+    },
+    checkedInAt: {
+      type: Date,
+      default: null,
+    },
+    checkedInBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
     usaVerificationStatus: {
       type: String,
@@ -196,6 +210,9 @@ registrationSchema.index({ tryoutId: 1, status: 1, waitlistPosition: 1 });
 
 // Session and segment lookups
 registrationSchema.index({ sessionId: 1, segmentId: 1 });
+
+// Roster check-in filter/lookup
+registrationSchema.index({ tryoutId: 1, checkedInAt: 1 });
 
 // ─── Export ─────────────────────────────────────────────────────────────────────
 

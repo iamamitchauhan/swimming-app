@@ -649,6 +649,12 @@ paths:
         registrations that have at least one row in `email_audit_logs`, or
         `emailSent=false` to return only those with none. Resolved via a
         single `distinct()` query on `email_audit_logs` for this tryout.
+
+        **Check-in:** Each registration includes `checked_in_at` (ISO timestamp
+        or null), `checked_in_by` (staff user id or null), and
+        `checked_in_by_name` (display name of the checker, or null). Pass
+        `checkedIn=true` to return only checked-in registrations, or
+        `checkedIn=false` for those not yet checked in.
       operationId: listTryoutRegistrations
       parameters:
         - name: id
@@ -747,6 +753,17 @@ paths:
           schema:
             type: string
             enum: ["true", "false"]
+        - name: checkedIn
+          in: query
+          required: false
+          description: |
+            Filter by roster check-in state.
+            - `true`  → only registrations that have been checked in
+            - `false` → only registrations that have NOT been checked in
+            Omit to disable the filter.
+          schema:
+            type: string
+            enum: ["true", "false"]
       responses:
         "200":
           description: Registrations returned successfully
@@ -823,6 +840,9 @@ paths:
                           sent_at: "2026-08-16T14:03:21.000Z"
                           created_at: "2026-08-16T14:03:21.103Z"
                       coach_recommendation: "6a7f3bbee7302c5e57e80233"
+                      checked_in_at: "2026-08-15T09:04:00.000Z"
+                      checked_in_by: "6a5499b323709ced7a116edc"
+                      checked_in_by_name: "Coach Pat"
                   total: 1
                   page: 1
                   limit: 10
@@ -831,6 +851,83 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /tryouts/{id}/registrations/check-in:
+    post:
+      tags: [Tryouts]
+      summary: Bulk check-in / un-check registrations
+      description: |
+        Marks arriving swimmers as checked in, recording the check-in time and
+        the acting staff member. A single check-in is an array of one
+        registration id.
+
+        Pass `checkedIn: false` to un-check — this clears both `checkedInAt`
+        and `checkedInBy`.
+
+        Requires admin or coach role. A coach may only check in registrations
+        for their assigned segments. Cancelled registrations cannot be checked
+        in (but may be un-checked).
+      operationId: checkInRegistrations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tryout ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [registrationIds, checkedIn]
+              properties:
+                registrationIds:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  description: Registration IDs to check in / un-check.
+                  items:
+                    type: string
+                checkedIn:
+                  type: boolean
+                  description: "`true` marks arrival (sets time + actor); `false` clears both."
+                checkedInAt:
+                  type: string
+                  format: date-time
+                  description: ISO timestamp for the check-in. Defaults to now when omitted (check-in only).
+            example:
+              registrationIds: ["6a59572d27844baaf898610d"]
+              checkedIn: true
+              checkedInAt: "2026-08-15T09:04:00.000Z"
+      responses:
+        "200":
+          description: The updated registrations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          registrations:
+                            type: array
+                            items:
+                              type: object
+        "400":
+          description: No matching (or checkable) registrations, or an invalid request body
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /tryouts/{id}/registrations/{regId}/score:
     put:

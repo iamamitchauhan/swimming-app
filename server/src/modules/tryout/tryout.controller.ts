@@ -25,6 +25,21 @@ import logger from "../../shared/utils/logger";
 import { isTestUser } from "../../shared/constants/testUsers";
 import { config } from "../../config/env";
 
+// ─── Check-in helper ─────────────────────────────────────────────────────────
+
+/**
+ * Flattens a populated `checkedInBy` user (or null) into the roster's
+ * `checked_in_by` (id string) + `checked_in_by_name` (display name) fields.
+ */
+function checkedInByFields(user: any): { checked_in_by: string | null; checked_in_by_name: string | null } {
+  if (!user) return { checked_in_by: null, checked_in_by_name: null };
+  const name = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
+  return {
+    checked_in_by: user._id?.toString?.() ?? String(user._id ?? user),
+    checked_in_by_name: name || null,
+  };
+}
+
 // ─── Email audit logging helper ──────────────────────────────────────────────
 
 /**
@@ -319,6 +334,16 @@ export class TryoutController {
           },
         },
         { $unwind: { path: "$parentId", preserveNullAndEmptyArrays: true } },
+        // Populate the checking-in staff member (same shape as .populate("checkedInBy", "firstName lastName"))
+        {
+          $lookup: {
+            from: "users",
+            let: { checkedInBy: "$checkedInBy" },
+            pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$checkedInBy"] } } }, { $project: { firstName: 1, lastName: 1 } }],
+            as: "checkedInBy",
+          },
+        },
+        { $unwind: { path: "$checkedInBy", preserveNullAndEmptyArrays: true } },
         // Replace slotId with the slot document (same as .populate("slotId", "startTime endTime"))
         { $addFields: { slotId: { _id: "$_sortSlot._id", startTime: "$_sortSlot.startTime", endTime: "$_sortSlot.endTime" } } },
         // Remove temp sort fields
@@ -342,6 +367,7 @@ export class TryoutController {
       .populate("swimmerId", "firstName lastName birthDate")
       .populate("parentId", "firstName lastName email")
       .populate("slotId", "startTime endTime")
+      .populate("checkedInBy", "firstName lastName")
       .lean()
       .exec();
   }
@@ -358,9 +384,7 @@ export class TryoutController {
     registrationIds: Array<string | mongoose.Types.ObjectId>,
     includeBody = false,
   ): Promise<Map<string, any[]>> {
-    const ids = registrationIds
-      .filter(Boolean)
-      .map((id) => (id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(String(id))));
+    const ids = registrationIds.filter(Boolean).map((id) => (id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(String(id))));
     if (ids.length === 0) return new Map();
 
     const projection: Record<string, number> = {
@@ -433,9 +457,7 @@ export class TryoutController {
     const rows = await EmailAuditLogModel.find({ tryoutId: new mongoose.Types.ObjectId(tryoutId) })
       .distinct("registrationId")
       .exec();
-    const ids = (rows as any[])
-      .filter(Boolean)
-      .map((id) => (id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(String(id))));
+    const ids = (rows as any[]).filter(Boolean).map((id) => (id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(String(id))));
     if (ids.length === 0) return null;
     return new Set(ids);
   }
@@ -852,13 +874,21 @@ export class TryoutController {
       // "false" → only registrations that have NO email_audit_logs row
       // omitted  → no email-sent filtering
       const emailSentParam = String(req.query["emailSent"] ?? "").toLowerCase();
-      const emailSentFilter: boolean | null =
-        emailSentParam === "true" ? true : emailSentParam === "false" ? false : null;
+      const emailSentFilter: boolean | null = emailSentParam === "true" ? true : emailSentParam === "false" ? false : null;
+      // "true"  → only registrations that have been checked in
+      // "false" → only registrations that have NOT been checked in
+      // omitted  → no check-in filtering
+      const checkedInParam = String(req.query["checkedIn"] ?? "").toLowerCase();
+      const checkedInFilter: boolean | null = checkedInParam === "true" ? true : checkedInParam === "false" ? false : null;
 
       // ── Build MongoDB filter ──────────────────────────────────────────────
       const mongoFilter: Record<string, any> = { tryoutId: id };
       if (statusFilter) mongoFilter["status"] = statusFilter;
       if (segmentIdFilter) mongoFilter["segmentId"] = segmentIdFilter;
+      // `$in: [null]` matches both null and missing fields, so it covers rows
+      // created before the check-in columns existed.
+      if (checkedInFilter === true) mongoFilter["checkedInAt"] = { $exists: true, $ne: null };
+      else if (checkedInFilter === false) mongoFilter["checkedInAt"] = { $in: [null] };
       if (coachRecommendationFilter.length > 0) {
         // Values may be group ObjectId strings and/or the "__rejected__" sentinel.
         // Both are stored verbatim on the registration's `coachRecommendation` field.
@@ -927,9 +957,7 @@ export class TryoutController {
             if (!existing) {
               mongoFilter["_id"] = { $nin: excludeIds };
             } else if (existing instanceof mongoose.Types.ObjectId) {
-              mongoFilter["_id"] = excludeIds.some((id) => id.equals(existing))
-                ? new mongoose.Types.ObjectId("000000000000000000000000")
-                : existing;
+              mongoFilter["_id"] = excludeIds.some((id) => id.equals(existing)) ? new mongoose.Types.ObjectId("000000000000000000000000") : existing;
             } else if (Array.isArray(existing["$in"])) {
               mongoFilter["_id"] = { $in: existing["$in"], $nin: excludeIds };
             } else {
@@ -1021,6 +1049,8 @@ export class TryoutController {
             detailed_scores: r.detailedScores || {},
             email_info: scopedEmailInfoMap.get(r._id.toString()) ?? [],
             coach_recommendation: r.coachRecommendation || null,
+            checked_in_at: r.checkedInAt ?? null,
+            ...checkedInByFields(r.checkedInBy),
           };
         });
         sendSuccess(
@@ -1085,6 +1115,8 @@ export class TryoutController {
           detailed_scores: r.detailedScores || {},
           email_info: emailInfoMap.get(r._id.toString()) ?? [],
           coach_recommendation: r.coachRecommendation || null,
+          checked_in_at: r.checkedInAt ?? null,
+          ...checkedInByFields(r.checkedInBy),
         };
       });
 
@@ -1420,9 +1452,9 @@ export class TryoutController {
             action: emailType,
             status: "sent",
           })
-          .sort({ sentAt: -1 })
-          .lean()
-          .exec()
+            .sort({ sentAt: -1 })
+            .lean()
+            .exec()
         : null;
 
       if (lastSent) {
@@ -1663,6 +1695,83 @@ export class TryoutController {
       if (!updated) throw new NotFoundError("Registration not found");
       req.step?.("responding", { status: HTTP_STATUS.OK });
       sendSuccess(res, { registration: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * POST /tryouts/:id/registrations/check-in
+   * Bulk check-in / un-check for the roster. A single check-in is an array of
+   * one. Coaches are limited to their assigned segments. Cancelled
+   * registrations cannot be checked in (but may be un-checked).
+   */
+  checkIn = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      req.step?.("received", { params: req.params, body: req.body });
+      const { id } = req.params;
+      const { registrationIds, checkedIn, checkedInAt } = req.body as {
+        registrationIds?: unknown;
+        checkedIn?: unknown;
+        checkedInAt?: unknown;
+      };
+
+      if (!Array.isArray(registrationIds) || registrationIds.length === 0) {
+        throw new BadRequestError("registrationIds must be a non-empty array");
+      }
+      if (typeof checkedIn !== "boolean") {
+        throw new BadRequestError("checkedIn must be a boolean");
+      }
+      const ids = registrationIds
+        .filter((value): value is string => typeof value === "string" && mongoose.Types.ObjectId.isValid(value))
+        .map((value) => new mongoose.Types.ObjectId(value));
+      if (ids.length === 0) throw new BadRequestError("No valid registration ids provided");
+
+      // The check-in time is staff-editable, defaulting to now; the client sends
+      // an ISO datetime and the server validates it.
+      let when: Date | null = null;
+      if (checkedIn && checkedInAt !== undefined && checkedInAt !== null) {
+        if (typeof checkedInAt !== "string" || isNaN(new Date(checkedInAt).getTime())) {
+          throw new BadRequestError("checkedInAt must be a valid ISO datetime");
+        }
+        when = new Date(checkedInAt);
+      }
+      req.step?.("validated");
+
+      const clubId = req.user?.clubId;
+      if (!clubId) throw new ForbiddenError("No club associated with user");
+      const tryout = await this.service.getById(id, clubId);
+      if (!tryout) throw new NotFoundError("Tryout not found");
+
+      // ── Load the targeted registrations ─────────────────────────────────
+      const registrations = await RegistrationModel.find({ _id: { $in: ids }, tryoutId: id })
+        .lean()
+        .exec();
+      if (registrations.length === 0) throw new BadRequestError("No matching registrations found");
+
+      // ── Coach segment scoping ───────────────────────────────────────────
+      const coachSegmentIds = this.getCoachSegmentIds(tryout, req.user);
+      const scoped = coachSegmentIds === null ? registrations : registrations.filter((r) => coachSegmentIds.includes(r.segmentId));
+      // Cancelled registrations cannot be checked in, but may be un-checked.
+      const targets = checkedIn ? scoped.filter((r) => r.status !== "cancelled") : scoped;
+      if (targets.length === 0) throw new BadRequestError("No checkable registrations found");
+
+      const targetIds = targets.map((r) => r._id);
+      await RegistrationModel.updateMany(
+        { _id: { $in: targetIds }, tryoutId: id },
+        checkedIn
+          ? { $set: { checkedInAt: when ?? new Date(), checkedInBy: req.user?.id ?? null } }
+          : { $set: { checkedInAt: null, checkedInBy: null } },
+      );
+
+      const updated = await RegistrationModel.find({ _id: { $in: targetIds } })
+        .populate("checkedInBy", "firstName lastName")
+        .lean()
+        .exec();
+
+      logger.info({ tryoutId: id, count: updated.length, checkedIn }, "roster.check_in_updated");
+      req.step?.("responding", { status: HTTP_STATUS.OK });
+      sendSuccess(res, { registrations: updated }, MESSAGES.UPDATED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }
@@ -1910,6 +2019,7 @@ export class TryoutController {
       const registration = await RegistrationModel.findOne({ _id: regId, tryoutId: id })
         .populate("swimmerId", "firstName lastName birthDate")
         .populate("parentId", "firstName lastName email")
+        .populate("checkedInBy", "firstName lastName")
         .lean()
         .exec();
 
@@ -1921,8 +2031,9 @@ export class TryoutController {
         throw new ForbiddenError("You do not have access to this registration");
       }
 
+      const { checked_in_by_name } = checkedInByFields((registration as any).checkedInBy);
       req.step?.("responding", { status: HTTP_STATUS.OK });
-      sendSuccess(res, { registration }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
+      sendSuccess(res, { registration: { ...registration, checkedInByName: checked_in_by_name } }, MESSAGES.RETRIEVED, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

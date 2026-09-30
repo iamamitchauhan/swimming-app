@@ -92,6 +92,20 @@ function DetailContent({ detail }: { detail: RegistrationDetail }) {
         </Section>
       )}
 
+      {/* Check-in */}
+      {detail.checkedInAt && (
+        <Section title="Check-in">
+          <Row
+            label="Time"
+            value={new Date(detail.checkedInAt).toLocaleString("en-US", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          />
+          <Row label="Checked in by" value={detail.checkedInByName || "—"} />
+        </Section>
+      )}
+
       {/* Scores */}
       {/* {detail.scores && (
         <Section title="Scores">

@@ -8,6 +8,7 @@
  * usePromoteWaitlist()               → PUT .../promote   + cache invalidation
  * useSaveScore()                     → PUT .../score     + cache invalidation
  * useResetScore()                    → DELETE .../score  + cache invalidation
+ * useCheckInMutation()               → POST .../check-in + cache invalidation
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -22,6 +23,7 @@ import {
   type WaitlistListParams,
   type WaitlistListResult,
   type EmailPreview,
+  type CheckInInput,
 } from "../lib/api/tryouts.api";
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
@@ -35,7 +37,15 @@ export const tryoutDashboardKeys = {
   waitlist: (id: string, params: WaitlistListParams) =>
     ["tryouts", id, "waitlist", params] as const,
   emailPreview: (id: string, regId: string, status: string, fresh: boolean) =>
-    ["tryouts", id, "registration", regId, "email-preview", status, fresh ? "fresh" : "historical"] as const,
+    [
+      "tryouts",
+      id,
+      "registration",
+      regId,
+      "email-preview",
+      status,
+      fresh ? "fresh" : "historical",
+    ] as const,
 };
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
@@ -269,5 +279,29 @@ export function useResetScore(tryoutId: string) {
       });
       toast.success("Score reset.");
     },
+  });
+}
+
+/**
+ * Bulk check-in / un-check. A single check-in is an array of one. Invalidates
+ * every roster query so the check-in column + filter reflect the change.
+ */
+export function useCheckInMutation(tryoutId: string) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CheckInInput) => tryoutsApi.checkIn(tryoutId, input),
+    onSuccess: (updated, { checkedIn }) => {
+      qc.invalidateQueries({ queryKey: ["tryouts", tryoutId, "roster"] });
+      qc.invalidateQueries({ queryKey: tryoutDashboardKeys.allRegistrations(tryoutId) });
+      const count = updated.length;
+      toast.success(
+        checkedIn
+          ? `Checked in ${count} swimmer${count === 1 ? "" : "s"}.`
+          : `Un-checked ${count} swimmer${count === 1 ? "" : "s"}.`,
+      );
+    },
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : "Failed to update check-in."),
   });
 }

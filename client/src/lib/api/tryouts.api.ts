@@ -293,7 +293,8 @@ export const tryoutsApi = {
     if (params.search) query.set("search", params.search);
     if (params.status) query.set("status", params.status);
     if (params.segmentId) query.set("segmentId", params.segmentId);
-    if (params.coachRecommendations?.length) query.set("coachRecommendations", params.coachRecommendations.join(","));
+    if (params.coachRecommendations?.length)
+      query.set("coachRecommendations", params.coachRecommendations.join(","));
     if (params.registerId) query.set("registerId", params.registerId);
     if (params.registerIds?.length) query.set("registerIds", params.registerIds.join(","));
     if (params.sortBy) query.set("sortBy", params.sortBy);
@@ -301,11 +302,22 @@ export const tryoutsApi = {
     if (params.includeEmailBody) query.set("includeEmailBody", "true");
     if (params.emailSent === true) query.set("emailSent", "true");
     else if (params.emailSent === false) query.set("emailSent", "false");
+    if (params.checkedIn === true) query.set("checkedIn", "true");
+    else if (params.checkedIn === false) query.set("checkedIn", "false");
     const qs = query.toString();
     return api<RegistrationListResult>(
       apiClient.get(`/tryouts/${id}/registrations${qs ? `?${qs}` : ""}`),
     );
   },
+
+  /**
+   * POST /tryouts/:id/registrations/check-in
+   * Bulk check-in / un-check; a single check-in is an array of one.
+   */
+  checkIn: (tryoutId: string, input: CheckInInput): Promise<Registration[]> =>
+    api<{ registrations: Registration[] }>(
+      apiClient.post(`/tryouts/${tryoutId}/registrations/check-in`, input),
+    ).then((res) => res.registrations),
 
   /**
    * GET /tryouts/:id/registrations/:regId
@@ -443,6 +455,12 @@ export interface Registration {
   /** Audit-log rows from email_audit_logs for this registration (oldest → newest). */
   email_info?: EmailAuditLogInfo[];
   coach_recommendation?: string | null;
+  /** Set when the swimmer was checked in on arrival; null when not checked in. */
+  checked_in_at?: string | null;
+  /** Id of the staff member who performed the (latest) check-in. */
+  checked_in_by?: string | null;
+  /** Display name of the checker, for the tooltip. */
+  checked_in_by_name?: string | null;
 }
 
 /** Summary of a single email_audit_logs row, returned inside Registration.email_info. */
@@ -517,6 +535,10 @@ export interface RegistrationDetail {
   emailSent?: boolean;
   notes?: string;
   coachRecommendation?: string | null;
+  /** Set when the swimmer was checked in on arrival; cleared on un-check. */
+  checkedInAt?: string | null;
+  /** Display name of the staff member who performed the check-in. */
+  checkedInByName?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -601,6 +623,22 @@ export interface RegistrationListParams {
    * Omit to disable the filter.
    */
   emailSent?: boolean;
+  /**
+   * Filter by roster check-in state.
+   * - `true`  → only registrations that have been checked in
+   * - `false` → only registrations that have NOT been checked in
+   * Omit to disable the filter.
+   */
+  checkedIn?: boolean;
+}
+
+/** Bulk check-in / un-check. A single check-in is an array of one. */
+export interface CheckInInput {
+  registrationIds: string[];
+  /** `true` marks arrival (sets time + actor); `false` clears both. */
+  checkedIn: boolean;
+  /** ISO timestamp; defaults to now when omitted (check-in only). */
+  checkedInAt?: string;
 }
 
 export interface RegistrationListResult {

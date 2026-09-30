@@ -10,6 +10,7 @@ import {
   Mail,
   MoreVertical,
   RotateCcw,
+  Undo2,
   UserCog,
   X,
   XCircle,
@@ -40,11 +41,13 @@ import {
   useSendDecision,
   useSaveScore,
   useResetScore,
+  useCheckInMutation,
 } from "@/hooks/use-tryout-dashboard";
 import { useGroups } from "@/hooks/use-groups";
 import { useAuthStore } from "@/lib/auth.store";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
 import { DecisionConfirmDialog } from "./DecisionConfirmDialog";
+import { CheckInDialog } from "./CheckInDialog";
 import { SentEmailPreviewDialog } from "./SentEmailPreviewDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -114,6 +117,23 @@ function fmtTime(t?: string) {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
+/** "9:05 AM" from an ISO check-in timestamp. "" when empty/invalid. */
+function fmtCheckInTime(input?: string | null) {
+  if (!input) return "";
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+/** "Sep 26, 2026 · 9:05 AM" — full check-in timestamp for the tooltip. */
+function fmtCheckInFull(input?: string | null) {
+  if (!input) return "";
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return "";
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return `${date} · ${fmtCheckInTime(input)}`;
+}
+
 const DETAILED_SCORE_FIELDS = SCORING_CRITERIA.map((c) => c.id);
 const DETAILED_SCORE_TOTAL = DETAILED_SCORE_FIELDS.length;
 
@@ -173,6 +193,7 @@ export function RosterTab({ tryoutId }: Props) {
   const { registrations = [], total = 0, page = 1, totalPages = 0 } = rosterResult ?? {};
   const sendDecision = useSendDecision(tryoutId);
   const resetScore = useResetScore(tryoutId);
+  const checkInMutation = useCheckInMutation(tryoutId);
   const { data: groups } = useGroups();
 
   function onParamsChange(params: Partial<RegistrationListParams>) {
@@ -192,6 +213,11 @@ export function RosterTab({ tryoutId }: Props) {
   const [sentEmailPreview, setSentEmailPreview] = useState<{
     regId: string;
     action: "offered" | "rejected";
+  } | null>(null);
+  const [checkInDialog, setCheckInDialog] = useState<{
+    open: boolean;
+    regIds: string[];
+    mode: "in" | "out";
   } | null>(null);
 
   const user = useAuthStore((state) => state.user);
@@ -306,6 +332,27 @@ export function RosterTab({ tryoutId }: Props) {
       setBulkAction(null);
     }
   }
+
+  function openCheckIn(regIds: string[], mode: "in" | "out") {
+    setCheckInDialog({ open: true, regIds, mode });
+  }
+
+  async function confirmCheckIn(checkedInAt?: string) {
+    if (!checkInDialog) return;
+    try {
+      await checkInMutation.mutateAsync({
+        registrationIds: checkInDialog.regIds,
+        checkedIn: checkInDialog.mode === "in",
+        checkedInAt,
+      });
+      setSelectedIds(new Set());
+    } catch {
+      // Errors are surfaced by the mutation's onError.
+    } finally {
+      setCheckInDialog((prev) => (prev ? { ...prev, open: false } : null));
+    }
+  }
+
   const sortBy = rosterParams.sortBy ?? "swimmer_name";
   const sortOrder = rosterParams.sortOrder ?? "asc";
 
@@ -356,6 +403,13 @@ export function RosterTab({ tryoutId }: Props) {
         ? "Without email sent"
         : "All registrations";
 
+  const checkedInLabel =
+    rosterParams.checkedIn === true
+      ? "Checked in"
+      : rosterParams.checkedIn === false
+        ? "Not checked in"
+        : "All check-ins";
+
   return (
     <div>
       {/* ── Filters ───────────────────────────────────────────────────────── */}
@@ -367,6 +421,28 @@ export function RosterTab({ tryoutId }: Props) {
           className="flex-1 min-w-48 bg-white"
           debounceMs={350}
         />
+
+        {/* Check-in filter */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
+              <CheckCircle2 className="h-3.5 w-3.5 text-gray-500" />
+              {checkedInLabel}
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => onParamsChange({ checkedIn: undefined, page: 1 })}>
+              All check-ins
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onParamsChange({ checkedIn: true, page: 1 })}>
+              Checked in
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onParamsChange({ checkedIn: false, page: 1 })}>
+              Not checked in
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Segment filter */}
         <DropdownMenu>
@@ -421,7 +497,9 @@ export function RosterTab({ tryoutId }: Props) {
         <CoachRecommendationFilter
           groups={groups ?? []}
           selected={rosterParams.coachRecommendations ?? []}
-          onChange={(next) => onParamsChange({ coachRecommendations: next.length ? next : undefined, page: 1 })}
+          onChange={(next) =>
+            onParamsChange({ coachRecommendations: next.length ? next : undefined, page: 1 })
+          }
         />
 
         {/* Email-sent filter — three states:
@@ -497,6 +575,7 @@ export function RosterTab({ tryoutId }: Props) {
                 When
                 <SortIcon field="session_time" active={sortBy} order={sortOrder} />
               </TableHead>
+              <TableHead>Check-in</TableHead>
               <TableHead>Parent</TableHead>
               <TableHead
                 className="cursor-pointer select-none whitespace-nowrap"
@@ -514,7 +593,7 @@ export function RosterTab({ tryoutId }: Props) {
           <TableBody className="divide-y divide-gray-50">
             {loading && (
               <TableRow>
-                <TableCell colSpan={11} className="py-10 text-center text-gray-400">
+                <TableCell colSpan={12} className="py-10 text-center text-gray-400">
                   <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
                   Loading…
                 </TableCell>
@@ -522,7 +601,7 @@ export function RosterTab({ tryoutId }: Props) {
             )}
             {!loading && registrations.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="py-10 text-center text-gray-400">
+                <TableCell colSpan={12} className="py-10 text-center text-gray-400">
                   No registrations found
                 </TableCell>
               </TableRow>
@@ -536,12 +615,12 @@ export function RosterTab({ tryoutId }: Props) {
                     className={`hover:bg-gray-50 transition ${selectedIds.has(r.id) ? "bg-blue-50" : ""}`}
                   >
                     <TableCell className="w-10 px-4 py-3">
-                        <Checkbox
-                          checked={selectedIds.has(r.id)}
-                          onCheckedChange={() => toggleRow(r.id)}
-                          aria-label={`Select ${r.swimmer_name}`}
-                          className="cursor-pointer"
-                        />
+                      <Checkbox
+                        checked={selectedIds.has(r.id)}
+                        onCheckedChange={() => toggleRow(r.id)}
+                        aria-label={`Select ${r.swimmer_name}`}
+                        className="cursor-pointer"
+                      />
                     </TableCell>
                     <TableCell
                       className="text-blue-700 cursor-pointer hover:underline px-4 py-3"
@@ -562,6 +641,52 @@ export function RosterTab({ tryoutId }: Props) {
                         <span className="text-gray-400">
                           {fmtTime(r.slot_id.startTime)} – {fmtTime(r.slot_id.endTime)}
                         </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {r.checked_in_at ? (
+                        <div className="flex items-center gap-2">
+                          <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex cursor-default items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  {fmtCheckInTime(r.checked_in_at)}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Checked in
+                                {r.checked_in_by_name ? ` by ${r.checked_in_by_name}` : ""} ·{" "}
+                                {fmtCheckInFull(r.checked_in_at)}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          {/* <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={() => openCheckIn([r.id], "out")}
+                                  className="cursor-pointer text-muted-foreground hover:text-destructive"
+                                  aria-label={`Un-check ${r.swimmer_name}`}
+                                >
+                                  <Undo2 className="h-4 w-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Un-check</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider> */}
+                        </div>
+                      ) : r.status === "cancelled" ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openCheckIn([r.id], "in")}
+                          className="cursor-pointer text-xs text-muted-foreground hover:text-foreground hover:underline"
+                        >
+                          Check in
+                        </button>
                       )}
                     </TableCell>
                     <TableCell className="px-4 py-3">
@@ -653,8 +778,7 @@ export function RosterTab({ tryoutId }: Props) {
                       ) : (
                         (() => {
                           const isRejected = r.coach_recommendation === REJECTED_VALUE;
-                          const offerDisabled =
-                            !r.coach_recommendation || isRejected;
+                          const offerDisabled = !r.coach_recommendation || isRejected;
                           const offerTooltip = isRejected
                             ? "Cannot offer — coach recommendation is set to Reject."
                             : "Cannot offer — please assign a coach recommendation first.";
@@ -732,7 +856,8 @@ export function RosterTab({ tryoutId }: Props) {
                           actually sent and recorded in email_audit_logs).
                           The action (offer/reject) is taken from the most
                           recent email_info entry. */}
-                      {r.email_info && r.email_info.length > 0 && (
+                      {r.email_info &&
+                        r.email_info.length > 0 &&
                         (() => {
                           const lastEmail = r.email_info![r.email_info!.length - 1];
                           const lastAction = lastEmail.action;
@@ -783,7 +908,8 @@ export function RosterTab({ tryoutId }: Props) {
                                     }}
                                     className={`cursor-pointer flex items-center gap-2 ${offerDisabled ? "opacity-40" : ""}`}
                                   >
-                                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Resend as Offer
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Resend
+                                    as Offer
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => {
@@ -798,14 +924,14 @@ export function RosterTab({ tryoutId }: Props) {
                                     }}
                                     className={`cursor-pointer flex items-center gap-2 ${rejectDisabled ? "opacity-40" : ""}`}
                                   >
-                                    <XCircle className="h-3.5 w-3.5 text-red-500" /> Resend as Reject
+                                    <XCircle className="h-3.5 w-3.5 text-red-500" /> Resend as
+                                    Reject
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
                           );
-                        })()
-                      )}
+                        })()}
                       {/* Resend email */}
                     </TableCell>
                   </TableRow>
@@ -831,6 +957,19 @@ export function RosterTab({ tryoutId }: Props) {
           >
             <X className="h-3.5 w-3.5" /> Clear all
           </button>
+          <div className="h-4 w-px bg-gray-600" />
+          <button
+            onClick={() => openCheckIn(Array.from(selectedIds), "in")}
+            className="flex items-center gap-1.5 font-medium text-emerald-300 hover:text-emerald-200 transition cursor-pointer"
+          >
+            <CheckCircle2 className="h-4 w-4" /> Check in
+          </button>
+          {/* <button
+            onClick={() => openCheckIn(Array.from(selectedIds), "out")}
+            className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white transition cursor-pointer"
+          >
+            <Undo2 className="h-4 w-4" /> Un-check
+          </button> */}
           <div className="h-4 w-px bg-gray-600" />
           <button
             onClick={() => {
@@ -995,6 +1134,17 @@ export function RosterTab({ tryoutId }: Props) {
         onOpenChange={setModalOpen}
       />
 
+      <CheckInDialog
+        open={checkInDialog?.open ?? false}
+        onOpenChange={(open) =>
+          !open && setCheckInDialog((prev) => (prev ? { ...prev, open: false } : null))
+        }
+        count={checkInDialog?.regIds.length ?? 0}
+        mode={checkInDialog?.mode ?? "in"}
+        onConfirm={confirmCheckIn}
+        isPending={checkInMutation.isPending}
+      />
+
       <ManageCoachesDialog
         tryoutId={tryoutId}
         open={manageCoachesOpen}
@@ -1051,7 +1201,8 @@ function CoachRecommendationFilter({ groups, selected, onChange }: CoachRecommen
     }
   }
 
-  const groupName = (id: string) => (id === REJECTED_VALUE ? "Reject" : groups.find((g) => g._id === id)?.name ?? id);
+  const groupName = (id: string) =>
+    id === REJECTED_VALUE ? "Reject" : (groups.find((g) => g._id === id)?.name ?? id);
   const triggerLabel = isAllSelected
     ? "All recommendations"
     : selected.length <= 2
@@ -1067,10 +1218,7 @@ function CoachRecommendationFilter({ groups, selected, onChange }: CoachRecommen
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        <DropdownMenuItem
-          onSelect={() => onChange([])}
-          className="cursor-pointer"
-        >
+        <DropdownMenuItem onSelect={() => onChange([])} className="cursor-pointer">
           All recommendations
         </DropdownMenuItem>
         <DropdownMenuSeparator />
