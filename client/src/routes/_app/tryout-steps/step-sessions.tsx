@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, Clock, Users, CalendarIcon } from "lucide-react";
 import { TimePicker } from "@/components/time-picker/TimePicker";
+import { formatTime12h } from "@/components/time-picker/utils";
 import { TryoutFormValues, SLOT_DURATIONS, calcSlots, buildLabel } from "./shared";
 import { FieldGroup } from "./field-group";
 
@@ -295,17 +296,14 @@ export function StepSessions({ register, control, watch, setValue, errors, sessi
                         value={field.value ?? ""}
                         placeholder="Select time"
                         onChange={(v) => {
-                          field.onChange(v.formatted);
+                          const formatted = formatTime12h(v);
+                          field.onChange(formatted);
                           setValue(
                             `sessions.${idx}.label`,
-                            buildLabel(sv?.date ?? "", v.formatted, sv?.endTime ?? ""),
+                            buildLabel(sv?.date ?? "", formatted, sv?.endTime ?? ""),
                           );
                         }}
-                        className={
-                          sessionErrors?.startTime
-                            ? "[&_button]:border-destructive [&_button]:focus:ring-destructive"
-                            : ""
-                        }
+                        aria-invalid={sessionErrors?.startTime ? true : undefined}
                       />
                     )}
                   />
@@ -321,17 +319,14 @@ export function StepSessions({ register, control, watch, setValue, errors, sessi
                         value={field.value ?? ""}
                         placeholder="Select time"
                         onChange={(v) => {
-                          field.onChange(v.formatted);
+                          const formatted = formatTime12h(v);
+                          field.onChange(formatted);
                           setValue(
                             `sessions.${idx}.label`,
-                            buildLabel(sv?.date ?? "", sv?.startTime ?? "", v.formatted),
+                            buildLabel(sv?.date ?? "", sv?.startTime ?? "", formatted),
                           );
                         }}
-                        className={
-                          sessionErrors?.endTime
-                            ? "[&_button]:border-destructive [&_button]:focus:ring-destructive"
-                            : ""
-                        }
+                        aria-invalid={sessionErrors?.endTime ? true : undefined}
                       />
                     )}
                   />

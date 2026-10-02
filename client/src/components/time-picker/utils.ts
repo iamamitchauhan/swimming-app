@@ -46,19 +46,12 @@ export function hours24ToParts(hours24: number): {
   return { hour12, period };
 }
 
-export function partsToHours24(
-  hour12: number,
-  period: Meridiem,
-): number {
+export function partsToHours24(hour12: number, period: Meridiem): number {
   if (period === "AM") return hour12 === 12 ? 0 : hour12;
   return hour12 === 12 ? 12 : hour12 + 12;
 }
 
-export function buildTimeValue(
-  hours24: number,
-  minute: number,
-  showMeridiem: boolean,
-): TimeValue {
+export function buildTimeValue(hours24: number, minute: number, showMeridiem: boolean): TimeValue {
   const { hour12, period } = hours24ToParts(hours24);
   const formatted = showMeridiem
     ? `${pad2(hour12)}:${pad2(minute)} ${period}`
@@ -70,6 +63,12 @@ export function buildTimeValue(
     period,
     hours24,
   };
+}
+
+/** Format a time string as 12-hour "hh:mm AM/PM". Returns "" when unparsable. */
+export function formatTime12h(input?: string | null): string {
+  const parsed = parseTimeString(input);
+  return parsed ? buildTimeValue(parsed.hours24, parsed.minute, true).formatted : "";
 }
 
 export function generateHourOptions(showMeridiem: boolean): number[] {

@@ -14,32 +14,17 @@ export interface TimeValue {
 }
 
 export interface TimePickerProps {
+  /** Time as "HH:mm" (24-hour). */
   value?: string;
-  defaultValue?: string;
-
-  onChange?: (value: TimeValue) => void;
-
-  disabled?: boolean;
-  readOnly?: boolean;
-  required?: boolean;
-
-  label?: string;
+  /** Called with "HH:mm" (24-hour) when the draft is saved. */
+  onChange: (value: string) => void;
   placeholder?: string;
-  error?: string;
-  helperText?: string;
-
-  /** Minute step interval (e.g. 1, 5, 15, 30). Default: 1 */
-  minuteStep?: number;
-
-  /** Show AM/PM selector (12-hour mode). When false, uses 24-hour mode. Default: true */
-  showMeridiem?: boolean;
-
   className?: string;
   id?: string;
-  name?: string;
-
-  autoFocus?: boolean;
-
-  onFocus?: () => void;
-  onBlur?: () => void;
+  disabled?: boolean;
+  /** Minute increment between selectable values (default 1). */
+  minuteStep?: number;
+  /** Accessible label for the trigger (when there is no associated <Label>). */
+  ariaLabel?: string;
+  "aria-invalid"?: boolean;
 }

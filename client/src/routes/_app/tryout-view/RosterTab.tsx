@@ -6,6 +6,7 @@ import {
   ChevronsUpDown,
   ChevronUp,
   ClipboardList,
+  Clock,
   Loader2,
   Mail,
   MoreVertical,
@@ -47,7 +48,7 @@ import { useGroups } from "@/hooks/use-groups";
 import { useAuthStore } from "@/lib/auth.store";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
 import { DecisionConfirmDialog } from "./DecisionConfirmDialog";
-import { CheckInDialog } from "./CheckInDialog";
+import { CheckInPopover } from "./CheckInPopover";
 import { SentEmailPreviewDialog } from "./SentEmailPreviewDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -214,11 +215,7 @@ export function RosterTab({ tryoutId }: Props) {
     regId: string;
     action: "offered" | "rejected";
   } | null>(null);
-  const [checkInDialog, setCheckInDialog] = useState<{
-    open: boolean;
-    regIds: string[];
-    mode: "in" | "out";
-  } | null>(null);
+  const [pendingRegIds, setPendingRegIds] = useState<string[]>([]);
 
   const user = useAuthStore((state) => state.user);
   const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
@@ -333,23 +330,24 @@ export function RosterTab({ tryoutId }: Props) {
     }
   }
 
-  function openCheckIn(regIds: string[], mode: "in" | "out") {
-    setCheckInDialog({ open: true, regIds, mode });
-  }
-
-  async function confirmCheckIn(checkedInAt?: string) {
-    if (!checkInDialog) return;
+  /**
+   * Check in / un-check registrations. When `checkedInAt` is omitted the server
+   * defaults to now. Resolves `true` on success.
+   */
+  async function setCheckIn(
+    regIds: string[],
+    checkedIn: boolean,
+    checkedInAt?: string,
+  ): Promise<boolean> {
+    setPendingRegIds((prev) => Array.from(new Set([...prev, ...regIds])));
     try {
-      await checkInMutation.mutateAsync({
-        registrationIds: checkInDialog.regIds,
-        checkedIn: checkInDialog.mode === "in",
-        checkedInAt,
-      });
-      setSelectedIds(new Set());
+      await checkInMutation.mutateAsync({ registrationIds: regIds, checkedIn, checkedInAt });
+      return true;
     } catch {
       // Errors are surfaced by the mutation's onError.
+      return false;
     } finally {
-      setCheckInDialog((prev) => (prev ? { ...prev, open: false } : null));
+      setPendingRegIds((prev) => prev.filter((id) => !regIds.includes(id)));
     }
   }
 
@@ -643,51 +641,39 @@ export function RosterTab({ tryoutId }: Props) {
                         </span>
                       )}
                     </TableCell>
+                    {/* Fixed height + min width so the pill → checked-in transition
+                        (and the in-flight spinner) never resize the row/column. */}
                     <TableCell className="px-4 py-3">
-                      {r.checked_in_at ? (
-                        <div className="flex items-center gap-2">
-                          <TooltipProvider delayDuration={0}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="inline-flex cursor-default items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                  {fmtCheckInTime(r.checked_in_at)}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Checked in
-                                {r.checked_in_by_name ? ` by ${r.checked_in_by_name}` : ""} ·{" "}
-                                {fmtCheckInFull(r.checked_in_at)}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          {/* <TooltipProvider delayDuration={0}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  onClick={() => openCheckIn([r.id], "out")}
-                                  className="cursor-pointer text-muted-foreground hover:text-destructive"
-                                  aria-label={`Un-check ${r.swimmer_name}`}
-                                >
-                                  <Undo2 className="h-4 w-4" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>Un-check</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider> */}
-                        </div>
-                      ) : r.status === "cancelled" ? (
-                        <span className="text-muted-foreground">—</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => openCheckIn([r.id], "in")}
-                          className="cursor-pointer text-xs text-muted-foreground hover:text-foreground hover:underline"
-                        >
-                          Check in
-                        </button>
-                      )}
+                      <div className="flex h-10 min-w-26 items-center">
+                        {r.checked_in_at ? (
+                          <CheckInPopover
+                            checkedInAt={r.checked_in_at}
+                            timeLabel={fmtCheckInTime(r.checked_in_at)}
+                            fullLabel={fmtCheckInFull(r.checked_in_at)}
+                            checkedInByName={r.checked_in_by_name}
+                            ariaLabel={`Edit check-in for ${r.swimmer_name}`}
+                            onSave={(checkedInAt) => setCheckIn([r.id], true, checkedInAt)}
+                            onUndo={() => setCheckIn([r.id], false)}
+                            isPending={pendingRegIds.includes(r.id)}
+                          />
+                        ) : r.status === "cancelled" ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setCheckIn([r.id], true)}
+                            disabled={pendingRegIds.includes(r.id)}
+                            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-primary/40 px-3 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {pendingRegIds.includes(r.id) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Clock className="h-4 w-4" />
+                            )}
+                            Check in
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <div className="text-gray-700">{r.guardian_name || r.parent_name}</div>
@@ -959,17 +945,25 @@ export function RosterTab({ tryoutId }: Props) {
           </button>
           <div className="h-4 w-px bg-gray-600" />
           <button
-            onClick={() => openCheckIn(Array.from(selectedIds), "in")}
-            className="flex items-center gap-1.5 font-medium text-emerald-300 hover:text-emerald-200 transition cursor-pointer"
+            onClick={async () => {
+              const ids = Array.from(selectedIds);
+              if (await setCheckIn(ids, true)) setSelectedIds(new Set());
+            }}
+            disabled={Array.from(selectedIds).some((id) => pendingRegIds.includes(id))}
+            className="flex items-center gap-1.5 font-medium text-emerald-300 hover:text-emerald-200 transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CheckCircle2 className="h-4 w-4" /> Check in
           </button>
-          {/* <button
-            onClick={() => openCheckIn(Array.from(selectedIds), "out")}
-            className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white transition cursor-pointer"
+          <button
+            onClick={async () => {
+              const ids = Array.from(selectedIds);
+              if (await setCheckIn(ids, false)) setSelectedIds(new Set());
+            }}
+            disabled={Array.from(selectedIds).some((id) => pendingRegIds.includes(id))}
+            className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Undo2 className="h-4 w-4" /> Un-check
-          </button> */}
+          </button>
           <div className="h-4 w-px bg-gray-600" />
           <button
             onClick={() => {
@@ -1132,17 +1126,6 @@ export function RosterTab({ tryoutId }: Props) {
         registrationId={selectedRegId}
         open={modalOpen}
         onOpenChange={setModalOpen}
-      />
-
-      <CheckInDialog
-        open={checkInDialog?.open ?? false}
-        onOpenChange={(open) =>
-          !open && setCheckInDialog((prev) => (prev ? { ...prev, open: false } : null))
-        }
-        count={checkInDialog?.regIds.length ?? 0}
-        mode={checkInDialog?.mode ?? "in"}
-        onConfirm={confirmCheckIn}
-        isPending={checkInMutation.isPending}
       />
 
       <ManageCoachesDialog
