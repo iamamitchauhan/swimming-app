@@ -13,6 +13,11 @@ export interface LoginInput {
   email: string;
 }
 
+/** Response data for POST /auth/login. `otp` is only present in development. */
+export interface LoginResponse {
+  otp: string;
+}
+
 export interface VerifyOtpInput {
   email: string;
   otp: string;
@@ -55,8 +60,8 @@ export const authApi = {
   verifyEmail: (token: string) =>
     api<VerifyOtpResponse>(apiClient.get("/auth/verify-email", { params: { token } })),
 
-  /** POST /auth/login — request OTP */
-  login: (input: LoginInput) => api<null>(apiClient.post("/auth/login", input)),
+  /** POST /auth/login — request OTP (returns the OTP in development) */
+  login: (input: LoginInput) => api<LoginResponse | null>(apiClient.post("/auth/login", input)),
 
   /** POST /auth/verify-otp — verify OTP, get JWT */
   verifyOtp: (input: VerifyOtpInput) =>

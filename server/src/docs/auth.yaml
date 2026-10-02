@@ -90,6 +90,10 @@ paths:
         Accepts a registered, verified email address and sends a 6-digit OTP
         (valid for `OTP_EXPIRES_MINUTES` minutes, default 10 m). For security
         the response is always 200 even if the email does not exist.
+
+        **Development only:** when `NODE_ENV=development` the generated OTP is
+        returned in `data.otp` so it can be used without access to the inbox.
+        In production `data` is always `null`.
       operationId: login
       requestBody:
         required: true
@@ -108,12 +112,38 @@ paths:
           description: OTP sent (or silently ignored if email not found)
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/SuccessResponse" }
-              example:
-                success: true
-                message: OTP sent to your email
-                data: null
-                error: null
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        nullable: true
+                        description: |
+                          `null` in production. In development contains the
+                          generated OTP so it can be used without inbox access.
+                        properties:
+                          otp:
+                            type: string
+                            description: 6-digit OTP (development only)
+                            example: "482951"
+              examples:
+                production:
+                  summary: Production response
+                  value:
+                    success: true
+                    message: OTP sent to your email
+                    data: null
+                    error: null
+                development:
+                  summary: Development response (NODE_ENV=development)
+                  value:
+                    success: true
+                    message: OTP sent to your email
+                    data:
+                      otp: "482951"
+                    error: null
         "403":
           description: Account is suspended
           content:

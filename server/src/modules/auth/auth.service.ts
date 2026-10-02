@@ -38,6 +38,12 @@ export type VerifyOtpResult =
   | { token: string; user: PublicUser; requiresClubSelection: false }
   | { token: string; user: PublicUser; requiresClubSelection: true; clubs: ClubOption[] };
 
+/**
+ * Result of a login request. The OTP is only exposed in development so it can
+ * be used without access to the recipient inbox; in production it is null.
+ */
+export type LoginResult = { otp: string } | null;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function signToken(payload: { id: string; email: string; role: string; clubId: string | null }): string {
@@ -140,7 +146,7 @@ export class AuthService {
   /**
    * Accepts email, looks up active users (possibly across multiple clubs), and sends a 6-digit OTP.
    */
-  async login(email: string): Promise<void> {
+  async login(email: string): Promise<LoginResult> {
     const users = await this.repository.findUsersByEmailAndRoles(email, [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.COACH]);
 
     if (users.length === 0) {
@@ -178,6 +184,9 @@ export class AuthService {
     }
 
     logger.info({ email }, "auth.otp.sent");
+
+    // Expose the OTP in development only so it can be used without inbox access.
+    return config.NODE_ENV === "development" ? { otp } : null;
   }
 
   /**

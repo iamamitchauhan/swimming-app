@@ -62,9 +62,9 @@ export class AuthController {
       const { email } = loginSchema.parse(req.body);
       req.step?.("validated");
       req.step?.("delegating to service");
-      await this.service.login(email);
+      const result = await this.service.login(email);
       req.step?.("responding", { status: HTTP_STATUS.OK });
-      sendSuccess(res, null, MESSAGES.OTP_SENT, HTTP_STATUS.OK);
+      sendSuccess(res, result, MESSAGES.OTP_SENT, HTTP_STATUS.OK);
     } catch (err) {
       next(err);
     }

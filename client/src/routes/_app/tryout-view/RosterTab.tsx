@@ -142,6 +142,42 @@ function avg(r: Registration) {
   return calculateDetailedScoreTotal(r.detailed_scores);
 }
 
+/** True when the swimmer has any recorded score — detailed criteria or a stroke total. */
+function hasScore(r: Registration) {
+  if (avg(r) != null) return true;
+  const total = r.total_score;
+  return total != null && total !== "" && Number(total) > 0;
+}
+
+/**
+ * Cancelled or waitlisted — not an active part of the tryout, so the roster
+ * exposes no actions for these rows. A waitlisted swimmer only becomes active
+ * once promoted to `registered`.
+ */
+function isInactive(r: Registration) {
+  return r.status === "cancelled" || r.status === "waitlisted";
+}
+
+/**
+ * Scoring is only allowed once the swimmer is checked in, and never for
+ * cancelled, waitlisted or rejected registrations.
+ */
+function canAddScore(r: Registration) {
+  return !!r.checked_in_at && !isInactive(r) && r.status !== "rejected";
+}
+
+/** The coach-recommendation dropdown unlocks only after a check-in + a score. */
+function canEditCoachRecommendation(r: Registration) {
+  return canAddScore(r) && hasScore(r);
+}
+
+/** Toast how many selected rows a bulk action skipped because they were ineligible. */
+function notifySkipped(skipped: number, reason: string) {
+  if (skipped > 0) {
+    toast.info(`Skipped ${skipped} swimmer${skipped === 1 ? "" : "s"}`, { description: reason });
+  }
+}
+
 function countYesNo(r: Registration) {
   const values = Object.values(r.detailed_scores ?? {});
   const yes = values.filter((v) => v === "yes" || v === true).length;
@@ -216,20 +252,23 @@ export function RosterTab({ tryoutId }: Props) {
     action: "offered" | "rejected";
   } | null>(null);
   const [pendingRegIds, setPendingRegIds] = useState<string[]>([]);
+  // Registration ids the current bulk offer/reject targets (after skipping
+  // ineligible rows). Empty for single-row actions.
+  const [bulkTargetIds, setBulkTargetIds] = useState<string[]>([]);
 
   const user = useAuthStore((state) => state.user);
   const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
 
   function openDecisionDialog(regId: string, status: "offered" | "rejected") {
     setPendingRegId(regId);
+    setBulkTargetIds([]);
     setBulkAction(status);
     setConfirmOpen(true);
   }
 
-  function validateCoachRecommendation(): boolean {
-    const missing = registrations.filter((r) => selectedIds.has(r.id) && !r.coach_recommendation);
+  function validateCoachRecommendation(rows: Registration[]): boolean {
+    const missing = rows.filter((r) => !r.coach_recommendation);
     if (missing.length > 0) {
-      const names = missing.map((r) => r.swimmer_name).join(", ");
       toast.error("Coach recommendation required", {
         description: `Please assign a coach recommendation before proceeding`,
         duration: 6000,
@@ -239,15 +278,12 @@ export function RosterTab({ tryoutId }: Props) {
     return true;
   }
 
-  // Offer validation: no selected swimmer may have coach recommendation set
-  // to "rejected" — they must be assigned to a group first.
-  function validateOfferCoachRecommendation(): boolean {
-    if (!validateCoachRecommendation()) return false;
-    const rejectedOnes = registrations.filter(
-      (r) => selectedIds.has(r.id) && r.coach_recommendation === REJECTED_VALUE,
-    );
+  // Offer validation: no swimmer may have coach recommendation set to
+  // "rejected" — they must be assigned to a group first.
+  function validateOfferCoachRecommendation(rows: Registration[]): boolean {
+    if (!validateCoachRecommendation(rows)) return false;
+    const rejectedOnes = rows.filter((r) => r.coach_recommendation === REJECTED_VALUE);
     if (rejectedOnes.length > 0) {
-      const names = rejectedOnes.map((r) => r.swimmer_name).join(", ");
       toast.error("Cannot offer — coach recommendation is set to Reject", {
         description: `Please change coach recommendation to a group before offering.`,
         duration: 6000,
@@ -257,13 +293,11 @@ export function RosterTab({ tryoutId }: Props) {
     return true;
   }
 
-  // Reject validation: every selected swimmer must have coach recommendation
-  // set to "rejected" before bulk reject is allowed.
-  function validateRejectCoachRecommendation(): boolean {
-    if (!validateCoachRecommendation()) return false;
-    const notRejected = registrations.filter(
-      (r) => selectedIds.has(r.id) && r.coach_recommendation !== REJECTED_VALUE,
-    );
+  // Reject validation: every swimmer must have coach recommendation set to
+  // "rejected" before bulk reject is allowed.
+  function validateRejectCoachRecommendation(rows: Registration[]): boolean {
+    if (!validateCoachRecommendation(rows)) return false;
+    const notRejected = rows.filter((r) => r.coach_recommendation !== REJECTED_VALUE);
     if (notRejected.length > 0) {
       const names = notRejected.map((r) => r.swimmer_name).join(", ");
       toast.error("Coach recommendation must be set to Reject", {
@@ -283,6 +317,12 @@ export function RosterTab({ tryoutId }: Props) {
   const allRegisteredSelected =
     registeredRows.length > 0 && registeredRows.every((r) => selectedIds.has(r.id));
   const someSelected = selectedIds.size > 0;
+  // Selected rows on the current page, plus the subsets each bulk action may
+  // touch. Ineligible rows are skipped (see the bulk handlers below).
+  const selectedRows = registrations.filter((r) => selectedIds.has(r.id));
+  const scoreEligibleRows = selectedRows.filter(canAddScore);
+  const offerRejectEligibleRows = selectedRows.filter((r) => r.status === "registered");
+  const checkInEligibleRows = selectedRows.filter((r) => !isInactive(r));
 
   function toggleAll() {
     if (allRegisteredSelected) {
@@ -315,10 +355,9 @@ export function RosterTab({ tryoutId }: Props) {
       if (pendingRegId) {
         await sendDecision.mutateAsync({ regId: pendingRegId, status: bulkAction });
         setPendingRegId(null);
-      } else if (selectedIds.size > 0) {
-        const ids = Array.from(selectedIds);
+      } else if (bulkTargetIds.length > 0) {
         await Promise.all(
-          ids.map((id) => sendDecision.mutateAsync({ regId: id, status: bulkAction })),
+          bulkTargetIds.map((id) => sendDecision.mutateAsync({ regId: id, status: bulkAction })),
         );
         setSelectedIds(new Set());
       }
@@ -327,6 +366,7 @@ export function RosterTab({ tryoutId }: Props) {
     } finally {
       setConfirmOpen(false);
       setBulkAction(null);
+      setBulkTargetIds([]);
     }
   }
 
@@ -645,7 +685,9 @@ export function RosterTab({ tryoutId }: Props) {
                         (and the in-flight spinner) never resize the row/column. */}
                     <TableCell className="px-4 py-3">
                       <div className="flex h-10 min-w-26 items-center">
-                        {r.checked_in_at ? (
+                        {isInactive(r) ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : r.checked_in_at ? (
                           <CheckInPopover
                             checkedInAt={r.checked_in_at}
                             timeLabel={fmtCheckInTime(r.checked_in_at)}
@@ -656,7 +698,7 @@ export function RosterTab({ tryoutId }: Props) {
                             onUndo={() => setCheckIn([r.id], false)}
                             isPending={pendingRegIds.includes(r.id)}
                           />
-                        ) : r.status === "cancelled" ? (
+                        ) : r.status !== "registered" ? (
                           <span className="text-muted-foreground">—</span>
                         ) : (
                           <button
@@ -705,9 +747,9 @@ export function RosterTab({ tryoutId }: Props) {
                       {/* show yes/no chip like this [(10)Yes/(5)No] */}
                     </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
-                      {r.status === "cancelled" ? (
+                      {isInactive(r) ? (
                         <span className="text-gray-400">—</span>
-                      ) : (
+                      ) : canAddScore(r) ? (
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() =>
@@ -745,18 +787,45 @@ export function RosterTab({ tryoutId }: Props) {
                             </TooltipProvider>
                           ) : null}
                         </div>
+                      ) : hasScore(r) ? (
+                        // Not scoreable (not checked in, or rejected) — show the
+                        // existing score read-only rather than the Add Score link.
+                        <span className="text-sm font-medium text-gray-500">
+                          {avg(r) ?? r.total_score}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
                       )}
                     </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
-                      <CoachRecommendationSelect
-                        tryoutId={tryoutId}
-                        regId={r.id}
-                        value={
-                          r.coach_recommendation === REJECTED_VALUE
-                            ? undefined
-                            : (r.coach_recommendation ?? null)
-                        }
-                      />
+                      {isInactive(r) ? (
+                        <span className="text-gray-400">—</span>
+                      ) : r.status === "rejected" ? (
+                        // Rejected rows keep their recorded recommendation visible
+                        // (that's why they were rejected) but read-only.
+                        <CoachRecommendationSelect
+                          tryoutId={tryoutId}
+                          regId={r.id}
+                          value={
+                            r.coach_recommendation === REJECTED_VALUE
+                              ? undefined
+                              : (r.coach_recommendation ?? null)
+                          }
+                          disabled
+                        />
+                      ) : canEditCoachRecommendation(r) ? (
+                        <CoachRecommendationSelect
+                          tryoutId={tryoutId}
+                          regId={r.id}
+                          value={
+                            r.coach_recommendation === REJECTED_VALUE
+                              ? undefined
+                              : (r.coach_recommendation ?? null)
+                          }
+                        />
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       {r.status !== "registered" || !canManageCoaches ? (
@@ -946,10 +1015,26 @@ export function RosterTab({ tryoutId }: Props) {
           <div className="h-4 w-px bg-gray-600" />
           <button
             onClick={async () => {
-              const ids = Array.from(selectedIds);
-              if (await setCheckIn(ids, true)) setSelectedIds(new Set());
+              if (checkInEligibleRows.length === 0) {
+                toast.error("No swimmers can be checked in", {
+                  description: "Cancelled and waitlisted registrations can't be checked in.",
+                });
+                return;
+              }
+              notifySkipped(
+                selectedRows.length - checkInEligibleRows.length,
+                "Cancelled and waitlisted registrations can't be checked in.",
+              );
+              if (
+                await setCheckIn(
+                  checkInEligibleRows.map((r) => r.id),
+                  true,
+                )
+              ) {
+                setSelectedIds(new Set());
+              }
             }}
-            disabled={Array.from(selectedIds).some((id) => pendingRegIds.includes(id))}
+            disabled={checkInEligibleRows.some((r) => pendingRegIds.includes(r.id))}
             className="flex items-center gap-1.5 font-medium text-emerald-300 hover:text-emerald-200 transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CheckCircle2 className="h-4 w-4" /> Check in
@@ -967,12 +1052,23 @@ export function RosterTab({ tryoutId }: Props) {
           <div className="h-4 w-px bg-gray-600" />
           <button
             onClick={() => {
-              if (!validateOfferCoachRecommendation()) return;
-              // When exactly one swimmer is selected, treat it as a single
-              // action so the email preview can be fetched for that swimmer.
-              if (selectedIds.size === 1) {
-                setPendingRegId(Array.from(selectedIds)[0]);
+              if (offerRejectEligibleRows.length === 0) {
+                toast.error("No swimmers can be offered", {
+                  description: "Only registered swimmers can be offered.",
+                });
+                return;
               }
+              if (!validateOfferCoachRecommendation(offerRejectEligibleRows)) return;
+              notifySkipped(
+                selectedRows.length - offerRejectEligibleRows.length,
+                "Only registered swimmers were included.",
+              );
+              // When exactly one swimmer is eligible, treat it as a single
+              // action so the email preview can be fetched for that swimmer.
+              if (offerRejectEligibleRows.length === 1) {
+                setPendingRegId(offerRejectEligibleRows[0].id);
+              }
+              setBulkTargetIds(offerRejectEligibleRows.map((r) => r.id));
               setBulkAction("offered");
               setConfirmOpen(true);
             }}
@@ -982,10 +1078,21 @@ export function RosterTab({ tryoutId }: Props) {
           </button>
           <button
             onClick={() => {
-              if (!validateRejectCoachRecommendation()) return;
-              if (selectedIds.size === 1) {
-                setPendingRegId(Array.from(selectedIds)[0]);
+              if (offerRejectEligibleRows.length === 0) {
+                toast.error("No swimmers can be rejected", {
+                  description: "Only registered swimmers can be rejected.",
+                });
+                return;
               }
+              if (!validateRejectCoachRecommendation(offerRejectEligibleRows)) return;
+              notifySkipped(
+                selectedRows.length - offerRejectEligibleRows.length,
+                "Only registered swimmers were included.",
+              );
+              if (offerRejectEligibleRows.length === 1) {
+                setPendingRegId(offerRejectEligibleRows[0].id);
+              }
+              setBulkTargetIds(offerRejectEligibleRows.map((r) => r.id));
               setBulkAction("rejected");
               setConfirmOpen(true);
             }}
@@ -998,12 +1105,24 @@ export function RosterTab({ tryoutId }: Props) {
               <div className="h-4 w-px bg-gray-600" />
               <button
                 onClick={() => {
-                  const ids = Array.from(selectedIds);
-                  navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${ids.join(",")}`);
+                  if (scoreEligibleRows.length === 0) {
+                    toast.error("No swimmers can be scored", {
+                      description:
+                        "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers can't be scored.",
+                    });
+                    return;
+                  }
+                  notifySkipped(
+                    selectedRows.length - scoreEligibleRows.length,
+                    "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers were skipped.",
+                  );
+                  navigate(
+                    `/tryouts/view/${tryoutId}/bulk-scoring?ids=${scoreEligibleRows.map((r) => r.id).join(",")}`,
+                  );
                 }}
                 className="flex items-center gap-1.5 text-blue-300 hover:text-blue-200 transition cursor-pointer font-medium"
               >
-                <ClipboardList className="h-4 w-4" /> Score {selectedIds.size} together
+                <ClipboardList className="h-4 w-4" /> Score {scoreEligibleRows.length} together
               </button>
             </>
           )}
@@ -1075,6 +1194,7 @@ export function RosterTab({ tryoutId }: Props) {
           if (!v) {
             setBulkAction(null);
             setPendingRegId(null);
+            setBulkTargetIds([]);
           }
         }}
         action={bulkAction}
@@ -1082,7 +1202,7 @@ export function RosterTab({ tryoutId }: Props) {
         isPending={sendDecision.isPending}
         tryoutId={tryoutId}
         regId={pendingRegId}
-        selectedCount={selectedIds.size}
+        selectedCount={bulkTargetIds.length}
       />
 
       <AlertDialog
@@ -1244,10 +1364,13 @@ function CoachRecommendationSelect({
   tryoutId,
   regId,
   value,
+  disabled,
 }: {
   tryoutId: string;
   regId: string;
   value: string | undefined | null;
+  /** Read-only mode — shows the recorded value but can't be changed. */
+  disabled?: boolean;
 }) {
   const saveScore = useSaveScore(tryoutId);
   const { data: groups, isLoading } = useGroups();
@@ -1261,7 +1384,7 @@ function CoachRecommendationSelect({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          disabled={isLoading}
+          disabled={isLoading || disabled}
           className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition cursor-pointer hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 border-gray-200"
         >
           {isLoading ? (
