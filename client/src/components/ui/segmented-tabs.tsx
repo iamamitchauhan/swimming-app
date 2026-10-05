@@ -15,7 +15,12 @@ interface SegmentedTabsProps {
 
 export function SegmentedTabs({ tabs, active, onChange, className }: SegmentedTabsProps) {
   return (
-    <div className={cn("bg-primary/5 rounded-lg p-1 flex gap-x-1", className)}>
+    <div
+      className={cn(
+        "bg-primary/5 rounded-lg p-1 flex gap-x-1 min-w-0 max-w-full overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden",
+        className,
+      )}
+    >
       {tabs.map((tab) => {
         const isActive = active === tab.value;
         return (
@@ -24,7 +29,7 @@ export function SegmentedTabs({ tabs, active, onChange, className }: SegmentedTa
             type="button"
             onClick={() => onChange(tab.value)}
             className={cn(
-              "cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5",
+              "cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap",
               isActive
                 ? "bg-primary text-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted",

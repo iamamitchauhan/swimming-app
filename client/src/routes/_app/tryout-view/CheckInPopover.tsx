@@ -5,6 +5,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TimePicker } from "@/components/time-picker/TimePicker";
+import { cn } from "@/lib/utils";
 
 /** Split an ISO timestamp into local `YYYY-MM-DD` and `HH:mm` parts for the inputs. */
 function splitLocalDateTime(iso: string): { date: string; time: string } {
@@ -40,6 +41,8 @@ export interface CheckInPopoverProps {
   /** Clears the check-in. Resolves `true` on success (closes the popover). */
   onUndo: () => Promise<boolean>;
   isPending?: boolean;
+  /** Denser trigger for cards: single line, no date sub-label. */
+  compact?: boolean;
 }
 
 /**
@@ -55,6 +58,7 @@ export function CheckInPopover({
   onSave,
   onUndo,
   isPending,
+  compact,
 }: CheckInPopoverProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -85,16 +89,28 @@ export function CheckInPopover({
         <button
           type="button"
           aria-label={ariaLabel}
-          className="group flex cursor-pointer items-start gap-1.5 text-left"
+          className={cn(
+            "group flex cursor-pointer gap-1.5 text-left",
+            compact ? "items-center" : "items-start",
+          )}
         >
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+          <CheckCircle2 className={cn("h-4 w-4 shrink-0 text-green-600", !compact && "mt-0.5")} />
           {/* Time + date share a column so the date aligns under the time text. */}
           <span className="flex flex-col items-start gap-0.5">
             <span className="inline-flex items-center gap-1.5">
-              <span className="text-sm font-medium tabular-nums text-green-600">{timeLabel}</span>
+              <span
+                className={cn(
+                  "font-medium tabular-nums text-green-600",
+                  compact ? "text-xs" : "text-sm",
+                )}
+              >
+                {timeLabel}
+              </span>
               <Pencil className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
             </span>
-            <span className="text-xs text-muted-foreground">{formatDateLabel(checkedInAt)}</span>
+            {!compact && (
+              <span className="text-xs text-muted-foreground">{formatDateLabel(checkedInAt)}</span>
+            )}
           </span>
         </button>
       </PopoverTrigger>

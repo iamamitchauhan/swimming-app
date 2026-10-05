@@ -122,13 +122,17 @@ export default function TryoutViewPage() {
 
   return (
     <PageShell title={""} crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: tryout.name }]}>
-      <div className="flex items-start justify-between gap-2 pb-3">
+      <div className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-2 flex-col">
           <h2 className="text-2xl font-semibold">{tryout.name}</h2>
           <p className="text-sm text-muted-foreground">{tryout.description}</p>
         </div>
         {canManageCoaches && (
-          <Button size="sm" className="shrink-0" onClick={() => setManageCoachesOpen(true)}>
+          <Button
+            size="sm"
+            className="shrink-0 self-start"
+            onClick={() => setManageCoachesOpen(true)}
+          >
             <UserCog className="mr-1.5 h-4 w-4" /> Manage coaches
           </Button>
         )}
@@ -154,7 +158,7 @@ export default function TryoutViewPage() {
         />
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-1.5">
         <SegmentedTabs
           tabs={TABS.map((t) => ({ value: t.key, label: t.label }))}
           active={tab}

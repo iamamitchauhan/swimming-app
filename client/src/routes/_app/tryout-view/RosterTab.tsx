@@ -29,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { calculateDetailedScoreTotal } from "@/lib/utils";
+import { calculateDetailedScoreTotal, cn } from "@/lib/utils";
 import type {
   Registration,
   RegistrationListParams,
@@ -554,7 +554,7 @@ export function RosterTab({ tryoutId }: Props) {
               <ChevronDown className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-[28rem] p-0">
+          <PopoverContent align="end" className="w-[calc(100vw-2rem)] max-w-md p-0">
             <div className="grid gap-5 p-4">
               <FilterGroup title="Check-in">
                 <FilterChip
@@ -672,8 +672,8 @@ export function RosterTab({ tryoutId }: Props) {
         </Popover>
       </div>
 
-      {/* ── Table ─────────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-gray-200 mt-4 [&>div]:overflow-visible">
+      {/* ── Roster: desktop table, mobile/tablet cards ────────────────────── */}
+      <div className="mt-4 hidden overflow-hidden rounded-xl border border-gray-200 lg:block">
         <Table>
           <TableHeader className="sticky top-0 z-20 rounded-t-xl">
             <TableRow>
@@ -775,41 +775,12 @@ export function RosterTab({ tryoutId }: Props) {
                         </span>
                       )}
                     </TableCell>
-                    {/* Fixed height + min width so the pill → checked-in transition
-                        (and the in-flight spinner) never resize the row/column. */}
                     <TableCell className="px-4 py-3">
-                      <div className="flex h-10 min-w-26 items-center">
-                        {isInactive(r) ? (
-                          <span className="text-muted-foreground">—</span>
-                        ) : r.checked_in_at ? (
-                          <CheckInPopover
-                            checkedInAt={r.checked_in_at}
-                            timeLabel={fmtCheckInTime(r.checked_in_at)}
-                            fullLabel={fmtCheckInFull(r.checked_in_at)}
-                            checkedInByName={r.checked_in_by_name}
-                            ariaLabel={`Edit check-in for ${r.swimmer_name}`}
-                            onSave={(checkedInAt) => setCheckIn([r.id], true, checkedInAt)}
-                            onUndo={() => setCheckIn([r.id], false)}
-                            isPending={pendingRegIds.includes(r.id)}
-                          />
-                        ) : r.status !== "registered" ? (
-                          <span className="text-muted-foreground">—</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setCheckIn([r.id], true)}
-                            disabled={pendingRegIds.includes(r.id)}
-                            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-primary/40 px-3 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {pendingRegIds.includes(r.id) ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Clock className="h-4 w-4" />
-                            )}
-                            Check in
-                          </button>
-                        )}
-                      </div>
+                      <CheckInControl
+                        registration={r}
+                        isPending={pendingRegIds.includes(r.id)}
+                        onSetCheckIn={setCheckIn}
+                      />
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <div className="text-gray-700">{r.guardian_name || r.parent_name}</div>
@@ -826,262 +797,25 @@ export function RosterTab({ tryoutId }: Props) {
                     </TableCell>
 
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
-                      {(() => {
-                        const { yes, no } = countYesNo(r);
-                        if (yes === 0 && no === 0) return <span className="text-gray-400">—</span>;
-                        return (
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-green-600">{yes}</span>
-                            <span className="text-gray-400 font-normal">/</span>
-                            <span className="text-red-500">{no}</span>
-                          </div>
-                        );
-                      })()}
-
-                      {/* show yes/no chip like this [(10)Yes/(5)No] */}
+                      <YesNoValue registration={r} />
                     </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
-                      {isInactive(r) ? (
-                        <span className="text-gray-400">—</span>
-                      ) : canAddScore(r) ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() =>
-                              navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)
-                            }
-                            className="hover:underline cursor-pointer text-sm"
-                          >
-                            <div>{avg(r) || <span className="">Add Score</span>}</div>
-                            {/* <div className="text-xs font-normal text-gray-400">
-                              {(() => {
-                                const completion = detailedScoreCompletion(r);
-                                return `${completion.pct}% (${completion.done}/${completion.total})`;
-                              })()}
-                            </div>
-                            <div className="mt-1 h-1 w-20 rounded-full bg-gray-100 overflow-hidden">
-                              <div
-                                className="h-full bg-blue-600 transition-all"
-                                style={{ width: `${detailedScoreCompletion(r).pct}%` }}
-                              />
-                            </div> */}
-                          </button>
-                          {avg(r) ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    onClick={() => setResetConfirmRegId(r.id)}
-                                    className="text-gray-400 hover:text-red-500 cursor-pointer"
-                                  >
-                                    <RotateCcw className="h-4 w-4" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>Reset score</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : null}
-                        </div>
-                      ) : hasScore(r) ? (
-                        // Not scoreable (not checked in, or rejected) — show the
-                        // existing score read-only rather than the Add Score link.
-                        <span className="text-sm font-medium text-gray-500">
-                          {avg(r) ?? r.total_score}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
+                      <ScoreControl
+                        registration={r}
+                        tryoutId={tryoutId}
+                        onReset={setResetConfirmRegId}
+                      />
                     </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
-                      {isInactive(r) ? (
-                        <span className="text-gray-400">—</span>
-                      ) : r.status === "rejected" ? (
-                        // Rejected rows keep their recorded recommendation visible
-                        // (that's why they were rejected) but read-only.
-                        <CoachRecommendationSelect
-                          tryoutId={tryoutId}
-                          regId={r.id}
-                          value={
-                            r.coach_recommendation === REJECTED_VALUE
-                              ? undefined
-                              : (r.coach_recommendation ?? null)
-                          }
-                          disabled
-                        />
-                      ) : canEditCoachRecommendation(r) ? (
-                        <CoachRecommendationSelect
-                          tryoutId={tryoutId}
-                          regId={r.id}
-                          value={
-                            r.coach_recommendation === REJECTED_VALUE
-                              ? undefined
-                              : (r.coach_recommendation ?? null)
-                          }
-                        />
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
+                      <CoachRecommendationControl registration={r} tryoutId={tryoutId} />
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      {r.status !== "registered" || !canManageCoaches ? (
-                        <span className="text-gray-400"></span>
-                      ) : (
-                        (() => {
-                          const isRejected = r.coach_recommendation === REJECTED_VALUE;
-                          const offerDisabled = !r.coach_recommendation || isRejected;
-                          const offerTooltip = isRejected
-                            ? "Cannot offer — coach recommendation is set to Reject."
-                            : "Cannot offer — please assign a coach recommendation first.";
-                          const rejectDisabled = !isRejected;
-                          const rejectTooltip = !r.coach_recommendation
-                            ? "Cannot reject — please assign a coach recommendation of Reject first."
-                            : "Cannot reject — coach recommendation is not set to Reject.";
-
-                          const offerBtn = (
-                            <button
-                              onClick={() => {
-                                if (offerDisabled) {
-                                  toast.error("Cannot offer", {
-                                    description: offerTooltip,
-                                    duration: 6000,
-                                  });
-                                  return;
-                                }
-                                openDecisionDialog(r.id, "offered");
-                              }}
-                              className={`text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 ${offerDisabled ? "opacity-40 cursor-not-allowed" : ""}`}
-                            >
-                              <CheckCircle2 className="h-3.5 w-3.5" /> Offer
-                            </button>
-                          );
-                          const rejectBtn = (
-                            <button
-                              onClick={() => {
-                                if (rejectDisabled) {
-                                  toast.error("Cannot reject", {
-                                    description: rejectTooltip,
-                                    duration: 6000,
-                                  });
-                                  return;
-                                }
-                                openDecisionDialog(r.id, "rejected");
-                              }}
-                              className={`text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1 ${rejectDisabled ? "opacity-40 cursor-not-allowed" : ""}`}
-                            >
-                              <XCircle className="h-3.5 w-3.5" /> Reject
-                            </button>
-                          );
-                          return (
-                            <div className="flex items-center gap-2">
-                              {offerDisabled ? (
-                                <TooltipProvider delayDuration={0}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="block">{offerBtn}</span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top">{offerTooltip}</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : (
-                                offerBtn
-                              )}
-                              {rejectDisabled ? (
-                                <TooltipProvider delayDuration={0}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="block">{rejectBtn}</span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top">{rejectTooltip}</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : (
-                                rejectBtn
-                              )}
-                            </div>
-                          );
-                        })()
-                      )}
-                      {/* view sent email preview — shown for rows that have at
-                          least one entry in email_info (i.e. an email was
-                          actually sent and recorded in email_audit_logs).
-                          The action (offer/reject) is taken from the most
-                          recent email_info entry. */}
-                      {r.email_info &&
-                        r.email_info.length > 0 &&
-                        (() => {
-                          const lastEmail = r.email_info![r.email_info!.length - 1];
-                          const lastAction = lastEmail.action;
-                          const isRejected = r.coach_recommendation === REJECTED_VALUE;
-                          const offerDisabled = !r.coach_recommendation || isRejected;
-                          const rejectDisabled = !isRejected;
-                          const offerTooltip = isRejected
-                            ? "Cannot resend offer — coach recommendation is set to Reject."
-                            : "Cannot resend offer — please assign a coach recommendation first.";
-                          const rejectTooltip = !r.coach_recommendation
-                            ? "Cannot resend rejection — please assign a coach recommendation of Reject first."
-                            : "Cannot resend rejection — coach recommendation is not set to Reject.";
-
-                          return (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() =>
-                                  setSentEmailPreview({
-                                    regId: r.id,
-                                    action: lastAction,
-                                  })
-                                }
-                                className="text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
-                              >
-                                <Mail className="h-3.5 w-3.5" /> View sent email
-                              </button>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button className="text-gray-500 hover:text-gray-700 cursor-pointer flex items-center">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                                    RESEND COMMUNICATION
-                                  </DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      if (offerDisabled) {
-                                        toast.error("Cannot resend offer", {
-                                          description: offerTooltip,
-                                          duration: 6000,
-                                        });
-                                        return;
-                                      }
-                                      openDecisionDialog(r.id, "offered");
-                                    }}
-                                    className={`cursor-pointer flex items-center gap-2 ${offerDisabled ? "opacity-40" : ""}`}
-                                  >
-                                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Resend
-                                    as Offer
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      if (rejectDisabled) {
-                                        toast.error("Cannot resend rejection", {
-                                          description: rejectTooltip,
-                                          duration: 6000,
-                                        });
-                                        return;
-                                      }
-                                      openDecisionDialog(r.id, "rejected");
-                                    }}
-                                    className={`cursor-pointer flex items-center gap-2 ${rejectDisabled ? "opacity-40" : ""}`}
-                                  >
-                                    <XCircle className="h-3.5 w-3.5 text-red-500" /> Resend as
-                                    Reject
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          );
-                        })()}
-                      {/* Resend email */}
+                      <DecisionActions
+                        registration={r}
+                        canManageCoaches={canManageCoaches}
+                        onOpenDecision={openDecisionDialog}
+                        onViewSentEmail={setSentEmailPreview}
+                      />
                     </TableCell>
                   </TableRow>
                 );
@@ -1090,9 +824,44 @@ export function RosterTab({ tryoutId }: Props) {
         </Table>
       </div>
 
+      {/* ── Roster cards (mobile / tablet) ────────────────────────────────── */}
+      <div className="mt-3 space-y-2 lg:hidden">
+        {loading && (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-gray-400">
+            <Loader2 className="mr-2 inline h-5 w-5 animate-spin" />
+            Loading…
+          </div>
+        )}
+        {!loading && registrations.length === 0 && (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-gray-400">
+            No registrations found
+          </div>
+        )}
+        {!loading &&
+          registrations.map((r) => (
+            <RosterCard
+              key={r.id}
+              registration={r}
+              tryoutId={tryoutId}
+              selected={selectedIds.has(r.id)}
+              onToggle={() => toggleRow(r.id)}
+              canManageCoaches={canManageCoaches}
+              onOpenDetail={() => {
+                setSelectedRegId(r.id);
+                setModalOpen(true);
+              }}
+              onOpenDecision={openDecisionDialog}
+              onViewSentEmail={setSentEmailPreview}
+              onSetCheckIn={setCheckIn}
+              isPendingCheckIn={pendingRegIds.includes(r.id)}
+              onResetScore={setResetConfirmRegId}
+            />
+          ))}
+      </div>
+
       {/* ── Bulk action bar ───────────────────────────────────────────────── */}
       {someSelected && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-xl bg-gray-900 text-white shadow-2xl px-5 py-3 text-sm">
+        <div className="fixed bottom-4 left-1/2 z-50 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl bg-gray-900 px-4 py-3 text-xs text-white shadow-2xl sm:bottom-6 sm:px-5 sm:text-sm">
           <span className="flex items-center gap-2 font-semibold">
             <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-500 text-xs font-bold">
               {selectedIds.size}
@@ -1225,7 +994,7 @@ export function RosterTab({ tryoutId }: Props) {
 
       {/* ── Pagination ────────────────────────────────────────────────────── */}
       {total > 0 && (
-        <div className="sticky bottom-0 z-20 flex items-center justify-between mt-4 text-sm text-gray-600 bg-white/95 backdrop-blur border-t border-gray-100 py-3 -mx-0.5 px-0.5">
+        <div className="sticky bottom-0 z-20 mt-4 flex flex-col gap-3 border-t border-gray-100 bg-white/95 py-3 text-sm text-gray-600 backdrop-blur sm:flex-row sm:items-center sm:justify-between -mx-0.5 px-0.5">
           <span>
             Showing{" "}
             <span className="font-medium">
@@ -1234,7 +1003,7 @@ export function RosterTab({ tryoutId }: Props) {
             </span>{" "}
             of <span className="font-medium">{total}</span> results
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Page size selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1564,5 +1333,456 @@ function CoachRecommendationSelect({
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+// ─── Shared roster row controls ──────────────────────────────────────────────
+// Used by both the desktop table and the mobile/tablet cards so the two views
+// stay behaviourally identical.
+
+/** Green/red Yes/No tally, or an em-dash when nothing has been recorded. */
+function YesNoValue({ registration: r }: { registration: Registration }) {
+  const { yes, no } = countYesNo(r);
+  if (yes === 0 && no === 0) return <span className="text-gray-400">—</span>;
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-green-600">{yes}</span>
+      <span className="font-normal text-gray-400">/</span>
+      <span className="text-red-500">{no}</span>
+    </div>
+  );
+}
+
+/**
+ * Checked-in chip, "Check in" button, or em-dash. Fixed height + min width so
+ * the pill → checked-in transition (and the in-flight spinner) never resize
+ * the row/column.
+ */
+function CheckInControl({
+  registration: r,
+  isPending,
+  onSetCheckIn,
+  compact,
+}: {
+  registration: Registration;
+  isPending: boolean;
+  onSetCheckIn: (regIds: string[], checkedIn: boolean, checkedInAt?: string) => Promise<boolean>;
+  /** Denser layout for the mobile/tablet cards. */
+  compact?: boolean;
+}) {
+  return (
+    <div className={cn("flex items-center", !compact && "h-10 min-w-26")}>
+      {isInactive(r) ? (
+        <span className="text-muted-foreground">—</span>
+      ) : r.checked_in_at ? (
+        <CheckInPopover
+          checkedInAt={r.checked_in_at}
+          timeLabel={fmtCheckInTime(r.checked_in_at)}
+          fullLabel={fmtCheckInFull(r.checked_in_at)}
+          checkedInByName={r.checked_in_by_name}
+          ariaLabel={`Edit check-in for ${r.swimmer_name}`}
+          onSave={(checkedInAt) => onSetCheckIn([r.id], true, checkedInAt)}
+          onUndo={() => onSetCheckIn([r.id], false)}
+          isPending={isPending}
+          compact={compact}
+        />
+      ) : r.status !== "registered" ? (
+        <span className="text-muted-foreground">—</span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onSetCheckIn([r.id], true)}
+          disabled={isPending}
+          className={cn(
+            "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-primary/40 font-medium text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50",
+            compact ? "px-2.5 py-0.5 text-xs" : "px-3 py-1 text-sm",
+          )}
+        >
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
+          Check in
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Editable score link (with reset), or a read-only score for non-scoreable rows. */
+function ScoreControl({
+  registration: r,
+  tryoutId,
+  onReset,
+}: {
+  registration: Registration;
+  tryoutId: string;
+  onReset: (regId: string) => void;
+}) {
+  const navigate = useNavigate();
+
+  if (isInactive(r)) return <span className="text-gray-400">—</span>;
+
+  if (canAddScore(r)) {
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)}
+          className="cursor-pointer text-sm hover:underline"
+        >
+          <div>{avg(r) || <span className="">Add Score</span>}</div>
+          {/* <div className="text-xs font-normal text-gray-400">
+            {(() => {
+              const completion = detailedScoreCompletion(r);
+              return `${completion.pct}% (${completion.done}/${completion.total})`;
+            })()}
+          </div>
+          <div className="mt-1 h-1 w-20 rounded-full bg-gray-100 overflow-hidden">
+            <div
+              className="h-full bg-blue-600 transition-all"
+              style={{ width: `${detailedScoreCompletion(r).pct}%` }}
+            />
+          </div> */}
+        </button>
+        {avg(r) ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onReset(r.id)}
+                  className="cursor-pointer text-gray-400 hover:text-red-500"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Reset score</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (hasScore(r)) {
+    // Not scoreable (not checked in, or rejected) — show the existing score
+    // read-only rather than the Add Score link.
+    return <span className="text-sm font-medium text-gray-500">{avg(r) ?? r.total_score}</span>;
+  }
+
+  return <span className="text-gray-400">—</span>;
+}
+
+/** Coach-recommendation dropdown; read-only for rejected rows. */
+function CoachRecommendationControl({
+  registration: r,
+  tryoutId,
+}: {
+  registration: Registration;
+  tryoutId: string;
+}) {
+  if (isInactive(r)) return <span className="text-gray-400">—</span>;
+
+  const value =
+    r.coach_recommendation === REJECTED_VALUE ? undefined : (r.coach_recommendation ?? null);
+
+  // Rejected rows keep their recorded recommendation visible (that's why they
+  // were rejected) but read-only.
+  if (r.status === "rejected") {
+    return <CoachRecommendationSelect tryoutId={tryoutId} regId={r.id} value={value} disabled />;
+  }
+
+  if (canEditCoachRecommendation(r)) {
+    return <CoachRecommendationSelect tryoutId={tryoutId} regId={r.id} value={value} />;
+  }
+
+  return <span className="text-gray-400">—</span>;
+}
+
+/** Offer/Reject actions plus the "view sent email" / resend menu. */
+function DecisionActions({
+  registration: r,
+  canManageCoaches,
+  onOpenDecision,
+  onViewSentEmail,
+}: {
+  registration: Registration;
+  canManageCoaches: boolean;
+  onOpenDecision: (regId: string, status: "offered" | "rejected") => void;
+  onViewSentEmail: (v: { regId: string; action: "offered" | "rejected" }) => void;
+}) {
+  return (
+    <>
+      {r.status === "registered" &&
+        canManageCoaches &&
+        (() => {
+          const isRejected = r.coach_recommendation === REJECTED_VALUE;
+          const offerDisabled = !r.coach_recommendation || isRejected;
+          const offerTooltip = isRejected
+            ? "Cannot offer — coach recommendation is set to Reject."
+            : "Cannot offer — please assign a coach recommendation first.";
+          const rejectDisabled = !isRejected;
+          const rejectTooltip = !r.coach_recommendation
+            ? "Cannot reject — please assign a coach recommendation of Reject first."
+            : "Cannot reject — coach recommendation is not set to Reject.";
+
+          const offerBtn = (
+            <button
+              onClick={() => {
+                if (offerDisabled) {
+                  toast.error("Cannot offer", { description: offerTooltip, duration: 6000 });
+                  return;
+                }
+                onOpenDecision(r.id, "offered");
+              }}
+              className={`text-xs text-green-600 hover:underline cursor-pointer flex items-center gap-1 ${offerDisabled ? "opacity-40 cursor-not-allowed" : ""}`}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" /> Offer
+            </button>
+          );
+          const rejectBtn = (
+            <button
+              onClick={() => {
+                if (rejectDisabled) {
+                  toast.error("Cannot reject", { description: rejectTooltip, duration: 6000 });
+                  return;
+                }
+                onOpenDecision(r.id, "rejected");
+              }}
+              className={`text-xs text-red-500 hover:underline cursor-pointer flex items-center gap-1 ${rejectDisabled ? "opacity-40 cursor-not-allowed" : ""}`}
+            >
+              <XCircle className="h-3.5 w-3.5" /> Reject
+            </button>
+          );
+          return (
+            <div className="flex items-center gap-2">
+              {offerDisabled ? (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="block">{offerBtn}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">{offerTooltip}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                offerBtn
+              )}
+              {rejectDisabled ? (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="block">{rejectBtn}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">{rejectTooltip}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                rejectBtn
+              )}
+            </div>
+          );
+        })()}
+
+      {/* view sent email preview — shown for rows that have at least one entry
+          in email_info (i.e. an email was actually sent and recorded in
+          email_audit_logs). The action (offer/reject) is taken from the most
+          recent email_info entry. */}
+      {r.email_info &&
+        r.email_info.length > 0 &&
+        (() => {
+          const lastEmail = r.email_info![r.email_info!.length - 1];
+          const lastAction = lastEmail.action;
+          const isRejected = r.coach_recommendation === REJECTED_VALUE;
+          const offerDisabled = !r.coach_recommendation || isRejected;
+          const rejectDisabled = !isRejected;
+          const offerTooltip = isRejected
+            ? "Cannot resend offer — coach recommendation is set to Reject."
+            : "Cannot resend offer — please assign a coach recommendation first.";
+          const rejectTooltip = !r.coach_recommendation
+            ? "Cannot resend rejection — please assign a coach recommendation of Reject first."
+            : "Cannot resend rejection — coach recommendation is not set to Reject.";
+
+          return (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onViewSentEmail({ regId: r.id, action: lastAction })}
+                className="text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <Mail className="h-3.5 w-3.5" /> View sent email
+              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="text-gray-500 hover:text-gray-700 cursor-pointer flex items-center">
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    RESEND COMMUNICATION
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (offerDisabled) {
+                        toast.error("Cannot resend offer", {
+                          description: offerTooltip,
+                          duration: 6000,
+                        });
+                        return;
+                      }
+                      onOpenDecision(r.id, "offered");
+                    }}
+                    className={`cursor-pointer flex items-center gap-2 ${offerDisabled ? "opacity-40" : ""}`}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Resend as Offer
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (rejectDisabled) {
+                        toast.error("Cannot resend rejection", {
+                          description: rejectTooltip,
+                          duration: 6000,
+                        });
+                        return;
+                      }
+                      onOpenDecision(r.id, "rejected");
+                    }}
+                    className={`cursor-pointer flex items-center gap-2 ${rejectDisabled ? "opacity-40" : ""}`}
+                  >
+                    <XCircle className="h-3.5 w-3.5 text-red-500" /> Resend as Reject
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        })()}
+    </>
+  );
+}
+
+// ─── Roster card (mobile / tablet) ───────────────────────────────────────────
+
+interface RosterCardProps {
+  registration: Registration;
+  tryoutId: string;
+  selected: boolean;
+  onToggle: () => void;
+  canManageCoaches: boolean;
+  onOpenDetail: () => void;
+  onOpenDecision: (regId: string, status: "offered" | "rejected") => void;
+  onViewSentEmail: (v: { regId: string; action: "offered" | "rejected" }) => void;
+  onSetCheckIn: (regIds: string[], checkedIn: boolean, checkedInAt?: string) => Promise<boolean>;
+  isPendingCheckIn: boolean;
+  onResetScore: (regId: string) => void;
+}
+
+/** One registration as a card — the mobile/tablet equivalent of a table row. */
+function RosterCard({
+  registration: r,
+  tryoutId,
+  selected,
+  onToggle,
+  canManageCoaches,
+  onOpenDetail,
+  onOpenDecision,
+  onViewSentEmail,
+  onSetCheckIn,
+  isPendingCheckIn,
+  onResetScore,
+}: RosterCardProps) {
+  const hasEmail = !!r.email_info && r.email_info.length > 0;
+  const hasFooter = (r.status === "registered" && canManageCoaches) || hasEmail;
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border bg-white p-3 transition",
+        selected ? "border-blue-300 bg-blue-50/60" : "border-gray-200",
+      )}
+    >
+      {/* Header: selection, swimmer, status */}
+      <div className="flex items-center gap-2">
+        <Checkbox
+          checked={selected}
+          onCheckedChange={onToggle}
+          aria-label={`Select ${r.swimmer_name}`}
+          className="cursor-pointer"
+        />
+        <button
+          type="button"
+          onClick={onOpenDetail}
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+        >
+          <span className="truncate text-sm font-semibold text-blue-700 hover:underline">
+            {r.swimmer_name}
+          </span>
+          <span className="shrink-0 text-xs text-gray-400">
+            {r.swimmer_age}
+            {r.segment_name ? ` · ${r.segment_name}` : ""}
+          </span>
+        </button>
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[r.status]}`}
+        >
+          {r.status}
+        </span>
+      </div>
+
+      {/* Details */}
+      <div className="mt-2 space-y-1 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 text-gray-400">When</span>
+          <span className="min-w-0 truncate text-gray-600">
+            {r.session_date ? fmtDate(r.session_date) : "—"}
+            {r.slot_id?.startTime &&
+              ` · ${fmtTime(r.slot_id.startTime)}–${fmtTime(r.slot_id.endTime)}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 text-gray-400">Parent</span>
+          <span className="min-w-0 truncate text-gray-700">
+            {r.guardian_name || r.parent_name}
+            {(r.guardian_email || r.parent_email) && (
+              <span className="text-gray-400"> · {r.guardian_email || r.parent_email}</span>
+            )}
+          </span>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="text-gray-400">Check-in</span>
+          <CheckInControl
+            registration={r}
+            isPending={isPendingCheckIn}
+            onSetCheckIn={onSetCheckIn}
+            compact
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-gray-400">Score</span>
+          <span className="font-semibold text-blue-700">
+            <ScoreControl registration={r} tryoutId={tryoutId} onReset={onResetScore} />
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-gray-400">Yes/No</span>
+          <YesNoValue registration={r} />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-gray-400">Coach</span>
+          <CoachRecommendationControl registration={r} tryoutId={tryoutId} />
+        </div>
+      </div>
+
+      {hasFooter && (
+        <div className="mt-2 space-y-1.5 border-t border-gray-100 pt-2">
+          <DecisionActions
+            registration={r}
+            canManageCoaches={canManageCoaches}
+            onOpenDecision={onOpenDecision}
+            onViewSentEmail={onViewSentEmail}
+          />
+        </div>
+      )}
+    </div>
   );
 }
