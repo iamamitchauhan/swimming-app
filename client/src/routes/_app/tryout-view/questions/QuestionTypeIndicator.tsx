@@ -1,30 +1,17 @@
 import { Badge } from "@/components/ui/badge";
 import type { ScoringQuestion } from "@/lib/api/scoring-questions.api";
 
-/** Read-only type indicator: YESNO/RATING show both pills, the active one filled. */
+const TYPE_LABEL: Record<ScoringQuestion["type"], string> = {
+  YESNO: "Y/N",
+  RATING: "1-5",
+  TEXT: "Text",
+};
+
+/** Read-only type indicator: a single pill showing the question's type. */
 export function QuestionTypeIndicator({ type }: { type: ScoringQuestion["type"] }) {
-  if (type === "TEXT") {
-    return (
-      <Badge variant="outline" className="whitespace-nowrap text-[10px] font-normal">
-        Text
-      </Badge>
-    );
-  }
-  const isYesNo = type === "YESNO";
   return (
-    <div className="inline-flex shrink-0 items-center gap-1">
-      <Badge
-        variant={isYesNo ? "default" : "outline"}
-        className="whitespace-nowrap text-[10px] font-normal"
-      >
-        Y/N
-      </Badge>
-      <Badge
-        variant={isYesNo ? "outline" : "default"}
-        className="whitespace-nowrap text-[10px] font-normal"
-      >
-        1-5
-      </Badge>
-    </div>
+    <Badge variant="outline" className="whitespace-nowrap text-[10px] font-normal">
+      {TYPE_LABEL[type]}
+    </Badge>
   );
 }

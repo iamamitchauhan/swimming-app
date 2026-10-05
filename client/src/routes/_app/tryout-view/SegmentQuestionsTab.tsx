@@ -190,6 +190,16 @@ export function SegmentQuestionsTab({ tryout }: { tryout: Tryout }) {
     setSelectedIds(new Set());
   }
 
+  /** Drop a single age group from a question, leaving its other assignments intact. */
+  function removeSegmentFromQuestion(questionId: string, segmentId: string) {
+    const next = new Map(assignment);
+    const set = new Set(next.get(questionId) ?? []);
+    set.delete(segmentId);
+    if (set.size === 0) next.delete(questionId);
+    else next.set(questionId, set);
+    persist(next);
+  }
+
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -222,7 +232,7 @@ export function SegmentQuestionsTab({ tryout }: { tryout: Tryout }) {
   const isBusy = previewMutation.isPending || importMutation.isPending;
 
   return (
-    <div className="space-y-5 p-5">
+    <div className="space-y-5 py-5">
       <input
         ref={fileInputRef}
         type="file"
@@ -249,6 +259,7 @@ export function SegmentQuestionsTab({ tryout }: { tryout: Tryout }) {
           onToggleSelect={toggleSelect}
           onToggleAll={toggleSelectAll}
           onRemoveQuestion={(id) => setPendingRemoval([id])}
+          onRemoveSegment={removeSegmentFromQuestion}
           onAddToGroups={() => setAddToGroupsOpen(true)}
           onRemoveSelected={() => setPendingRemoval([...selectedIds])}
           onUploadMore={pickFile}

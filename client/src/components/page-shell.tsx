@@ -46,7 +46,7 @@ export function StatCard({
       <div className="flex items-start justify-between">
         <span className="text-sm text-muted-foreground font-medium">{label}</span>
         <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${accentMap[accent]}`}>
-          <Icon className="h-[18px] w-[18px]" />
+          <Icon className="h-4.5 w-4.5" />
         </div>
       </div>
       <div className="mt-3 text-3xl font-bold tracking-tight">{value}</div>

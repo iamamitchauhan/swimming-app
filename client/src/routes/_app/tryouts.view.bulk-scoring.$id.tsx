@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { PageShell } from "@/components/page-shell";
 import { useTryout } from "@/hooks/use-tryouts";
 import { useTryoutRegistration } from "@/hooks/use-tryout-dashboard";
 import { BulkScoreTab } from "./tryout-view/BulkScoreTab";
 
+/** Full-screen scoring view — rendered outside AppLayout (no sidebar/app header). */
 export default function BulkScoringPage() {
   const { id = "" } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
@@ -30,41 +30,31 @@ export default function BulkScoringPage() {
 
   if (loading) {
     return (
-      <PageShell
-        title="Loading…"
-        crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: "Bulk scoring" }]}
-      >
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </PageShell>
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   if (tryoutError || !tryout || ids.length === 0 || registrations.length === 0) {
     return (
-      <PageShell title="Scoring" crumbs={[{ label: "Tryouts", href: "/tryouts" }]}>
-        <div className="py-24 text-center text-muted-foreground">
-          No selected swimmers were found.
-        </div>
-      </PageShell>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-muted-foreground">No selected swimmers were found.</p>
+        <button
+          onClick={() => navigate(`/tryouts/view/${id}`)}
+          className="cursor-pointer text-sm font-medium text-primary hover:underline"
+        >
+          Back to tryout
+        </button>
+      </div>
     );
   }
 
   return (
-    <PageShell
-      title={`Scoring`}
-      crumbs={[
-        { label: "Tryouts", href: "/tryouts" },
-        { label: tryout.name, href: `/tryouts/view/${id}` },
-        { label: `Scoring` },
-      ]}
-    >
-      <BulkScoreTab
-        tryoutId={id}
-        registrations={registrations}
-        onBack={() => navigate(`/tryouts/view/${id}`)}
-      />
-    </PageShell>
+    <BulkScoreTab
+      tryoutId={id}
+      registrations={registrations}
+      onBack={() => navigate(`/tryouts/view/${id}`)}
+    />
   );
 }

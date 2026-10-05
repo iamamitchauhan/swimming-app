@@ -1,70 +1,119 @@
-import { Fragment, useState, useMemo, useCallback } from "react";
-import { ArrowLeft, Check, Dices, Loader2, Save, X } from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
+import { ArrowLeft, Dices, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSaveScore } from "@/hooks/use-tryout-dashboard";
+import { useSegmentQuestionsQuery } from "@/hooks/use-scoring-questions";
+import { useIsLandscape, useMediaQuery } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import type { Registration } from "@/lib/api/tryouts.api";
-import {
-  SCORING_CRITERIA,
-  CATEGORY_ORDER,
-  CRITERIA_BY_CATEGORY,
-  TOTAL_CRITERIA,
-  type Criterion,
-} from "@/lib/scoring-criteria";
+import type { ScoringQuestion, ScoringQuestionType } from "@/lib/api/scoring-questions.api";
 
-// ─── Score Controls ───────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+type ScoreValue = string | number | boolean | null;
+type ScoreMap = Record<string, Record<string, ScoreValue>>;
+type NotesMap = Record<string, string>;
+type Completion = { done: number; total: number; pct: number };
+
+interface Props {
+  tryoutId: string;
+  registrations: Registration[];
+  onBack: () => void;
+}
+
+interface ScoreGroup {
+  segmentId: string;
+  name: string;
+  swimmers: Registration[];
+  questions: ScoringQuestion[];
+}
+
+const QUESTION_TYPE_LABEL: Record<ScoringQuestionType, string> = {
+  YESNO: "Yes / No",
+  RATING: "Rate 1–5",
+  TEXT: "Text",
+};
+
+/** A value counts as "answered" once it is set, non-empty and not a zero rating. */
+function isAnswered(value: ScoreValue): boolean {
+  return value != null && value !== "" && value !== 0;
+}
+
+// ─── Score controls ────────────────────────────────────────────────────────────
 
 function ScoreControl({
-  criterion,
+  question,
   value,
   onChange,
+  size = "default",
 }: {
-  criterion: Criterion;
-  value: string | number | boolean | null;
-  onChange: (v: string | number | boolean | null) => void;
+  question: ScoringQuestion;
+  value: ScoreValue;
+  onChange: (v: ScoreValue) => void;
+  /** Denser layout for the matrix cells. */
+  size?: "default" | "compact";
 }) {
-  if (criterion.type === "yesno") {
+  const btn =
+    size === "compact"
+      ? "min-w-12 px-4 py-2 text-xs phone-landscape:min-w-6 phone-landscape:px-1.5 phone-landscape:py-0.5"
+      : "min-w-16 px-4 py-2 text-sm";
+
+  // Full labels normally; single letters on a phone held sideways so 6+ columns fit.
+  const label = (full: string, short: string) => (
+    <>
+      <span className="phone-landscape:hidden">{full}</span>
+      <span className="hidden phone-landscape:inline">{short}</span>
+    </>
+  );
+
+  if (question.type === "YESNO") {
     const isYes = value === "yes" || value === true;
     const isNo = value === "no" || value === false;
     return (
-      <div className="inline-flex rounded-lg border overflow-hidden">
+      <div className="inline-flex overflow-hidden rounded-lg border">
         <button
           type="button"
           onClick={() => onChange(isYes ? null : "yes")}
-          className={`px-2.5 py-1 text-xs font-semibold inline-flex items-center gap-1 transition ${
-            isYes ? "bg-emerald-600 text-white" : "bg-background hover:bg-muted"
-          }`}
+          className={cn(
+            btn,
+            "font-semibold transition",
+            isYes ? "bg-emerald-500 text-white" : "bg-background hover:bg-muted",
+          )}
         >
-          <Check className="h-3 w-3" /> Y
+          {label("Yes", "Y")}
         </button>
         <button
           type="button"
           onClick={() => onChange(isNo ? null : "no")}
-          className={`px-2.5 py-1 text-xs font-semibold inline-flex items-center gap-1 border-l transition ${
-            isNo ? "bg-rose-600 text-white" : "bg-background hover:bg-muted"
-          }`}
+          className={cn(
+            btn,
+            "border-l font-semibold transition",
+            isNo ? "bg-rose-500 text-white" : "bg-background hover:bg-muted",
+          )}
         >
-          <X className="h-3 w-3" /> N
+          {label("No", "N")}
         </button>
       </div>
     );
   }
 
-  if (criterion.type === "rate15") {
+  if (question.type === "RATING") {
     const current = value != null && value !== "" ? Number(value) : 0;
     return (
-      <div className="inline-flex rounded-lg border overflow-hidden">
+      <div className="inline-flex overflow-hidden rounded-lg border">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
             type="button"
             onClick={() => onChange(current === n ? null : n)}
-            className={`w-7 py-1 text-xs font-semibold border-l first:border-l-0 transition ${
-              current === n ? "bg-blue-600 text-white" : "bg-background hover:bg-muted"
-            }`}
+            className={cn(
+              "w-7 border-l py-1 text-xs font-semibold transition first:border-l-0 phone-landscape:w-6 phone-landscape:py-0.5",
+              current === n ? "bg-blue-600 text-white" : "bg-background hover:bg-muted",
+            )}
           >
             {n}
           </button>
@@ -74,28 +123,227 @@ function ScoreControl({
   }
 
   return (
-    <Checkbox
-      checked={value === true || value === "yes"}
-      onCheckedChange={(v) => onChange(v ? true : null)}
+    <Input
+      value={typeof value === "string" ? value : ""}
+      onChange={(e) => onChange(e.target.value || null)}
+      placeholder="—"
+      className={
+        size === "compact"
+          ? "h-8 min-w-32 text-xs phone-landscape:h-7 phone-landscape:min-w-20"
+          : "h-9 text-sm"
+      }
     />
   );
 }
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// ─── Swimmer heading (matrix row/column header) ─────────────────────────────────
 
-type ScoreMap = Record<string, Record<string, string | number | boolean | null>>;
-type NotesMap = Record<string, string>;
+function SwimmerHeading({
+  swimmer,
+  completion,
+}: {
+  swimmer: Registration;
+  completion: Completion;
+}) {
+  return (
+    <div>
+      <div className="text-sm font-semibold wrap-break-word text-foreground phone-landscape:text-xs">
+        {swimmer.swimmer_name}
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-1 phone-landscape:hidden">
+        <Badge
+          variant="outline"
+          className="border-sky-200 bg-sky-50 text-[10px] font-normal text-sky-700"
+        >
+          {swimmer.swimmer_age} yrs
+        </Badge>
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-[10px] font-normal",
+            completion.pct === 100
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-amber-200 bg-amber-50 text-amber-700",
+          )}
+        >
+          {completion.pct}% ({completion.done}/{completion.total})
+        </Badge>
+      </div>
+    </div>
+  );
+}
 
-interface Props {
-  tryoutId: string;
-  registrations: Registration[];
-  onBack: () => void;
+// ─── Narrow-screen cards (phone portrait) ───────────────────────────────────────
+
+function QuestionCard({
+  question,
+  index,
+  total,
+  swimmers,
+  getScore,
+  setScore,
+}: {
+  question: ScoringQuestion;
+  index: number;
+  total: number;
+  swimmers: Registration[];
+  getScore: (regId: string, questionId: string) => ScoreValue;
+  setScore: (regId: string, questionId: string, v: ScoreValue) => void;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div className="border-b bg-violet-50 px-4 py-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-violet-600">
+          Question {index + 1} of {total}
+        </div>
+        <div className="mt-0.5 text-sm font-semibold text-foreground">{question.label}</div>
+      </div>
+      <ul className="divide-y">
+        {swimmers.map((swimmer, i) => (
+          <li key={swimmer.id} className="flex items-center gap-3 px-4 py-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+              {i + 1}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">
+              {swimmer.swimmer_name}
+            </span>
+            <ScoreControl
+              question={question}
+              value={getScore(swimmer.id, question._id)}
+              onChange={(v) => setScore(swimmer.id, question._id, v)}
+            />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ─── Adaptive matrix (tablet + desktop) ────────────────────────────────────────
+
+type AxisCell =
+  | { kind: "swimmer"; key: string; swimmer: Registration }
+  | { kind: "question"; key: string; question: ScoringQuestion };
+
+const swimmerOf = (cell: AxisCell) => (cell.kind === "swimmer" ? cell.swimmer : null);
+const questionOf = (cell: AxisCell) => (cell.kind === "question" ? cell.question : null);
+
+function ScoreMatrix({
+  swimmers,
+  questions,
+  getScore,
+  setScore,
+  getCompletion,
+  isMissing,
+  transposed,
+}: {
+  swimmers: Registration[];
+  questions: ScoringQuestion[];
+  getScore: (regId: string, questionId: string) => ScoreValue;
+  setScore: (regId: string, questionId: string, v: ScoreValue) => void;
+  getCompletion: (swimmer: Registration) => Completion;
+  isMissing: (regId: string, questionId: string) => boolean;
+  /** true → questions as rows, swimmers as columns (portrait/tablet). */
+  transposed: boolean;
+}) {
+  const swimmerCells: AxisCell[] = swimmers.map((s) => ({
+    kind: "swimmer",
+    key: s.id,
+    swimmer: s,
+  }));
+  const questionCells: AxisCell[] = questions.map((q) => ({
+    kind: "question",
+    key: q._id,
+    question: q,
+  }));
+  const rows = transposed ? questionCells : swimmerCells;
+  const cols = transposed ? swimmerCells : questionCells;
+
+  const renderHeader = (cell: AxisCell) =>
+    cell.kind === "swimmer" ? (
+      <SwimmerHeading swimmer={cell.swimmer} completion={getCompletion(cell.swimmer)} />
+    ) : (
+      <div>
+        <div className="text-sm font-semibold wrap-break-word text-foreground phone-landscape:text-xs phone-landscape:leading-tight">
+          {cell.question.label}
+        </div>
+        <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-violet-600 phone-landscape:hidden">
+          {QUESTION_TYPE_LABEL[cell.question.type]}
+        </div>
+      </div>
+    );
+
+  return (
+    <div className="max-h-[calc(100vh-8rem)] overflow-auto overscroll-x-contain border border-border phone-landscape:max-h-[calc(100vh-7rem)]">
+      <table className="w-full min-w-max border-collapse text-sm">
+        <thead>
+          <tr>
+            <th className="sticky left-0 top-0 z-30 border-b border-r border-border bg-muted px-4 py-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-muted-foreground phone-landscape:px-2 phone-landscape:py-2">
+              {transposed ? "Question" : "Swimmer"}
+            </th>
+            {cols.map((col) => (
+              <th
+                key={col.key}
+                className={cn(
+                  "sticky top-0 z-20 border-b border-l border-border px-4 py-3 text-left align-middle phone-landscape:px-2 phone-landscape:py-2",
+                  col.kind === "swimmer"
+                    ? "min-w-35.5 bg-muted phone-landscape:min-w-21"
+                    : "min-w-37.5 bg-violet-50 phone-landscape:min-w-22 phone-landscape:max-w-25",
+                )}
+              >
+                {renderHeader(col)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.key} className="hover:bg-muted/20">
+              <th
+                className={cn(
+                  "sticky left-0 z-10 border-b border-r border-border px-4 py-3 text-left align-middle phone-landscape:px-2 phone-landscape:py-2",
+                  row.kind === "swimmer"
+                    ? "min-w-42.75 bg-background phone-landscape:min-w-19 phone-landscape:max-w-45"
+                    : "min-w-45 bg-violet-50 phone-landscape:min-w-20",
+                )}
+              >
+                {renderHeader(row)}
+              </th>
+              {cols.map((col) => {
+                const swimmer = (swimmerOf(row) ?? swimmerOf(col))!;
+                const question = (questionOf(row) ?? questionOf(col))!;
+                return (
+                  <td
+                    key={col.key}
+                    className={cn(
+                      "border-b border-l border-border px-3 py-3 text-center align-middle phone-landscape:max-w-25 phone-landscape:px-2 phone-landscape:py-1.5",
+                      isMissing(swimmer.id, question._id) && "bg-rose-50",
+                    )}
+                  >
+                    <ScoreControl
+                      question={question}
+                      value={getScore(swimmer.id, question._id)}
+                      onChange={(v) => setScore(swimmer.id, question._id, v)}
+                      size="compact"
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
   const saveScoreMutation = useSaveScore(tryoutId);
+  const { data: segmentQuestions = [], isLoading: questionsLoading } =
+    useSegmentQuestionsQuery(tryoutId);
+
   const [scores, setScores] = useState<ScoreMap>({});
   const [notesByReg, setNotesByReg] = useState<NotesMap>(() =>
     Object.fromEntries(registrations.map((r) => [r.id, r.notes ?? ""])),
@@ -103,6 +351,11 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
   const [savingAll, setSavingAll] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [highlightMissing, setHighlightMissing] = useState(false);
+  // null → follow the viewport default (open on tablet+, collapsed on phones);
+  // a boolean means the user has toggled it explicitly.
+  const [notesOpen, setNotesOpen] = useState<boolean | null>(null);
+  const isTabletUp = useMediaQuery("(min-width: 768px)");
+  const notesExpanded = notesOpen ?? isTabletUp;
 
   // Track committed scores (from server + saved edits) so UI always shows current values
   const [committedScores, setCommittedScores] = useState<ScoreMap>(() => {
@@ -120,31 +373,57 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     Object.fromEntries(registrations.map((r) => [r.id, r.notes ?? ""])),
   );
 
+  // Segment → configured questions, keyed by the same segment id stored on registrations.
+  const questionsBySegment = useMemo(() => {
+    const map = new Map<string, ScoringQuestion[]>();
+    for (const entry of segmentQuestions) map.set(entry.segmentId, entry.questions);
+    return map;
+  }, [segmentQuestions]);
+
+  const questionsFor = useCallback(
+    (reg: Registration) => questionsBySegment.get(reg.segment_id ?? "") ?? [],
+    [questionsBySegment],
+  );
+
+  // Swimmers grouped by age group so each group renders against its own questions.
+  const groups = useMemo<ScoreGroup[]>(() => {
+    const bySegment = new Map<string, Registration[]>();
+    for (const r of registrations) {
+      const key = r.segment_id ?? "unknown";
+      const list = bySegment.get(key) ?? [];
+      list.push(r);
+      bySegment.set(key, list);
+    }
+    return Array.from(bySegment.entries()).map(([segmentId, swimmers]) => ({
+      segmentId,
+      name: swimmers[0]?.segment_name || segmentId,
+      swimmers,
+      questions: questionsBySegment.get(segmentId) ?? [],
+    }));
+  }, [registrations, questionsBySegment]);
+
   // Get the display value: local edits take priority, then committed scores
   const getScore = useCallback(
-    (regId: string, criterionId: string): string | number | boolean | null => {
-      if (scores[regId]?.[criterionId] !== undefined) return scores[regId][criterionId];
-      if (committedScores[regId]?.[criterionId] !== undefined)
-        return committedScores[regId][criterionId];
+    (regId: string, questionId: string): ScoreValue => {
+      if (scores[regId]?.[questionId] !== undefined) return scores[regId][questionId];
+      if (committedScores[regId]?.[questionId] !== undefined)
+        return committedScores[regId][questionId];
       return null;
     },
     [scores, committedScores],
   );
 
-  const setScore = useCallback(
-    (regId: string, criterionId: string, value: string | number | boolean | null) => {
-      setScores((prev) => ({
-        ...prev,
-        [regId]: { ...prev[regId], [criterionId]: value },
-      }));
-      setSavedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(regId);
-        return next;
-      });
-    },
-    [],
-  );
+  const setScore = useCallback((regId: string, questionId: string, value: ScoreValue) => {
+    setScores((prev) => ({
+      ...prev,
+      [regId]: { ...prev[regId], [questionId]: value },
+    }));
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(regId);
+      return next;
+    });
+  }, []);
 
   const notesDirtyIds = useMemo(
     () =>
@@ -167,38 +446,53 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     return scoreIds.size;
   }, [scores, notesDirtyIds]);
 
-  // Score completion per swimmer
-  function getCompletion(regId: string) {
-    const allScores = { ...committedScores[regId], ...scores[regId] };
-    const done = SCORING_CRITERIA.filter((c) => {
-      const v = allScores[c.id];
-      return v != null && v !== "" && v !== 0;
-    }).length;
-    return { done, total: TOTAL_CRITERIA, pct: Math.round((done / TOTAL_CRITERIA) * 100) };
-  }
+  // Score completion per swimmer, against that swimmer's own questions.
+  const getCompletion = useCallback(
+    (swimmer: Registration): Completion => {
+      const questions = questionsFor(swimmer);
+      const all = { ...committedScores[swimmer.id], ...scores[swimmer.id] };
+      const done = questions.filter((q) => isAnswered(all[q._id])).length;
+      const total = questions.length;
+      return { done, total, pct: total ? Math.round((done / total) * 100) : 100 };
+    },
+    [committedScores, scores, questionsFor],
+  );
 
-  function getMissingCriteria(regId: string): string[] {
-    const allScores = { ...committedScores[regId], ...scores[regId] };
-    return SCORING_CRITERIA.filter((c) => {
-      const v = allScores[c.id];
-      return v == null || v === "" || v === 0;
-    }).map((c) => c.label);
-  }
+  const getMissingQuestions = useCallback(
+    (swimmer: Registration): string[] => {
+      const all = { ...committedScores[swimmer.id], ...scores[swimmer.id] };
+      return questionsFor(swimmer)
+        .filter((q) => !isAnswered(all[q._id]))
+        .map((q) => q.label);
+    },
+    [committedScores, scores, questionsFor],
+  );
+
+  const isMissing = useCallback(
+    (regId: string, questionId: string) => {
+      if (!highlightMissing) return false;
+      const swimmer = registrations.find((r) => r.id === regId);
+      if (!swimmer || !questionsFor(swimmer).some((q) => q._id === questionId)) return false;
+      return !isAnswered(getScore(regId, questionId));
+    },
+    [highlightMissing, registrations, questionsFor, getScore],
+  );
 
   async function saveAll() {
-    // Validate: every swimmer must have all criteria scored
-    const incomplete = swimmers
+    // Validate: every swimmer must have all of their questions scored
+    const incomplete = registrations
       .map((s) => {
-        const missing = getMissingCriteria(s.id);
-        return missing.length > 0 ? { name: s.swimmer_name, missing } : null;
+        const missing = getMissingQuestions(s);
+        const total = questionsFor(s).length;
+        return missing.length > 0 ? { name: s.swimmer_name, missing, total } : null;
       })
-      .filter(Boolean) as { name: string; missing: string[] }[];
+      .filter(Boolean) as { name: string; missing: string[]; total: number }[];
 
     if (incomplete.length > 0) {
       const messages = incomplete.map(
-        (item) => `${item.name}: ${item.missing.length} of ${TOTAL_CRITERIA} criteria missing`,
+        (item) => `${item.name}: ${item.missing.length} of ${item.total} questions missing`,
       );
-      toast.error(`All criteria must be scored before saving`, {
+      toast.error(`All questions must be scored before saving`, {
         description: messages.join("\n"),
         duration: 6000,
       });
@@ -260,13 +554,13 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     const next: ScoreMap = {};
     for (const swimmer of registrations) {
       next[swimmer.id] = {};
-      for (const criterion of SCORING_CRITERIA) {
-        if (criterion.type === "yesno") {
-          next[swimmer.id][criterion.id] = Math.random() < 0.7 ? "yes" : "no";
-        } else if (criterion.type === "rate15") {
-          next[swimmer.id][criterion.id] = Math.floor(Math.random() * 5) + 1;
+      for (const question of questionsFor(swimmer)) {
+        if (question.type === "YESNO") {
+          next[swimmer.id][question._id] = Math.random() < 0.7 ? "yes" : "no";
+        } else if (question.type === "RATING") {
+          next[swimmer.id][question._id] = Math.floor(Math.random() * 5) + 1;
         } else {
-          next[swimmer.id][criterion.id] = Math.random() < 0.6 ? true : false;
+          next[swimmer.id][question._id] = "Looks good";
         }
       }
     }
@@ -276,6 +570,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
   }
 
   const swimmers = registrations;
+  const isLandscape = useIsLandscape();
 
   if (swimmers.length === 0) {
     return (
@@ -285,218 +580,166 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     );
   }
 
+  if (questionsLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const singleGroup = groups.length === 1 ? groups[0] : null;
+  const questionCount = singleGroup?.questions.length ?? 0;
+
   return (
-    <div className="mx-auto">
-      {/* ── Back link ──────────────────────────────────────────────────────── */}
-      <button
-        onClick={onBack}
-        className="text-sm text-muted-foreground hover:underline inline-flex items-center gap-1 mb-4"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to roster
-      </button>
-
-      {/* ── Gradient header ────────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 text-white p-6 mb-6 shadow-lg">
-        <div className="text-xs uppercase tracking-widest opacity-80">Parallel evaluation</div>
-        <h1 className="text-2xl font-bold mt-1">
-          Scoring {swimmers.map((s) => s.swimmer_name).join(", ")}
-        </h1>
-        <p className="text-sm opacity-90 mt-1">Compare criteria across swimmers at once.</p>
-      </div>
-
-      {/* ── Scoring Table ──────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-auto overscroll-contain max-h-[calc(100vh-280px)] pb-20">
-          <table className="min-w-max w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-muted border-b">
-                <th className="sticky left-0 top-0 z-40 w-[220px] min-w-[220px] bg-muted text-left p-3 border-r shadow-[4px_0_8px_-6px_rgba(0,0,0,0.35)] md:w-[260px] md:min-w-[260px]">
-                  Criterion
-                </th>
-                {swimmers.map((s) => {
-                  const comp = getCompletion(s.id);
-                  return (
-                    <th
-                      key={s.id}
-                      className="sticky top-0 z-30 w-[200px] min-w-[200px] bg-muted text-left p-3 border-l md:w-[220px] md:min-w-[220px]"
-                    >
-                      <div className="font-semibold wrap-break-word text-foreground">
-                        {s.swimmer_name}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1 mt-1">
-                        <Badge
-                          variant="outline"
-                          className="border-sky-200 bg-sky-50 text-[10px] font-normal text-sky-700"
-                        >
-                          {s.swimmer_age} yrs
-                        </Badge>
-                        {s.segment_name && (
-                          <Badge
-                            variant="outline"
-                            className="border-violet-200 bg-violet-50 text-[10px] font-normal text-violet-700"
-                          >
-                            {s.segment_name}
-                          </Badge>
-                        )}
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] font-normal ${
-                            comp.pct === 100
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-amber-200 bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          {comp.pct}% ({comp.done}/{comp.total})
-                        </Badge>
-                      </div>
-                      {/* <div className="mt-1 h-1 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full bg-blue-600 transition-all"
-                          style={{ width: `${comp.pct}%` }}
-                        />
-                      </div> */}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {CATEGORY_ORDER.map((category) => (
-                <Fragment key={category}>
-                  {/* Category group header */}
-                  <tr className="bg-blue-50">
-                    <td className="sticky left-0 z-20 w-[220px] min-w-[220px] bg-blue-50 p-2 px-3 text-xs font-semibold uppercase tracking-wide text-blue-700 border-r md:w-[260px] md:min-w-[260px]">
-                      {category}
-                    </td>
-                    <td
-                      colSpan={swimmers.length}
-                      className="p-2 px-3 text-xs font-semibold uppercase tracking-wide text-blue-700"
-                    />
-                  </tr>
-                  {/* Criteria rows */}
-                  {CRITERIA_BY_CATEGORY[category].map((criterion) => {
-                    const missingSwimmerIds = highlightMissing
-                      ? new Set(
-                          swimmers
-                            .filter((s) => {
-                              const v = getScore(s.id, criterion.id);
-                              return v == null || v === "" || v === 0;
-                            })
-                            .map((s) => s.id),
-                        )
-                      : new Set<string>();
-                    return (
-                      <tr key={criterion.id} className="border-t hover:bg-muted/20">
-                        <td className="sticky left-0 z-20 w-[220px] min-w-[220px] bg-background p-3 border-r align-top md:w-[260px] md:min-w-[260px]">
-                          <div className="font-medium">{criterion.label}</div>
-                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">
-                            {criterion.type === "yesno"
-                              ? "Yes / No"
-                              : criterion.type === "rate15"
-                                ? "Rate 1–5"
-                                : "Checkbox"}
-                          </div>
-                        </td>
-                        {swimmers.map((swimmer) => {
-                          const value = getScore(swimmer.id, criterion.id);
-                          const isMissing = missingSwimmerIds.has(swimmer.id);
-                          return (
-                            <td
-                              key={swimmer.id}
-                              className={`p-3 border-l align-middle ${isMissing ? "bg-red-100/30" : ""}`}
-                            >
-                              <ScoreControl
-                                criterion={criterion}
-                                value={value}
-                                onChange={(v) => setScore(swimmer.id, criterion.id, v)}
-                              />
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </Fragment>
-              ))}
-              {/* Coach notes section */}
-              <tr className="bg-blue-50">
-                <td className="sticky left-0 z-20 w-[220px] min-w-[220px] bg-blue-50 p-2 px-3 text-xs font-semibold uppercase tracking-wide text-blue-700 border-r md:w-[260px] md:min-w-[260px]">
-                  Coach notes
-                </td>
-                <td
-                  colSpan={swimmers.length}
-                  className="p-2 px-3 text-xs font-semibold uppercase tracking-wide text-blue-700"
-                />
-              </tr>
-              <tr className="border-t">
-                <td className="sticky left-0 z-20 w-[220px] min-w-[220px] bg-background p-3 border-r align-top md:w-[260px] md:min-w-[260px]">
-                  <div className="font-medium">Notes</div>
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">
-                    Optional per swimmer
-                  </div>
-                </td>
-                {swimmers.map((swimmer) => (
-                  <td key={swimmer.id} className="p-2 border-l align-top">
-                    <Textarea
-                      rows={4}
-                      value={notesByReg[swimmer.id] ?? ""}
-                      onChange={(e) => {
-                        setNotesByReg((prev) => ({ ...prev, [swimmer.id]: e.target.value }));
-                        setSavedIds((prev) => {
-                          const next = new Set(prev);
-                          next.delete(swimmer.id);
-                          return next;
-                        });
-                      }}
-                      placeholder="Strengths, focus areas…"
-                    />
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
+    <>
+      {/* ── Fixed action bar ───────────────────────────────────────────────── */}
+      <div className="fixed inset-x-0 top-0 z-50 flex h-16 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+        <button
+          onClick={onBack}
+          aria-label="Back to roster"
+          className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="min-w-0 flex-1 phone-landscape:hidden">
+          <div className="truncate text-base font-semibold leading-tight">
+            Tryout scoring{singleGroup ? ` · ${singleGroup.name}` : ""}
+          </div>
+          <div className="truncate text-xs text-muted-foreground">
+            {swimmers.length} swimmer{swimmers.length === 1 ? "" : "s"} ·{" "}
+            {singleGroup
+              ? `${questionCount} question${questionCount === 1 ? "" : "s"}`
+              : `${groups.length} age groups`}
+          </div>
         </div>
-      </div>
-
-      {/* ── Fixed bottom save bar ──────────────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur z-40">
-        <div className="mx-auto max-w-[1400px] px-6 py-3 flex items-center justify-between gap-3">
-          <div className="text-sm text-muted-foreground hidden sm:block">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <span className="hidden text-xs text-muted-foreground lg:block">
             {dirtyCount > 0 ? (
-              <span className="text-amber-600 font-medium">{dirtyCount} unsaved</span>
+              <span className="font-medium text-amber-600">{dirtyCount} unsaved</span>
             ) : savedIds.size > 0 ? (
-              <span className="text-green-600 font-medium">All saved</span>
+              <span className="font-medium text-green-600">All saved</span>
             ) : (
               <span>
                 Scoring {swimmers.length} swimmer{swimmers.length > 1 ? "s" : ""} in parallel
               </span>
             )}
-          </div>
-          <div className="flex gap-2 ml-auto">
-            {import.meta.env.VITE_ENV === "dev" && (
-              <Button variant="outline" onClick={fillRandomScores}>
-                <Dices className="h-4 w-4 mr-1" />
-                Random fill
-              </Button>
+          </span>
+          {import.meta.env.VITE_ENV === "dev" && (
+            <Button variant="outline" onClick={fillRandomScores} className="hidden sm:inline-flex">
+              <Dices className="mr-1 h-4 w-4" />
+              Random fill
+            </Button>
+          )}
+          <Button variant="outline" onClick={onBack} className="phone-landscape:hidden">
+            Cancel
+          </Button>
+          <Button
+            onClick={saveAll}
+            disabled={savingAll || !hasEdits}
+            className="bg-blue-600 hover:bg-blue-500"
+          >
+            {savingAll ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-1 h-4 w-4" />
             )}
-            <Button variant="outline" onClick={onBack}>
-              Cancel
-            </Button>
-            <Button
-              onClick={saveAll}
-              disabled={savingAll}
-              className="bg-blue-600 hover:bg-blue-500"
-            >
-              {savingAll ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              ) : (
-                <Save className="h-4 w-4 mr-1" />
-              )}
-              Save all
-            </Button>
-          </div>
+            Save
+          </Button>
         </div>
       </div>
-    </div>
+
+      {/* ── Groups ─────────────────────────────────────────────────────────── */}
+      <div className="space-y-8 px-4 pt-20 pb-8 sm:px-6 lg:px-8">
+        {groups.map((group) => (
+          <section key={group.segmentId}>
+            {!singleGroup && (
+              <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 phone-landscape:hidden">
+                <h2 className="text-base font-semibold">{group.name}</h2>
+                <span className="text-xs text-muted-foreground">
+                  {group.swimmers.length} swimmer{group.swimmers.length === 1 ? "" : "s"} ·{" "}
+                  {group.questions.length} question{group.questions.length === 1 ? "" : "s"}
+                </span>
+              </div>
+            )}
+
+            {group.questions.length === 0 ? (
+              <div className="rounded-xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
+                No scoring questions are configured for {group.name}. Add questions to this age
+                group in the Questions tab, then come back to score.
+              </div>
+            ) : (
+              <>
+                {/* Phone portrait — one card per question */}
+                <div className="space-y-4 sm:hidden">
+                  {group.questions.map((question, index) => (
+                    <QuestionCard
+                      key={question._id}
+                      question={question}
+                      index={index}
+                      total={group.questions.length}
+                      swimmers={group.swimmers}
+                      getScore={getScore}
+                      setScore={setScore}
+                    />
+                  ))}
+                </div>
+
+                {/* Tablet / desktop — matrix flips axes by orientation */}
+                <div className="hidden sm:block">
+                  <ScoreMatrix
+                    swimmers={group.swimmers}
+                    questions={group.questions}
+                    getScore={getScore}
+                    setScore={setScore}
+                    getCompletion={getCompletion}
+                    isMissing={isMissing}
+                    transposed={!isLandscape}
+                  />
+                </div>
+              </>
+            )}
+          </section>
+        ))}
+
+        {/* ── Coach notes (collapsible; open by default on tablet+) ────────── */}
+        <section className="overflow-hidden rounded-xl border bg-card">
+          <button
+            type="button"
+            onClick={() => setNotesOpen(!notesExpanded)}
+            className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-muted/40"
+          >
+            <span className="text-sm font-semibold">
+              Coach notes <span className="font-normal text-muted-foreground">· optional</span>
+            </span>
+            <span className="text-sm font-medium text-primary">
+              {notesExpanded ? "Hide" : "Show"}
+            </span>
+          </button>
+          {notesExpanded && (
+            <div className="grid gap-3 border-t p-4 sm:grid-cols-2">
+              {swimmers.map((swimmer) => (
+                <div key={swimmer.id}>
+                  <div className="mb-1.5 truncate text-sm font-medium">{swimmer.swimmer_name}</div>
+                  <Textarea
+                    rows={3}
+                    value={notesByReg[swimmer.id] ?? ""}
+                    onChange={(e) => {
+                      setNotesByReg((prev) => ({ ...prev, [swimmer.id]: e.target.value }));
+                      setSavedIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(swimmer.id);
+                        return next;
+                      });
+                    }}
+                    placeholder="Strengths, focus areas…"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </>
   );
 }

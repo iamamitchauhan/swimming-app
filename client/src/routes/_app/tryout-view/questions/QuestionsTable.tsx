@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Search, Upload, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import type { ScoringQuestion } from "@/lib/api/scoring-questions.api";
 import type { Segment } from "@/lib/api/tryouts.api";
 import { QuestionTypeIndicator } from "./QuestionTypeIndicator";
@@ -31,6 +32,7 @@ interface QuestionsTableProps {
   onToggleSelect: (id: string) => void;
   onToggleAll: (ids: string[]) => void;
   onRemoveQuestion: (id: string) => void;
+  onRemoveSegment: (questionId: string, segmentId: string) => void;
   onAddToGroups: () => void;
   onRemoveSelected: () => void;
   onUploadMore: () => void;
@@ -47,6 +49,7 @@ export function QuestionsTable({
   onToggleSelect,
   onToggleAll,
   onRemoveQuestion,
+  onRemoveSegment,
   onAddToGroups,
   onRemoveSelected,
   onUploadMore,
@@ -147,7 +150,7 @@ export function QuestionsTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10">
+              <TableHead className="w-10 px-4">
                 <Checkbox
                   checked={allSelected ? true : someSelected ? "indeterminate" : false}
                   onCheckedChange={() => onToggleAll(visibleQuestions.map((q) => q._id))}
@@ -164,45 +167,60 @@ export function QuestionsTable({
           <TableBody>
             {visibleQuestions.map((question) => {
               const segmentIds = assignment.get(question._id) ?? new Set<string>();
-              const names = segments
-                .filter((segment) => segmentIds.has(segment.id ?? segment.name))
-                .map((segment) => segment.name);
+              const assignedSegments = segments.filter((segment) =>
+                segmentIds.has(segment.id ?? segment.name),
+              );
               const isSelected = selectedIds.has(question._id);
 
               return (
                 <TableRow key={question._id} data-state={isSelected ? "selected" : undefined}>
-                  <TableCell>
+                  <TableCell className="w-10 px-4 py-3">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={() => onToggleSelect(question._id)}
                       aria-label={`Select ${question.label}`}
                     />
                   </TableCell>
-                  <TableCell className="font-medium">{question.label}</TableCell>
-                  <TableCell>
+                  <TableCell className="px-4 py-3 font-medium">{question.label}</TableCell>
+                  <TableCell className="px-4 py-3">
                     <QuestionTypeIndicator type={question.type} />
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="px-4 py-3 text-muted-foreground">
                     {question.category ?? "—"}
                   </TableCell>
-                  <TableCell>
-                    {names.length === 0 ? (
+                  <TableCell className="px-4 py-3">
+                    {assignedSegments.length === 0 ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       <div className="flex flex-wrap gap-1">
-                        {names.map((name) => (
-                          <Badge
-                            key={name}
-                            variant="outline"
-                            className="border-primary/30 bg-primary/10 text-[10px] font-normal text-primary"
-                          >
-                            {name}
-                          </Badge>
-                        ))}
+                        {assignedSegments.map((segment) => {
+                          const key = segment.id ?? segment.name;
+                          return (
+                            <span
+                              key={key}
+                              className={cn(
+                                badgeVariants({ variant: "outline" }),
+                                "gap-1.5 border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-normal text-primary",
+                              )}
+                            >
+                              {segment.name}
+                              <button
+                                type="button"
+                                onClick={() => onRemoveSegment(question._id, key)}
+                                disabled={isSaving}
+                                title={`Remove from ${segment.name}`}
+                                aria-label={`Remove ${question.label} from ${segment.name}`}
+                                className="-mr-1.5 inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-full text-primary/60 transition-colors hover:bg-destructive/15 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          );
+                        })}
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-4 py-3">
                     {segmentIds.size > 0 && (
                       <Button
                         variant="ghost"
@@ -221,7 +239,7 @@ export function QuestionsTable({
             })}
             {visibleQuestions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-24 px-4 text-center text-muted-foreground">
                   No questions match your filters.
                 </TableCell>
               </TableRow>

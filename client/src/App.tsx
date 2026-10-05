@@ -85,7 +85,6 @@ export default function App() {
           <Route path="/tryouts/edit/:id" element={<TryoutEditPage />} />
           <Route path="/tryouts/preview/:id" element={<TryoutPreviewPage />} />
           <Route path="/tryouts/register/:id" element={<TryoutRegistration />} />
-          <Route path="/tryouts/view/:id/bulk-scoring" element={<BulkScoringPage />} />
           <Route path="/tryouts/view/:id" element={<TryoutViewPage />} />
           <Route path="/tryouts/:id" element={<TryoutDetailPage />} />
           <Route path="/children" element={<ChildrenPage />} />
@@ -93,6 +92,16 @@ export default function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
+
+        {/* Full-screen bulk scoring — deliberately outside AppLayout (no sidebar/app header). */}
+        <Route
+          path="/tryouts/view/:id/bulk-scoring"
+          element={
+            <RequireAuth>
+              <BulkScoringPage />
+            </RequireAuth>
+          }
+        />
 
         {/* 404 */}
         <Route

@@ -4,6 +4,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Phones held sideways: wide enough for the scoring matrix, but short on height. */
+@custom-variant phone-landscape (@media (orientation: landscape) and (width < 64rem));
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
