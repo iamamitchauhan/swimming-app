@@ -277,14 +277,30 @@ function renderCallout(opts: { title?: string; content: string; tone?: "info" | 
 }
 
 /** Standard sign-off used across the swim-tryout templates. */
-function renderSignOff(clubName: string): string {
+function renderSignOff(clubName: string, opts: { includeContact?: boolean } = {}): string {
+  const contact = opts.includeContact === false ? "" : `<br />Bilgrij@friscoisd.org<br />${clubName}`;
   return `
     <p style="font-size:15px;line-height:24px;margin-top:30px;">
       Best regards,<br />
-      Justin Bilgri<br />
-      Bilgrij@friscoisd.org<br />
-      ${clubName}
+      Justin Bilgri${contact}
     </p>
+  `;
+}
+
+/** Contact block shown when parents may have questions before a tryout. */
+function renderQuestionsBlock(clubName: string): string {
+  return `
+    <div style="margin:28px 0;">
+      <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:${THEME.primaryDark};">Questions?</p>
+      <p style="margin:0 0 12px;font-size:15px;line-height:24px;color:${THEME.muted};">
+        If you have any questions about the tryout, please contact:
+      </p>
+      <p style="margin:0;font-size:15px;line-height:24px;color:${THEME.text};">
+        <strong>Justin Bilgri</strong><br />
+        <a href="mailto:Bilgrij@friscoisd.org" style="color:${THEME.primary};text-decoration:underline;">Bilgrij@friscoisd.org</a><br />
+        ${clubName}
+      </p>
+    </div>
   `;
 }
 
@@ -567,7 +583,8 @@ export async function sendRegistrationReceivedEmail(opts: {
   swimmerName: string;
   tryoutName: string;
   location: string;
-  slotLabel: string;
+  dateLabel: string;
+  timeLabel: string;
   clubName: string;
 }): Promise<any> {
   const bodyHtml = `
@@ -586,7 +603,8 @@ export async function sendRegistrationReceivedEmail(opts: {
       [
         { label: "Swimmer", value: opts.swimmerName },
         { label: "Tryout", value: opts.tryoutName },
-        { label: "Date & Time", value: opts.slotLabel },
+        { label: "Date", value: opts.dateLabel },
+        { label: "Time", value: opts.timeLabel },
         { label: "Location", value: opts.location },
       ],
       { title: "Tryout Details" },
@@ -596,21 +614,82 @@ export async function sendRegistrationReceivedEmail(opts: {
       tone: "info",
       content: `
         <ul style="margin:0 0 0 18px;padding:0;color:${THEME.muted};font-size:14px;line-height:22px;">
-          <li>Please arrive 10 minutes early for check-in.</li>
-          <li>Bring swimwear, goggles, and any required swim equipment.</li>
+          <li>Please arrive 10–15 minutes early for check-in.</li>
+          <li>Please bring: swimsuit, goggles, towel, and swim cap if your swimmer normally wears one.</li>
         </ul>
       `,
     })}
-    <p style="font-size:15px;line-height:24px;">
-      If you have any questions before the tryout, feel free to contact us.
-    </p>
-    ${renderSignOff(opts.clubName)}
+    ${renderQuestionsBlock(opts.clubName)}
+    ${renderSignOff(opts.clubName, { includeContact: false })}
   `;
 
   await sendMail({
     to: opts.to,
     subject: `Registration Received: ${opts.tryoutName} | ${config.SES_FROM_NAME}`,
     html: renderLayout({ bodyHtml }),
+  });
+}
+
+// ─── Registration cancelled email ────────────────────────────────────────────
+
+export async function sendRegistrationCancelledEmail(opts: {
+  to: string;
+  parentName: string;
+  swimmerName: string;
+  tryoutName: string;
+  location: string;
+  dateLabel: string;
+  timeLabel: string;
+  clubName: string;
+  cancelledOnLabel: string;
+  viewTryoutsUrl: string;
+}): Promise<any> {
+  const bodyHtml = `
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:48px;">🏊</div>
+      <h2 style="margin:16px 0 8px;color:${THEME.heading};">Tryout Registration Cancelled</h2>
+      <p style="margin:0;font-size:15px;line-height:24px;color:${THEME.muted};">
+        Your swimmer's tryout registration has been cancelled.
+      </p>
+    </div>
+    <p style="font-size:15px;line-height:24px;">Hi ${opts.parentName},</p>
+    <p style="font-size:15px;line-height:24px;">
+      Your request to cancel <strong>${opts.swimmerName}</strong>'s registration for the following swimming tryout has been confirmed.
+    </p>
+    ${renderDetailsTable(
+      [
+        { label: "Swimmer", value: opts.swimmerName },
+        { label: "Tryout", value: opts.tryoutName },
+        { label: "Date", value: opts.dateLabel },
+        { label: "Time", value: opts.timeLabel },
+        { label: "Location", value: opts.location },
+      ],
+      { title: "Tryout Details" },
+    )}
+    <p style="font-size:15px;line-height:24px;">
+      <strong>Cancelled on:</strong> ${opts.cancelledOnLabel}
+    </p>
+    ${renderCallout({
+      title: "What happens next?",
+      tone: "info",
+      content: `
+        <p style="margin:0 0 12px;font-size:14px;line-height:22px;">Your swimmer no longer has a reserved spot for this tryout.</p>
+        <p style="margin:0;font-size:14px;line-height:22px;">If you would like to try out at another time, you can register for another available session.</p>
+        ${renderButton({ href: opts.viewTryoutsUrl, label: "View Available Tryouts" })}
+        <p style="margin:0;font-size:14px;line-height:22px;">If you cancelled by mistake, please contact the coaching staff as soon as possible.</p>
+      `,
+    })}
+    ${renderQuestionsBlock(opts.clubName)}
+    <p style="font-size:15px;line-height:24px;">
+      Thank you, and we hope to see <strong>${opts.swimmerName}</strong> at a future tryout.
+    </p>
+    ${renderSignOff(opts.clubName, { includeContact: false })}
+  `;
+
+  await sendMail({
+    to: opts.to,
+    subject: `Tryout Registration Cancelled: ${opts.tryoutName} | ${config.SES_FROM_NAME}`,
+    html: renderLayout({ accent: "danger", bodyHtml }),
   });
 }
 

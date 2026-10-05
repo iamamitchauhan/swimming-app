@@ -32,6 +32,8 @@ const controller = new TryoutController(service);
  * PUT  /:id/registrations/:regId/verify   — update USA-S verification
  * PUT  /:id/registrations/:regId/score    — update scores
  * DELETE /:id/registrations/:regId/score — reset (clear) scores
+ * GET  /:id/segment-questions    — segment → bank-question assignments (admin, coach)
+ * PUT  /:id/segment-questions    — replace all segment assignments (admin)
  * POST /:id/registrations/check-in — bulk check-in / un-check registrations
  * POST /:id/comms                — send bulk communication
  * POST /                         — create tryout (admin, coach)
@@ -78,6 +80,17 @@ tryoutRouter.delete("/:id/registrations/:regId/score", authenticate, authorize(U
 tryoutRouter.post("/:id/registrations/check-in", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.checkIn);
 
 tryoutRouter.put("/:id/registration-questions", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.upsertRegistrationQuestions);
+
+// Club-bank evaluation questions each segment is scored against. Read is open to
+// staff (the scoring UI resolves a segment's questions); write is admin-only.
+tryoutRouter.get(
+  "/:id/segment-questions",
+  authenticate,
+  authorize(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.COACH),
+  controller.getSegmentQuestions,
+);
+
+tryoutRouter.put("/:id/segment-questions", authenticate, authorize(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN), controller.saveSegmentQuestions);
 
 tryoutRouter.post("/:id/comms", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.sendComms);
 

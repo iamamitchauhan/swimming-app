@@ -1,0 +1,267 @@
+paths:
+  /clubs/{clubId}/scoring-questions:
+    get:
+      tags: [Scoring Questions]
+      summary: List a club's scoring-question bank
+      description: >-
+        Club-wide bank of evaluation questions imported from a CSV/XLSX sheet.
+        Readable by any staff member of the club (the scoring UI resolves the
+        questions for the segments it renders).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clubId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Bank questions in display order
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/ScoringQuestion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /clubs/{clubId}/scoring-questions/template:
+    get:
+      tags: [Scoring Questions]
+      summary: Download the scoring-question CSV template
+      description: >-
+        Returns a ready-to-fill CSV with the import parser's columns
+        (category, question, type) and example rows. Readable by club staff.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clubId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: CSV template
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /clubs/{clubId}/scoring-questions/preview:
+    post:
+      tags: [Scoring Questions]
+      summary: Dry-run a scoring-question import sheet
+      description: >-
+        super_admin and admin only. Parses and validates a CSV or XLSX file
+        without writing anything. Expected columns: question (required), type
+        (required — yesno | rating | text) and category (optional). Returns valid
+        rows, per-row errors, and a count of rows whose label already exists in
+        the club bank.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clubId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+              required: [file]
+      responses:
+        "200":
+          description: Preview result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ScoringQuestionPreview" }
+        "400":
+          description: Bad request (empty file, unsupported type, etc.)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /clubs/{clubId}/scoring-questions/import:
+    post:
+      tags: [Scoring Questions]
+      summary: Import scoring questions into a club's bank (append only)
+      description: >-
+        super_admin and admin only. Adds questions not already present in the
+        club bank; duplicates (matched case/whitespace-insensitively by question
+        text, against the bank and within the file) are skipped.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clubId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+              required: [file]
+      responses:
+        "201":
+          description: Import completed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ScoringQuestionImportResult" }
+        "400":
+          description: Bad request (empty file, unsupported type, etc.)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /clubs/{clubId}/scoring-questions/bulk:
+    delete:
+      tags: [Scoring Questions]
+      summary: Remove several scoring questions from a club's bank
+      description: super_admin and admin only. Soft-deletes the given questions.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clubId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { type: string }
+      responses:
+        "200":
+          description: Number of questions removed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          deleted: { type: integer, example: 3 }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /clubs/{clubId}/scoring-questions/{questionId}:
+    delete:
+      tags: [Scoring Questions]
+      summary: Remove a scoring question from a club's bank
+      description: super_admin and admin only. Soft-deletes the question.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clubId, in: path, required: true, schema: { type: string } }
+        - { name: questionId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuccessResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: Question not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  /tryouts/{id}/segment-questions:
+    get:
+      tags: [Scoring Questions]
+      summary: Get the scoring questions each segment is evaluated against
+      description: >-
+        Returns every segment of the tryout with the club-bank evaluation
+        questions it is scored against (empty array when unset). Readable by any
+        staff member.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Segment question selections
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/TryoutSegmentQuestions" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: Tryout not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    put:
+      tags: [Scoring Questions]
+      summary: Replace the scoring-question selection for every segment
+      description: >-
+        super_admin and admin only. Replaces the whole selection for the tryout.
+        Every segment must belong to the tryout and every question must belong to
+        the tryout's club.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [segments]
+              properties:
+                segments:
+                  type: array
+                  items:
+                    type: object
+                    required: [segmentId, questionIds]
+                    properties:
+                      segmentId: { type: string, example: "8&U" }
+                      questionIds:
+                        type: array
+                        items: { type: string }
+      responses:
+        "200":
+          description: Selection saved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/SuccessResponse" }
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/TryoutSegmentQuestions" }
+        "400":
+          description: A segment or question does not belong to this tryout/club
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }

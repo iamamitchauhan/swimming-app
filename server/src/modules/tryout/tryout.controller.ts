@@ -1829,6 +1829,50 @@ export class TryoutController {
   };
 
   /**
+   * GET /tryouts/:id/segment-questions
+   * Returns each segment with the club-bank questions it is scored against.
+   */
+  getSegmentQuestions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      req.step?.("received", { params: req.params });
+      const data = await this.service.getSegmentQuestions(req.params["id"]!, req.user?.clubId ?? "", req.user?.role === "super_admin");
+      sendSuccess(res, data, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * PUT /tryouts/:id/segment-questions
+   * Replaces every segment's question selection.
+   */
+  saveSegmentQuestions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      req.step?.("received", { params: req.params, body: req.body });
+      const { segments } = req.body as {
+        segments?: { segmentId?: string; questionIds?: string[] }[];
+      };
+      if (!Array.isArray(segments)) {
+        throw new BadRequestError("segments must be an array");
+      }
+      const normalized = segments.map((selection, index) => {
+        if (!selection?.segmentId || typeof selection.segmentId !== "string") {
+          throw new BadRequestError(`segments[${index}].segmentId is required`);
+        }
+        if (!Array.isArray(selection.questionIds)) {
+          throw new BadRequestError(`segments[${index}].questionIds must be an array`);
+        }
+        return { segmentId: selection.segmentId, questionIds: selection.questionIds };
+      });
+
+      const data = await this.service.saveSegmentQuestions(req.params["id"]!, normalized, req.user?.clubId ?? "", req.user?.role === "super_admin");
+      sendSuccess(res, data, "Segment questions saved", HTTP_STATUS.OK);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
    * POST /tryouts/:id/comms
    * Send bulk communication to a filtered group of registrants.
    */

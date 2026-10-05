@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Loader2, CalendarDays, MapPin, Users2, Waves } from "lucide-react";
+import { Loader2, CalendarDays, MapPin, Users2, Waves, UserCog } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useTryout } from "@/hooks/use-tryouts";
 import { useTryoutRegistration } from "@/hooks/use-tryout-dashboard";
@@ -12,6 +13,8 @@ import { WaitlistTab } from "./tryout-view/WaitlistTab";
 import { ScoringTab } from "./tryout-view/ScoringTab";
 import { LeaderboardTab } from "./tryout-view/LeaderboardTab";
 import { CommsTab } from "./tryout-view/CommsTab";
+import { SegmentQuestionsTab } from "./tryout-view/SegmentQuestionsTab";
+import { ManageCoachesDialog } from "./tryout-view/ManageCoachesDialog";
 import { statusLabel } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth.store";
 
@@ -67,6 +70,7 @@ export default function TryoutViewPage() {
   const { data: rosterResult } = useTryoutRegistration(id, { page: 1, limit: 1 });
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState(() => searchParams.get("tab") ?? "roster");
+  const [manageCoachesOpen, setManageCoachesOpen] = useState(false);
   const registerId = searchParams.get("registerId") ?? undefined;
 
   const user = useAuthStore((state) => state.user);
@@ -94,6 +98,7 @@ export default function TryoutViewPage() {
     { key: "waitlist", label: "Waitlist" },
     // { key: "scoring", label: "Scoring" },
     { key: "leaderboard", label: "Leaderboard" },
+    ...(canManageCoaches ? [{ key: "questions", label: "Segments questions" }] : []),
     ...(canManageCoaches ? [{ key: "comms", label: "Comms" }] : []),
   ];
 
@@ -117,11 +122,16 @@ export default function TryoutViewPage() {
 
   return (
     <PageShell title={""} crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: tryout.name }]}>
-      <div className="flex justify-between gap-2 pb-3">
+      <div className="flex items-start justify-between gap-2 pb-3">
         <div className="flex gap-2 flex-col">
           <h2 className="text-2xl font-semibold">{tryout.name}</h2>
           <p className="text-sm text-muted-foreground">{tryout.description}</p>
         </div>
+        {canManageCoaches && (
+          <Button size="sm" className="shrink-0" onClick={() => setManageCoachesOpen(true)}>
+            <UserCog className="mr-1.5 h-4 w-4" /> Manage coaches
+          </Button>
+        )}
       </div>
 
       {/* ── Tryout details ─────────────────────────────────────────────────── */}
@@ -158,8 +168,15 @@ export default function TryoutViewPage() {
         {tab === "waitlist" && <WaitlistTab tryoutId={id} />}
         {/* {tab === "scoring" && <ScoringTab tryoutId={id} registerId={registerId} />} */}
         {tab === "leaderboard" && <LeaderboardTab tryoutId={id} />}
+        {tab === "questions" && canManageCoaches && <SegmentQuestionsTab tryout={tryout} />}
         {tab === "comms" && <CommsTab tryoutId={id} />}
       </div>
+
+      <ManageCoachesDialog
+        tryoutId={id}
+        open={manageCoachesOpen}
+        onOpenChange={setManageCoachesOpen}
+      />
     </PageShell>
   );
 }

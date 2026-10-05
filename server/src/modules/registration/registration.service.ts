@@ -6,10 +6,13 @@ import { TryoutSlotRepository } from "../tryout/tryout-slot.repository";
 import { SwimmerRepository } from "../swimmer/swimmer.repository";
 import { CreateRegistrationInput } from "./registration.validation";
 import logger from "../../shared/utils/logger";
-import { sendRegistrationReceivedEmail } from "../../shared/utils/mailer";
+import { sendRegistrationReceivedEmail, sendRegistrationCancelledEmail } from "../../shared/utils/mailer";
 import { UserModel } from "../auth/auth.schema";
 import { WaitlistService } from "../waitlist/waitlist.service";
 import { ClubModel } from "../../models/club.model";
+import { config } from "../../config/env";
+
+const TRYOUT_TIMEZONE_LABEL = "CT";
 
 function formatTimeWithAmPm(time: string): string {
   const [hourStr, minuteStr = "00"] = time.trim().split(":");
@@ -18,6 +21,27 @@ function formatTimeWithAmPm(time: string): string {
   const ampm = hour >= 12 ? "PM" : "AM";
   hour = hour % 12 || 12;
   return `${hour}:${minuteStr} ${ampm}`;
+}
+
+function formatFullDate(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function formatCancelledOn(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 export class RegistrationService {
@@ -306,7 +330,8 @@ export class RegistrationService {
         swimmerName: `${swimmerFirstName} ${swimmerLastName}`.trim(),
         tryoutName: tryout?.name || "",
         location: tryout.location || "",
-        slotLabel: `${slot.sessionDate} · ${formatTimeWithAmPm(slot.startTime)} – ${formatTimeWithAmPm(slot.endTime)}`,
+        dateLabel: formatFullDate(slot.sessionDate),
+        timeLabel: `${formatTimeWithAmPm(slot.startTime)} – ${formatTimeWithAmPm(slot.endTime)} (${TRYOUT_TIMEZONE_LABEL})`,
         clubName,
       });
     }
@@ -346,13 +371,47 @@ export class RegistrationService {
 
     logger.info({ registrationId: id, status }, "registration.status.updated");
 
-    // When cancelled, notify all waitlisted parents for this tryout (fire-and-forget)
+    // When cancelled, email the parent a confirmation and notify waitlisted parents (fire-and-forget)
     if (status === "cancelled") {
+      if (existing.status !== "cancelled") {
+        this.sendCancellationEmail(existing).catch((err: unknown) => logger.error({ err }, "registration.cancel.email.failed"));
+      }
       const tryoutIdStr = this.extractId(existing.tryoutId);
       this.waitlistService.notifyWaitlistForTryout(tryoutIdStr).catch((err: unknown) => logger.error({ err }, "waitlist.notify.failed"));
     }
 
     return updated;
+  }
+
+  /**
+   * Sends a registration-cancelled confirmation email to the parent.
+   * Gathers the tryout, slot, parent, and club details the template needs.
+   */
+  private async sendCancellationEmail(registration: PlainRegistration): Promise<void> {
+    const parentId = String(registration.parentId);
+    const parentDetail = await UserModel.findById(parentId).lean();
+    if (!parentDetail) {
+      logger.warn({ parentId, registrationId: registration._id }, "registration.cancel.parent_not_found — cancellation email not sent");
+      return;
+    }
+
+    const tryoutId = this.extractId(registration.tryoutId);
+    const tryout = await this.tryoutRepo.findById(tryoutId);
+    const slot = registration.slotId ? await this.slotRepo.findById(String(registration.slotId)) : null;
+    const club = tryout?.clubId ? await ClubModel.findById(tryout.clubId).lean().exec() : null;
+
+    await sendRegistrationCancelledEmail({
+      to: parentDetail.email,
+      parentName: `${parentDetail.firstName} ${parentDetail.lastName}`.trim(),
+      swimmerName: `${registration.swimmerDetails.firstName} ${registration.swimmerDetails.lastName}`.trim(),
+      tryoutName: tryout?.name ?? "",
+      location: tryout?.location ?? "",
+      dateLabel: slot ? formatFullDate(slot.sessionDate) : "",
+      timeLabel: slot ? `${formatTimeWithAmPm(slot.startTime)} – ${formatTimeWithAmPm(slot.endTime)} (${TRYOUT_TIMEZONE_LABEL})` : "",
+      clubName: club?.name ?? "",
+      cancelledOnLabel: formatCancelledOn(new Date()),
+      viewTryoutsUrl: `${config.LANDING_BASE_URL}/tryouts/${tryoutId}`,
+    });
   }
 
   /**
@@ -423,8 +482,11 @@ export class RegistrationService {
       await this.slotRepo.decrementRegisteredCount(String(existing.slotId));
     }
 
-    // When cancelled, notify all waitlisted parents for this tryout (fire-and-forget)
+    // When cancelled, email the parent a confirmation and notify waitlisted parents (fire-and-forget)
     if (status === "cancelled") {
+      if (existing.status !== "cancelled") {
+        this.sendCancellationEmail(existing).catch((err: unknown) => logger.error({ err }, "registration.cancel.email.failed"));
+      }
       const tryoutIdStr = this.extractId(existing.tryoutId);
       this.waitlistService.notifyWaitlistForTryout(tryoutIdStr).catch((err: unknown) => logger.error({ err }, "waitlist.notify.failed"));
     }

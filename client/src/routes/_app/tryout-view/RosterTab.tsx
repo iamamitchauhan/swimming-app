@@ -1,23 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronsUpDown,
   ChevronUp,
   ClipboardList,
   Clock,
+  Filter,
   Loader2,
   Mail,
   MoreVertical,
   RotateCcw,
   Undo2,
-  UserCog,
   X,
   XCircle,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ManageCoachesDialog } from "./ManageCoachesDialog";
 import { SCORING_CRITERIA } from "@/lib/scoring-criteria";
 import {
   AlertDialog,
@@ -55,7 +55,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -69,6 +68,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SearchInput } from "@/components/search-input";
 import { toast } from "sonner";
 
@@ -245,7 +245,6 @@ export function RosterTab({ tryoutId }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
   const [pendingRegId, setPendingRegId] = useState<string | null>(null);
-  const [manageCoachesOpen, setManageCoachesOpen] = useState(false);
   const [resetConfirmRegId, setResetConfirmRegId] = useState<string | null>(null);
   const [sentEmailPreview, setSentEmailPreview] = useState<{
     regId: string;
@@ -255,6 +254,7 @@ export function RosterTab({ tryoutId }: Props) {
   // Registration ids the current bulk offer/reject targets (after skipping
   // ineligible rows). Empty for single-row actions.
   const [bulkTargetIds, setBulkTargetIds] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const user = useAuthStore((state) => state.user);
   const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
@@ -448,6 +448,60 @@ export function RosterTab({ tryoutId }: Props) {
         ? "Not checked in"
         : "All check-ins";
 
+  const selectedRecommendations = rosterParams.coachRecommendations ?? [];
+  const recommendationName = (id: string) =>
+    id === REJECTED_VALUE ? "Reject" : (groups?.find((g) => g._id === id)?.name ?? id);
+
+  // One chip per active filter group, shown next to the Filters button.
+  const activeChips: { key: string; label: string; onRemove: () => void }[] = [];
+  if (rosterParams.checkedIn !== undefined) {
+    activeChips.push({
+      key: "checkedIn",
+      label: `Check-in: ${checkedInLabel}`,
+      onRemove: () => onParamsChange({ checkedIn: undefined, page: 1 }),
+    });
+  }
+  if (rosterParams.segmentId) {
+    activeChips.push({
+      key: "segment",
+      label: `Segment: ${segmentLabel}`,
+      onRemove: () => onParamsChange({ segmentId: undefined, page: 1 }),
+    });
+  }
+  if (rosterParams.status) {
+    activeChips.push({
+      key: "status",
+      label: `Status: ${statusLabel}`,
+      onRemove: () => onParamsChange({ status: undefined, page: 1 }),
+    });
+  }
+  if (selectedRecommendations.length > 0) {
+    activeChips.push({
+      key: "recommendation",
+      label: `Recommendation: ${selectedRecommendations.map(recommendationName).join(", ")}`,
+      onRemove: () => onParamsChange({ coachRecommendations: undefined, page: 1 }),
+    });
+  }
+  if (rosterParams.emailSent !== undefined) {
+    activeChips.push({
+      key: "emailSent",
+      label: `Email: ${emailSentLabel}`,
+      onRemove: () => onParamsChange({ emailSent: undefined, page: 1 }),
+    });
+  }
+  const activeFilterCount = activeChips.length;
+
+  function clearAllFilters() {
+    onParamsChange({
+      checkedIn: undefined,
+      segmentId: undefined,
+      status: undefined,
+      coachRecommendations: undefined,
+      emailSent: undefined,
+      page: 1,
+    });
+  }
+
   return (
     <div>
       {/* ── Filters ───────────────────────────────────────────────────────── */}
@@ -460,122 +514,162 @@ export function RosterTab({ tryoutId }: Props) {
           debounceMs={350}
         />
 
-        {/* Check-in filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
-              <CheckCircle2 className="h-3.5 w-3.5 text-gray-500" />
-              {checkedInLabel}
-              <ChevronDown className="h-4 w-4 text-gray-500" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => onParamsChange({ checkedIn: undefined, page: 1 })}>
-              All check-ins
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onParamsChange({ checkedIn: true, page: 1 })}>
-              Checked in
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onParamsChange({ checkedIn: false, page: 1 })}>
-              Not checked in
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Segment filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
-              {segmentLabel}
-              <ChevronDown className="h-4 w-4 text-gray-500" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {(!isCoach || visibleSegments.length > 1) && (
-              <DropdownMenuItem onClick={() => onParamsChange({ segmentId: undefined, page: 1 })}>
-                All segments
-              </DropdownMenuItem>
-            )}
-            {visibleSegments.map((seg, i) => (
-              <DropdownMenuItem
-                key={i}
-                onClick={() => onParamsChange({ segmentId: (seg as any).id ?? seg.name, page: 1 })}
-              >
-                {seg.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Status filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer capitalize">
-              {statusLabel}
-              <ChevronDown className="h-4 w-4 text-gray-500" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => onParamsChange({ status: undefined, page: 1 })}>
-              All status
-            </DropdownMenuItem>
-            {ALL_STATUSES.map((s) => (
-              <DropdownMenuItem
-                className="capitalize"
-                key={s}
-                onClick={() => onParamsChange({ status: s, page: 1 })}
-              >
-                {s}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Coach Recommendation Filter */}
-        <CoachRecommendationFilter
-          groups={groups ?? []}
-          selected={rosterParams.coachRecommendations ?? []}
-          onChange={(next) =>
-            onParamsChange({ coachRecommendations: next.length ? next : undefined, page: 1 })
-          }
-        />
-
-        {/* Email-sent filter — three states:
-            - All emails        → no filter
-            - Email sent        → only registrations with ≥1 email_audit_logs row
-            - Remaining to send → only registrations with no email_audit_logs row
-            Resolved server-side from email_audit_logs. */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
-              <Mail className="h-3.5 w-3.5 text-gray-500" />
-              {emailSentLabel}
-              <ChevronDown className="h-4 w-4 text-gray-500" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => onParamsChange({ emailSent: undefined, page: 1 })}>
-              All registrations
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onParamsChange({ emailSent: true, page: 1 })}>
-              With email sent
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onParamsChange({ emailSent: false, page: 1 })}>
-              Without email sent
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {canManageCoaches && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="ml-auto"
-            onClick={() => setManageCoachesOpen(true)}
+        {activeChips.map((chip) => (
+          <span
+            key={chip.key}
+            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm"
           >
-            <UserCog className="mr-1.5 h-4 w-4" /> Manage coaches
-          </Button>
+            {chip.label}
+            <button
+              type="button"
+              onClick={chip.onRemove}
+              className="text-gray-400 hover:text-gray-700 cursor-pointer"
+              aria-label={`Remove ${chip.label} filter`}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </span>
+        ))}
+
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
+          >
+            Clear all
+          </button>
         )}
+
+        <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <PopoverTrigger asChild>
+            <Button className="shrink-0 gap-2">
+              <Filter className="h-4 w-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="rounded bg-white/25 px-1.5 text-xs font-medium">
+                  {activeFilterCount}
+                </span>
+              )}
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-[28rem] p-0">
+            <div className="grid gap-5 p-4">
+              <FilterGroup title="Check-in">
+                <FilterChip
+                  selected={rosterParams.checkedIn === undefined}
+                  onClick={() => onParamsChange({ checkedIn: undefined, page: 1 })}
+                >
+                  All check-ins
+                </FilterChip>
+                <FilterChip
+                  selected={rosterParams.checkedIn === true}
+                  onClick={() => onParamsChange({ checkedIn: true, page: 1 })}
+                >
+                  Checked in
+                </FilterChip>
+                <FilterChip
+                  selected={rosterParams.checkedIn === false}
+                  onClick={() => onParamsChange({ checkedIn: false, page: 1 })}
+                >
+                  Not checked in
+                </FilterChip>
+              </FilterGroup>
+
+              <FilterGroup title="Segment">
+                {(!isCoach || visibleSegments.length > 1) && (
+                  <FilterChip
+                    selected={!rosterParams.segmentId}
+                    onClick={() => onParamsChange({ segmentId: undefined, page: 1 })}
+                  >
+                    All segments
+                  </FilterChip>
+                )}
+                {visibleSegments.map((seg, i) => {
+                  const value = (seg as any).id ?? seg.name;
+                  return (
+                    <FilterChip
+                      key={i}
+                      selected={rosterParams.segmentId === value}
+                      onClick={() => onParamsChange({ segmentId: value, page: 1 })}
+                    >
+                      {seg.name}
+                    </FilterChip>
+                  );
+                })}
+              </FilterGroup>
+
+              <FilterGroup title="Status">
+                <FilterChip
+                  selected={!rosterParams.status}
+                  onClick={() => onParamsChange({ status: undefined, page: 1 })}
+                >
+                  All statuses
+                </FilterChip>
+                {ALL_STATUSES.map((s) => (
+                  <FilterChip
+                    key={s}
+                    selected={rosterParams.status === s}
+                    onClick={() => onParamsChange({ status: s, page: 1 })}
+                  >
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </FilterChip>
+                ))}
+              </FilterGroup>
+
+              <FilterGroup title="Recommendation">
+                <CoachRecommendationChips
+                  groups={groups ?? []}
+                  selected={selectedRecommendations}
+                  onChange={(next) =>
+                    onParamsChange({
+                      coachRecommendations: next.length ? next : undefined,
+                      page: 1,
+                    })
+                  }
+                />
+              </FilterGroup>
+
+              {/* Email-sent filter — three states:
+                  - All emails        → no filter
+                  - Email sent        → only registrations with ≥1 email_audit_logs row
+                  - Remaining to send → only registrations with no email_audit_logs row
+                  Resolved server-side from email_audit_logs. */}
+              <FilterGroup title="Email">
+                <FilterChip
+                  selected={rosterParams.emailSent === undefined}
+                  onClick={() => onParamsChange({ emailSent: undefined, page: 1 })}
+                >
+                  All registrations
+                </FilterChip>
+                <FilterChip
+                  selected={rosterParams.emailSent === true}
+                  onClick={() => onParamsChange({ emailSent: true, page: 1 })}
+                >
+                  With email sent
+                </FilterChip>
+                <FilterChip
+                  selected={rosterParams.emailSent === false}
+                  onClick={() => onParamsChange({ emailSent: false, page: 1 })}
+                >
+                  Without email sent
+                </FilterChip>
+              </FilterGroup>
+            </div>
+
+            <div className="flex items-center justify-between border-t px-4 py-3">
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                Clear all
+              </button>
+              <Button onClick={() => setFiltersOpen(false)}>Apply filter</Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* ── Table ─────────────────────────────────────────────────────────── */}
@@ -1248,12 +1342,6 @@ export function RosterTab({ tryoutId }: Props) {
         onOpenChange={setModalOpen}
       />
 
-      <ManageCoachesDialog
-        tryoutId={tryoutId}
-        open={manageCoachesOpen}
-        onOpenChange={setManageCoachesOpen}
-      />
-
       <SentEmailPreviewDialog
         open={sentEmailPreview !== null}
         onOpenChange={(v) => {
@@ -1273,13 +1361,49 @@ const REJECTED_VALUE = "__rejected__";
 
 // ─── Coach Recommendation Filter (multi-select) ───────────────────────────────
 
-interface CoachRecommendationFilterProps {
+/** Toggleable pill used inside the roster filters popover. */
+function FilterChip({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition cursor-pointer ${
+        selected
+          ? "border-gray-900 bg-gray-900 text-white"
+          : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+      }`}
+    >
+      {selected && <Check className="h-3.5 w-3.5" />}
+      {children}
+    </button>
+  );
+}
+
+/** A labelled group of filter chips inside the roster filters popover. */
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{title}</p>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
+interface CoachRecommendationChipsProps {
   groups: { _id: string; name: string; color?: string }[];
   selected: string[];
   onChange: (next: string[]) => void;
 }
 
-function CoachRecommendationFilter({ groups, selected, onChange }: CoachRecommendationFilterProps) {
+function CoachRecommendationChips({ groups, selected, onChange }: CoachRecommendationChipsProps) {
   const allOptions = [...groups.map((g) => g._id), REJECTED_VALUE];
   // `selected = []` (no filter) is treated as "all selected" visually.
   // This keeps unassigned registrations (null recommendation) visible,
@@ -1304,59 +1428,34 @@ function CoachRecommendationFilter({ groups, selected, onChange }: CoachRecommen
     }
   }
 
-  const groupName = (id: string) =>
-    id === REJECTED_VALUE ? "Reject" : (groups.find((g) => g._id === id)?.name ?? id);
-  const triggerLabel = isAllSelected
-    ? "All recommendations"
-    : selected.length <= 2
-      ? selected.map(groupName).join(", ")
-      : `${selected.slice(0, 2).map(groupName).join(", ")} +${selected.length - 2} more`;
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer w-56 justify-between">
-          <span className="truncate">{triggerLabel}</span>
-          <ChevronDown className="h-4 w-4 text-gray-500 shrink-0" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        <DropdownMenuItem onSelect={() => onChange([])} className="cursor-pointer">
-          All recommendations
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        {groups.map((group) => (
-          <DropdownMenuCheckboxItem
-            key={group._id}
-            checked={selectedSet.has(group._id)}
-            onCheckedChange={() => toggle(group._id)}
-            onSelect={(e) => e.preventDefault()}
-            className="cursor-pointer flex items-center gap-2"
-          >
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: group.color || "#e5e7eb" }}
-              aria-hidden="true"
-            />
-            {group.name}
-          </DropdownMenuCheckboxItem>
-        ))}
-        {groups.length > 0 && <DropdownMenuSeparator />}
-        <DropdownMenuCheckboxItem
-          checked={selectedSet.has(REJECTED_VALUE)}
-          onCheckedChange={() => toggle(REJECTED_VALUE)}
-          onSelect={(e) => e.preventDefault()}
-          className="cursor-pointer flex items-center gap-2"
+    <>
+      <FilterChip selected={isAllSelected} onClick={() => onChange([])}>
+        All recommendations
+      </FilterChip>
+      {groups.map((group) => (
+        <FilterChip
+          key={group._id}
+          selected={selectedSet.has(group._id)}
+          onClick={() => toggle(group._id)}
         >
           <span
             className="h-2 w-2 rounded-full"
-            style={{ backgroundColor: "#ef4444" }}
+            style={{ backgroundColor: group.color || "#e5e7eb" }}
             aria-hidden="true"
           />
-          Reject
-        </DropdownMenuCheckboxItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          {group.name}
+        </FilterChip>
+      ))}
+      <FilterChip selected={selectedSet.has(REJECTED_VALUE)} onClick={() => toggle(REJECTED_VALUE)}>
+        <span
+          className="h-2 w-2 rounded-full"
+          style={{ backgroundColor: "#ef4444" }}
+          aria-hidden="true"
+        />
+        Reject
+      </FilterChip>
+    </>
   );
 }
 

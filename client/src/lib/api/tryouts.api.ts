@@ -1,5 +1,6 @@
 import { apiClient, api } from "./client";
 import type { SelectedQuestion } from "./question-library.api";
+import type { ScoringQuestion } from "./scoring-questions.api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,6 +105,18 @@ export interface Tryout {
 }
 
 // ─── List params / result ─────────────────────────────────────────────────────
+
+/** The club-bank evaluation questions a single tryout segment is scored against. */
+export interface TryoutSegmentQuestions {
+  segmentId: string;
+  questions: ScoringQuestion[];
+}
+
+/** A per-segment selection sent when saving. */
+export interface SaveTryoutSegmentQuestionsInput {
+  segmentId: string;
+  questionIds: string[];
+}
 
 export type TryoutSortField = "name" | "status" | "createdAt" | "updatedAt";
 export type SortOrder = "asc" | "desc";
@@ -262,6 +275,23 @@ export const tryoutsApi = {
     api<{ questions: SelectedQuestion[] }>(
       apiClient.put(`/tryouts/${id}/registration-questions`, { questions }),
     ).then((res) => res.questions),
+
+  /**
+   * GET /tryouts/:id/segment-questions
+   * Returns each segment with the club-bank questions it is scored against.
+   */
+  getSegmentQuestions: (id: string): Promise<TryoutSegmentQuestions[]> =>
+    api<TryoutSegmentQuestions[]>(apiClient.get(`/tryouts/${id}/segment-questions`)),
+
+  /**
+   * PUT /tryouts/:id/segment-questions
+   * Replaces every segment's question selection.
+   */
+  saveSegmentQuestions: (
+    id: string,
+    segments: SaveTryoutSegmentQuestionsInput[],
+  ): Promise<TryoutSegmentQuestions[]> =>
+    api<TryoutSegmentQuestions[]>(apiClient.put(`/tryouts/${id}/segment-questions`, { segments })),
 
   /**
    * GET /tryouts/:id/slots

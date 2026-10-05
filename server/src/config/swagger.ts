@@ -787,6 +787,89 @@ const options: swaggerJsdoc.Options = {
             updatedAt: { type: "string", format: "date-time" },
           },
         },
+        // ─── Scoring questions ────────────────────────────────────────────────
+        ScoringQuestion: {
+          type: "object",
+          description: "A club-wide evaluation question. type selects the answer control: YESNO (pass/fail), RATING (1-5) or TEXT (free text).",
+          properties: {
+            _id: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c20" },
+            clubId: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0e" },
+            category: { type: "string", nullable: true, example: "Freestyle" },
+            sourceFileName: { type: "string", nullable: true, example: "scoring-questions-sample.csv" },
+            label: { type: "string", maxLength: 500, example: "Bilateral breathing" },
+            type: { type: "string", enum: ["YESNO", "RATING", "TEXT"], example: "YESNO" },
+            orderIndex: { type: "integer", example: 0 },
+            createdAt: { type: "string", format: "date-time", nullable: true },
+            updatedAt: { type: "string", format: "date-time", nullable: true },
+          },
+        },
+        ScoringQuestionPreview: {
+          type: "object",
+          description: "Dry-run result of parsing a scoring-question sheet (nothing written).",
+          properties: {
+            totalRows: { type: "integer", example: 25 },
+            valid: { type: "integer", example: 22 },
+            duplicates: { type: "integer", example: 2 },
+            errors: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  row: { type: "integer", example: 7 },
+                  message: { type: "string", example: 'Invalid or missing "type"' },
+                },
+              },
+            },
+            rows: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  row: { type: "integer" },
+                  category: { type: "string", nullable: true },
+                  label: { type: "string" },
+                  type: { type: "string", enum: ["YESNO", "RATING", "TEXT"] },
+                },
+              },
+            },
+          },
+        },
+        ScoringQuestionImportResult: {
+          type: "object",
+          properties: {
+            totalRows: { type: "integer", example: 25 },
+            created: { type: "integer", example: 22 },
+            skipped: { type: "integer", example: 3 },
+            questions: {
+              type: "array",
+              items: { $ref: "#/components/schemas/ScoringQuestion" },
+            },
+            errors: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  row: { type: "integer" },
+                  message: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        TryoutSegmentQuestions: {
+          type: "object",
+          properties: {
+            segmentId: {
+              type: "string",
+              description: "segment.id ?? segment.name",
+              example: "8&U",
+            },
+            questions: {
+              type: "array",
+              items: { $ref: "#/components/schemas/ScoringQuestion" },
+            },
+          },
+        },
       },
       responses: {
         Unauthorized: {
@@ -872,6 +955,7 @@ const options: swaggerJsdoc.Options = {
       { name: "Email Templates", description: "Per-group email template configuration" },
       { name: "Email Audit Logs", description: "Audit trail of offer/reject email sends (single and bulk)" },
       { name: "Groups", description: "Club group management" },
+      { name: "Scoring Questions", description: "Club-wide evaluation question bank for tryout segment scoring" },
       { name: "Public", description: "Public endpoints for the landing page (no auth required)" },
       { name: "Parent Auth", description: "Parent authentication (registration, email verification, OTP login)" },
       { name: "Admin Registrations", description: "Admin/super_admin registration lookup by parent" },

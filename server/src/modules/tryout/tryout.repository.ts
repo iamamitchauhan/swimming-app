@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { TryoutModel } from "../../models/tryout.model";
 import { RegistrationModel } from "../../models/registration.model";
+import { TryoutSegmentQuestionModel } from "../../models/tryout-segment-question.model";
 
 export type PlainTryout = {
   _id: string;
@@ -56,6 +57,12 @@ export type PlainTryout = {
   startDate?: string | null;
   totalSlots?: number;
   registeredCount?: number;
+};
+
+export type PlainSegmentQuestionRow = {
+  segmentId: string;
+  questionId: string;
+  orderIndex: number;
 };
 
 export type TryoutSortField = "name" | "status" | "createdAt" | "updatedAt";
@@ -562,5 +569,26 @@ export class TryoutRepository {
       registeredFamilies: familiesResult.length,
       participatingClubs: stats?.clubIds?.length ?? 0,
     };
+  }
+
+  /** Raw segment→question links for a tryout, in display order. */
+  async findSegmentQuestionRows(tryoutId: string): Promise<PlainSegmentQuestionRow[]> {
+    return TryoutSegmentQuestionModel.find({ tryoutId }).sort({ orderIndex: 1 }).lean<PlainSegmentQuestionRow[]>().exec();
+  }
+
+  /** Replace every segment's question selection for a tryout. */
+  async replaceSegmentQuestions(tryoutId: string, selections: { segmentId: string; questionIds: string[] }[]): Promise<void> {
+    await TryoutSegmentQuestionModel.deleteMany({ tryoutId });
+    const docs = selections.flatMap((selection) =>
+      selection.questionIds.map((questionId, index) => ({
+        tryoutId,
+        segmentId: selection.segmentId,
+        questionId,
+        orderIndex: index,
+      })),
+    );
+    if (docs.length > 0) {
+      await TryoutSegmentQuestionModel.insertMany(docs);
+    }
   }
 }

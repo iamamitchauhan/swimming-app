@@ -25,6 +25,7 @@ import { registrationRouter, adminRegistrationRouter } from "./modules/registrat
 import { publicRouter } from "./modules/public/public.routes";
 import { parentRouter } from "./modules/parent/parent.routes";
 import { questionLibraryRouter } from "./modules/question-library/question-library.routes";
+import { scoringQuestionRouter } from "./modules/scoring-question/scoring-question.routes";
 import { waitlistRouter } from "./modules/waitlist/waitlist.routes";
 import { emailTemplateRouter } from "./modules/email-template/email-template.routes";
 import { groupRouter } from "./modules/group/group.routes";
@@ -134,6 +135,8 @@ export function createApp(): express.Application {
   // Module routes
   app.use(`${API_PREFIX}/auth`, authRouter);
   app.use(`${API_PREFIX}/onboarding`, onboardingRouter);
+  // Club-wide evaluation-question bank for tryout segment scoring.
+  app.use(`${API_PREFIX}/clubs/:clubId/scoring-questions`, scoringQuestionRouter);
   app.use(`${API_PREFIX}/clubs`, clubRouter);
   app.use(`${API_PREFIX}/invitations`, invitationRouter);
   app.use(`${API_PREFIX}/users`, userRouter);
