@@ -294,6 +294,7 @@ export function LeaderboardTab({ tryoutId }: Props) {
                                   ? undefined
                                   : (l.coach_recommendation ?? null)
                               }
+                              disabled={l.status === "rejected"}
                             />
                           </div>
                         )}
@@ -371,6 +372,7 @@ export function LeaderboardTab({ tryoutId }: Props) {
                                   ? undefined
                                   : (l.coach_recommendation ?? null)
                               }
+                              disabled={l.status === "rejected"}
                             />
                           ) : (
                             <span className="text-sm text-gray-700">
@@ -448,10 +450,13 @@ function CoachRecommendationSelect({
   tryoutId,
   regId,
   value,
+  disabled,
 }: {
   tryoutId: string;
   regId: string;
   value: string | undefined | null;
+  /** Read-only mode — shows the recorded value but can't be changed. */
+  disabled?: boolean;
 }) {
   const saveScore = useSaveScore(tryoutId);
   const { data: groups, isLoading } = useGroups();
@@ -465,7 +470,7 @@ function CoachRecommendationSelect({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          disabled={isLoading}
+          disabled={isLoading || disabled}
           className="inline-flex items-center gap-1.5 text-xs sm:text-sm px-2.5 py-1.5 rounded-full border font-medium transition cursor-pointer hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 border-gray-200"
         >
           {isLoading ? (

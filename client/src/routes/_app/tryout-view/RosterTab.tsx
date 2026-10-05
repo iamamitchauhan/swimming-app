@@ -666,7 +666,7 @@ export function RosterTab({ tryoutId }: Props) {
               >
                 Clear all
               </button>
-              <Button onClick={() => setFiltersOpen(false)}>Apply filter</Button>
+              <Button onClick={() => setFiltersOpen(false)}>Done</Button>
             </div>
           </PopoverContent>
         </Popover>
@@ -716,8 +716,10 @@ export function RosterTab({ tryoutId }: Props) {
                 Status
                 <SortIcon field="status" active={sortBy} order={sortOrder} />
               </TableHead>
-              <TableHead>Yes/No</TableHead>
-              <TableHead>Evaluation</TableHead>
+              <TableHead>
+                <div>Evaluation</div>
+                <div className="text-center text-[11px] font-normal text-gray-400">Yes/No</div>
+              </TableHead>
               <TableHead>Coach Recommendation</TableHead>
               <TableHead>Action</TableHead>
             </TableRow>
@@ -725,7 +727,7 @@ export function RosterTab({ tryoutId }: Props) {
           <TableBody className="divide-y divide-gray-50">
             {loading && (
               <TableRow>
-                <TableCell colSpan={12} className="py-10 text-center text-gray-400">
+                <TableCell colSpan={11} className="py-10 text-center text-gray-400">
                   <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
                   Loading…
                 </TableCell>
@@ -733,7 +735,7 @@ export function RosterTab({ tryoutId }: Props) {
             )}
             {!loading && registrations.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} className="py-10 text-center text-gray-400">
+                <TableCell colSpan={11} className="py-10 text-center text-gray-400">
                   No registrations found
                 </TableCell>
               </TableRow>
@@ -797,9 +799,6 @@ export function RosterTab({ tryoutId }: Props) {
                     </TableCell>
 
                     <TableCell className="px-4 py-3 font-semibold text-blue-700">
-                      <YesNoValue registration={r} />
-                    </TableCell>
-                    <TableCell className="px-4 py-3 font-semibold text-blue-700">
                       <ScoreControl
                         registration={r}
                         tryoutId={tryoutId}
@@ -860,135 +859,144 @@ export function RosterTab({ tryoutId }: Props) {
       </div>
 
       {/* ── Bulk action bar ───────────────────────────────────────────────── */}
+      {/* Mobile: full-width bottom sheet with a 2-column action grid.
+          Tablet (md+): centered floating panel with every action on one row.
+          Desktop (xl+): the same panel collapses into the compact inline pill. */}
       {someSelected && (
-        <div className="fixed bottom-4 left-1/2 z-50 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl bg-gray-900 px-4 py-3 text-xs text-white shadow-2xl sm:bottom-6 sm:px-5 sm:text-sm">
-          <span className="flex items-center gap-2 font-semibold">
-            <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-500 text-xs font-bold">
-              {selectedIds.size}
+        <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col gap-3 border-t border-gray-700 bg-gray-900 px-4 pt-3 pb-4 text-sm text-white shadow-2xl md:inset-x-4 md:bottom-6 md:mx-auto md:max-w-3xl md:rounded-2xl md:border xl:max-w-5xl xl:flex-row xl:flex-wrap xl:items-center xl:justify-center xl:gap-x-3 xl:gap-y-2 xl:py-3">
+          <div className="flex items-center justify-between gap-2 border-b border-gray-700 pb-3 xl:justify-start xl:border-0 xl:pb-0">
+            <span className="flex items-center gap-2 font-semibold">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-bold">
+                {selectedIds.size}
+              </span>
+              Selected
             </span>
-            Selected
-          </span>
-          <div className="h-4 w-px bg-gray-600" />
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            className="flex items-center gap-1.5 text-gray-300 hover:text-white transition cursor-pointer"
-          >
-            <X className="h-3.5 w-3.5" /> Clear all
-          </button>
-          <div className="h-4 w-px bg-gray-600" />
-          <button
-            onClick={async () => {
-              if (checkInEligibleRows.length === 0) {
-                toast.error("No swimmers can be checked in", {
-                  description: "Cancelled and waitlisted registrations can't be checked in.",
-                });
-                return;
-              }
-              notifySkipped(
-                selectedRows.length - checkInEligibleRows.length,
-                "Cancelled and waitlisted registrations can't be checked in.",
-              );
-              if (
-                await setCheckIn(
-                  checkInEligibleRows.map((r) => r.id),
-                  true,
-                )
-              ) {
-                setSelectedIds(new Set());
-              }
-            }}
-            disabled={checkInEligibleRows.some((r) => pendingRegIds.includes(r.id))}
-            className="flex items-center gap-1.5 font-medium text-emerald-300 hover:text-emerald-200 transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <CheckCircle2 className="h-4 w-4" /> Check in
-          </button>
-          <button
-            onClick={async () => {
-              const ids = Array.from(selectedIds);
-              if (await setCheckIn(ids, false)) setSelectedIds(new Set());
-            }}
-            disabled={Array.from(selectedIds).some((id) => pendingRegIds.includes(id))}
-            className="flex items-center gap-1.5 font-medium text-gray-300 hover:text-white transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Undo2 className="h-4 w-4" /> Un-check
-          </button>
-          <div className="h-4 w-px bg-gray-600" />
-          <button
-            onClick={() => {
-              if (offerRejectEligibleRows.length === 0) {
-                toast.error("No swimmers can be offered", {
-                  description: "Only registered swimmers can be offered.",
-                });
-                return;
-              }
-              if (!validateOfferCoachRecommendation(offerRejectEligibleRows)) return;
-              notifySkipped(
-                selectedRows.length - offerRejectEligibleRows.length,
-                "Only registered swimmers were included.",
-              );
-              // When exactly one swimmer is eligible, treat it as a single
-              // action so the email preview can be fetched for that swimmer.
-              if (offerRejectEligibleRows.length === 1) {
-                setPendingRegId(offerRejectEligibleRows[0].id);
-              }
-              setBulkTargetIds(offerRejectEligibleRows.map((r) => r.id));
-              setBulkAction("offered");
-              setConfirmOpen(true);
-            }}
-            className="flex items-center gap-1.5 text-green-400 hover:text-green-300 transition cursor-pointer font-medium"
-          >
-            <CheckCircle2 className="h-4 w-4" /> Offer
-          </button>
-          <button
-            onClick={() => {
-              if (offerRejectEligibleRows.length === 0) {
-                toast.error("No swimmers can be rejected", {
-                  description: "Only registered swimmers can be rejected.",
-                });
-                return;
-              }
-              if (!validateRejectCoachRecommendation(offerRejectEligibleRows)) return;
-              notifySkipped(
-                selectedRows.length - offerRejectEligibleRows.length,
-                "Only registered swimmers were included.",
-              );
-              if (offerRejectEligibleRows.length === 1) {
-                setPendingRegId(offerRejectEligibleRows[0].id);
-              }
-              setBulkTargetIds(offerRejectEligibleRows.map((r) => r.id));
-              setBulkAction("rejected");
-              setConfirmOpen(true);
-            }}
-            className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition cursor-pointer font-medium"
-          >
-            <XCircle className="h-4 w-4" /> Reject
-          </button>
-          {selectedIds.size <= 4 && (
-            <>
-              <div className="h-4 w-px bg-gray-600" />
-              <button
-                onClick={() => {
-                  if (scoreEligibleRows.length === 0) {
-                    toast.error("No swimmers can be scored", {
-                      description:
-                        "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers can't be scored.",
-                    });
-                    return;
-                  }
-                  notifySkipped(
-                    selectedRows.length - scoreEligibleRows.length,
-                    "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers were skipped.",
-                  );
-                  navigate(
-                    `/tryouts/view/${tryoutId}/bulk-scoring?ids=${scoreEligibleRows.map((r) => r.id).join(",")}`,
-                  );
-                }}
-                className="flex items-center gap-1.5 text-blue-300 hover:text-blue-200 transition cursor-pointer font-medium"
-              >
-                <ClipboardList className="h-4 w-4" /> Score {scoreEligibleRows.length} together
-              </button>
-            </>
-          )}
+            <div className="hidden h-4 w-px bg-gray-600 xl:block" />
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="flex min-h-10 items-center gap-1.5 rounded-lg border border-gray-700 px-3 text-gray-300 transition hover:text-white xl:min-h-0 xl:rounded-none xl:border-0 xl:px-0"
+            >
+              <X className="h-3.5 w-3.5" /> Clear all
+            </button>
+          </div>
+
+          <div className="hidden h-4 w-px bg-gray-600 xl:block" />
+
+          <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center md:justify-center md:gap-2 xl:gap-x-3 xl:gap-y-2">
+            <button
+              onClick={async () => {
+                if (checkInEligibleRows.length === 0) {
+                  toast.error("No swimmers can be checked in", {
+                    description: "Cancelled and waitlisted registrations can't be checked in.",
+                  });
+                  return;
+                }
+                notifySkipped(
+                  selectedRows.length - checkInEligibleRows.length,
+                  "Cancelled and waitlisted registrations can't be checked in.",
+                );
+                if (
+                  await setCheckIn(
+                    checkInEligibleRows.map((r) => r.id),
+                    true,
+                  )
+                ) {
+                  setSelectedIds(new Set());
+                }
+              }}
+              disabled={checkInEligibleRows.some((r) => pendingRegIds.includes(r.id))}
+              className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 font-medium text-emerald-300 transition hover:text-emerald-200 disabled:cursor-not-allowed disabled:opacity-50 xl:min-h-0 xl:justify-start xl:rounded-none xl:border-0 xl:px-0"
+            >
+              <CheckCircle2 className="h-4 w-4" /> Check in
+            </button>
+            <button
+              onClick={async () => {
+                const ids = Array.from(selectedIds);
+                if (await setCheckIn(ids, false)) setSelectedIds(new Set());
+              }}
+              disabled={Array.from(selectedIds).some((id) => pendingRegIds.includes(id))}
+              className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 font-medium text-gray-300 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50 xl:min-h-0 xl:justify-start xl:rounded-none xl:border-0 xl:px-0"
+            >
+              <Undo2 className="h-4 w-4" /> Un-check
+            </button>
+            <div className="hidden h-4 w-px bg-gray-600 xl:block" />
+            <button
+              onClick={() => {
+                if (offerRejectEligibleRows.length === 0) {
+                  toast.error("No swimmers can be offered", {
+                    description: "Only registered swimmers can be offered.",
+                  });
+                  return;
+                }
+                if (!validateOfferCoachRecommendation(offerRejectEligibleRows)) return;
+                notifySkipped(
+                  selectedRows.length - offerRejectEligibleRows.length,
+                  "Only registered swimmers were included.",
+                );
+                // When exactly one swimmer is eligible, treat it as a single
+                // action so the email preview can be fetched for that swimmer.
+                if (offerRejectEligibleRows.length === 1) {
+                  setPendingRegId(offerRejectEligibleRows[0].id);
+                }
+                setBulkTargetIds(offerRejectEligibleRows.map((r) => r.id));
+                setBulkAction("offered");
+                setConfirmOpen(true);
+              }}
+              className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 font-medium text-green-400 transition hover:text-green-300 xl:min-h-0 xl:justify-start xl:rounded-none xl:border-0 xl:px-0"
+            >
+              <CheckCircle2 className="h-4 w-4" /> Offer
+            </button>
+            <button
+              onClick={() => {
+                if (offerRejectEligibleRows.length === 0) {
+                  toast.error("No swimmers can be rejected", {
+                    description: "Only registered swimmers can be rejected.",
+                  });
+                  return;
+                }
+                if (!validateRejectCoachRecommendation(offerRejectEligibleRows)) return;
+                notifySkipped(
+                  selectedRows.length - offerRejectEligibleRows.length,
+                  "Only registered swimmers were included.",
+                );
+                if (offerRejectEligibleRows.length === 1) {
+                  setPendingRegId(offerRejectEligibleRows[0].id);
+                }
+                setBulkTargetIds(offerRejectEligibleRows.map((r) => r.id));
+                setBulkAction("rejected");
+                setConfirmOpen(true);
+              }}
+              className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 font-medium text-red-400 transition hover:text-red-300 xl:min-h-0 xl:justify-start xl:rounded-none xl:border-0 xl:px-0"
+            >
+              <XCircle className="h-4 w-4" /> Reject
+            </button>
+            {selectedIds.size <= 4 && (
+              <>
+                <div className="hidden h-4 w-px bg-gray-600 xl:block" />
+                <button
+                  onClick={() => {
+                    if (scoreEligibleRows.length === 0) {
+                      toast.error("No swimmers can be scored", {
+                        description:
+                          "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers can't be scored.",
+                      });
+                      return;
+                    }
+                    notifySkipped(
+                      selectedRows.length - scoreEligibleRows.length,
+                      "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers were skipped.",
+                    );
+                    navigate(
+                      `/tryouts/view/${tryoutId}/bulk-scoring?ids=${scoreEligibleRows.map((r) => r.id).join(",")}`,
+                    );
+                  }}
+                  className="col-span-2 flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 font-medium text-blue-300 transition hover:text-blue-200 xl:col-span-1 xl:min-h-0 xl:justify-start xl:rounded-none xl:border-0 xl:px-0"
+                >
+                  <ClipboardList className="h-4 w-4" /> Score {scoreEligibleRows.length} together
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
@@ -1421,27 +1429,13 @@ function ScoreControl({
   if (isInactive(r)) return <span className="text-gray-400">—</span>;
 
   if (canAddScore(r)) {
-    return (
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)}
-          className="cursor-pointer text-sm hover:underline"
-        >
-          <div>{avg(r) || <span className="">Add Score</span>}</div>
-          {/* <div className="text-xs font-normal text-gray-400">
-            {(() => {
-              const completion = detailedScoreCompletion(r);
-              return `${completion.pct}% (${completion.done}/${completion.total})`;
-            })()}
-          </div>
-          <div className="mt-1 h-1 w-20 rounded-full bg-gray-100 overflow-hidden">
-            <div
-              className="h-full bg-blue-600 transition-all"
-              style={{ width: `${detailedScoreCompletion(r).pct}%` }}
-            />
-          </div> */}
-        </button>
-        {avg(r) ? (
+    const { yes, no } = countYesNo(r);
+    // Once Yes/No answers exist, the Evaluation cell carries the tally + reset
+    // (the standalone Yes/No column is gone).
+    if (yes + no > 0) {
+      return (
+        <div className="flex items-center gap-2">
+          <YesNoValue registration={r} />
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1455,8 +1449,18 @@ function ScoreControl({
               <TooltipContent>Reset score</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        ) : null}
-      </div>
+        </div>
+      );
+    }
+
+    // Nothing recorded yet — keep the link so coaches can start scoring.
+    return (
+      <button
+        onClick={() => navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)}
+        className="cursor-pointer text-sm hover:underline"
+      >
+        <div>{avg(r) || <span className="">Add Score</span>}</div>
+      </button>
     );
   }
 
@@ -1693,88 +1697,89 @@ function RosterCard({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-white p-3 transition",
+        "rounded-xl border bg-white p-4 transition",
         selected ? "border-blue-300 bg-blue-50/60" : "border-gray-200",
       )}
     >
-      {/* Header: selection, swimmer, status */}
-      <div className="flex items-center gap-2">
+      {/* Header: selection, swimmer + meta, status */}
+      <div className="flex items-start gap-3">
         <Checkbox
           checked={selected}
           onCheckedChange={onToggle}
           aria-label={`Select ${r.swimmer_name}`}
-          className="cursor-pointer"
+          className="mt-0.5 cursor-pointer"
         />
-        <button
-          type="button"
-          onClick={onOpenDetail}
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-        >
-          <span className="truncate text-sm font-semibold text-blue-700 hover:underline">
-            {r.swimmer_name}
-          </span>
-          <span className="shrink-0 text-xs text-gray-400">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <button type="button" onClick={onOpenDetail} className="min-w-0 text-left">
+              <span className="block truncate text-sm font-semibold text-blue-700 hover:underline">
+                {r.swimmer_name}
+              </span>
+            </button>
+            <span
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${STATUS_COLORS[r.status]}`}
+            >
+              {r.status}
+            </span>
+          </div>
+          <div className="mt-0.5 text-xs text-gray-500">
             {r.swimmer_age}
             {r.segment_name ? ` · ${r.segment_name}` : ""}
-          </span>
-        </button>
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[r.status]}`}
-        >
-          {r.status}
-        </span>
+          </div>
+        </div>
       </div>
 
       {/* Details */}
-      <div className="mt-2 space-y-1 text-xs">
-        <div className="flex items-center gap-1.5">
-          <span className="shrink-0 text-gray-400">When</span>
-          <span className="min-w-0 truncate text-gray-600">
+      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+        <div className="min-w-0">
+          <div className="text-[11px] font-medium text-gray-400">When</div>
+          <div className="mt-0.5 truncate text-gray-700">
             {r.session_date ? fmtDate(r.session_date) : "—"}
             {r.slot_id?.startTime &&
               ` · ${fmtTime(r.slot_id.startTime)}–${fmtTime(r.slot_id.endTime)}`}
-          </span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="shrink-0 text-gray-400">Parent</span>
-          <span className="min-w-0 truncate text-gray-700">
+        <div className="min-w-0">
+          <div className="text-[11px] font-medium text-gray-400">Parent</div>
+          <div className="mt-0.5 truncate text-gray-700">
             {r.guardian_name || r.parent_name}
             {(r.guardian_email || r.parent_email) && (
               <span className="text-gray-400"> · {r.guardian_email || r.parent_email}</span>
             )}
-          </span>
+          </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-        <div className="flex items-center gap-1.5">
-          <span className="text-gray-400">Check-in</span>
-          <CheckInControl
-            registration={r}
-            isPending={isPendingCheckIn}
-            onSetCheckIn={onSetCheckIn}
-            compact
-          />
+      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-gray-100 pt-3 text-xs">
+        <div className="min-w-0">
+          <div className="text-[11px] font-medium text-gray-400">Check-in</div>
+          <div className="mt-1">
+            <CheckInControl
+              registration={r}
+              isPending={isPendingCheckIn}
+              onSetCheckIn={onSetCheckIn}
+              compact
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-gray-400">Score</span>
-          <span className="font-semibold text-blue-700">
+        <div className="min-w-0">
+          <div className="text-[11px] font-medium text-gray-400">Evaluation</div>
+          <div className="text-center text-[11px] font-medium text-gray-400">Yes/No</div>
+          <div className="mt-1 flex justify-center font-semibold text-blue-700">
             <ScoreControl registration={r} tryoutId={tryoutId} onReset={onResetScore} />
-          </span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-gray-400">Yes/No</span>
-          <YesNoValue registration={r} />
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-gray-400">Coach</span>
-          <CoachRecommendationControl registration={r} tryoutId={tryoutId} />
+        <div className="min-w-0">
+          <div className="text-[11px] font-medium text-gray-400">Coach</div>
+          <div className="mt-1">
+            <CoachRecommendationControl registration={r} tryoutId={tryoutId} />
+          </div>
         </div>
       </div>
 
       {hasFooter && (
-        <div className="mt-2 space-y-1.5 border-t border-gray-100 pt-2">
+        <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
           <DecisionActions
             registration={r}
             canManageCoaches={canManageCoaches}

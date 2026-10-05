@@ -73,8 +73,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full grid lg:grid-cols-2">
-      <div className="relative hidden lg:flex flex-col justify-between p-12 overflow-hidden bg-linear-to-br from-primary via-primary to-aqua text-primary-foreground">
+    <div className="grid min-h-dvh w-full md:grid-cols-2">
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-linear-to-br from-primary via-primary to-aqua p-8 text-primary-foreground md:flex xl:p-12">
         <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full" viewBox="0 0 800 800" preserveAspectRatio="none">
             {Array.from({ length: 10 }).map((_, i) => (
@@ -92,10 +92,10 @@ export default function LoginPage() {
           <BrandLogo size="lg" />
         </div>
         <div className="relative space-y-3">
-          <h2 className="text-3xl font-bold tracking-tight">
+          <h2 className="text-2xl font-bold tracking-tight xl:text-3xl">
             Manage your swim club with confidence
           </h2>
-          <p className="text-primary-foreground/80 text-lg leading-relaxed">
+          <p className="text-base leading-relaxed text-primary-foreground/80 xl:text-lg">
             From tryouts to evaluations — everything your club needs in one place.
           </p>
         </div>
@@ -105,9 +105,9 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-center p-8">
+      <div className="flex items-center justify-center px-5 py-10 sm:px-8">
         <div className="w-full max-w-sm">
-          <div className="flex justify-center mb-8 lg:hidden">
+          <div className="mb-6 flex justify-center md:hidden sm:mb-8">
             <BrandLogo size="lg" />
           </div>
 
@@ -240,7 +240,11 @@ export default function LoginPage() {
                   <InputOTP maxLength={6} value={otp} onChange={setOtp}>
                     <InputOTPGroup>
                       {Array.from({ length: 6 }).map((_, i) => (
-                        <InputOTPSlot key={i} index={i} className="w-15 h-15 text-2xl" />
+                        <InputOTPSlot
+                          key={i}
+                          index={i}
+                          className="h-12 w-12 text-xl lg:h-15 lg:w-15 lg:text-2xl"
+                        />
                       ))}
                     </InputOTPGroup>
                   </InputOTP>
