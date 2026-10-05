@@ -95,12 +95,44 @@ export function SegmentQuestionsTab({ tryout }: { tryout: Tryout }) {
   const [manageBankOpen, setManageBankOpen] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<string[] | null>(null);
   const [pendingBankRemoval, setPendingBankRemoval] = useState<string[] | null>(null);
+  const [pendingSegmentRemoval, setPendingSegmentRemoval] = useState<{
+    questionId: string;
+    segmentId: string;
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ScoringQuestionPreview | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+
+  // Questions awaiting removal confirmation, with the age groups they will be dropped from.
+  const pendingRemovalItems = useMemo(() => {
+    if (!pendingRemoval) return [];
+    return pendingRemoval.map((id) => {
+      const segmentKeys = assignment.get(id) ?? new Set<string>();
+      return {
+        id,
+        label: bank.find((question) => question._id === id)?.label ?? "Question",
+        segmentNames: segments
+          .filter((segment) => segmentKeys.has(segment.id ?? segment.name))
+          .map((segment) => segment.name),
+      };
+    });
+  }, [pendingRemoval, assignment, bank, segments]);
+
+  // Question + age group awaiting a single-segment removal confirmation.
+  const pendingSegmentRemovalDetails = useMemo(() => {
+    if (!pendingSegmentRemoval) return null;
+    return {
+      questionLabel:
+        bank.find((question) => question._id === pendingSegmentRemoval.questionId)?.label ??
+        "Question",
+      segmentName:
+        segments.find((segment) => (segment.id ?? segment.name) === pendingSegmentRemoval.segmentId)
+          ?.name ?? pendingSegmentRemoval.segmentId,
+    };
+  }, [pendingSegmentRemoval, bank, segments]);
 
   function pickFile() {
     fileInputRef.current?.click();
@@ -259,7 +291,9 @@ export function SegmentQuestionsTab({ tryout }: { tryout: Tryout }) {
           onToggleSelect={toggleSelect}
           onToggleAll={toggleSelectAll}
           onRemoveQuestion={(id) => setPendingRemoval([id])}
-          onRemoveSegment={removeSegmentFromQuestion}
+          onRemoveSegment={(questionId, segmentId) =>
+            setPendingSegmentRemoval({ questionId, segmentId })
+          }
           onAddToGroups={() => setAddToGroupsOpen(true)}
           onRemoveSelected={() => setPendingRemoval([...selectedIds])}
           onUploadMore={pickFile}
@@ -333,20 +367,95 @@ export function SegmentQuestionsTab({ tryout }: { tryout: Tryout }) {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {pendingRemoval && pendingRemoval.length > 1
-                ? `Remove ${pendingRemoval.length} questions?`
-                : "Remove question?"}
+                ? `Remove ${pendingRemoval.length} questions from age groups?`
+                : "Remove question from age groups?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               This only removes them from this tryout's age groups. The questions stay in the club
               bank.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {pendingRemovalItems.length > 0 && (
+            <div className="max-h-56 space-y-2 overflow-auto rounded-lg border p-3 text-sm">
+              {pendingRemovalItems.map((item) => (
+                <div key={item.id}>
+                  <div className="font-medium">{item.label}</div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {item.segmentNames.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">
+                        Not assigned to any age group
+                      </span>
+                    ) : (
+                      item.segmentNames.map((name) => (
+                        <Badge
+                          key={name}
+                          variant="outline"
+                          className="border-destructive/30 bg-destructive/10 text-[10px] font-normal text-destructive"
+                        >
+                          {name}
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={saveMutation.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={saveMutation.isPending}
               onClick={() => pendingRemoval && unassign(pendingRemoval)}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={pendingSegmentRemoval !== null}
+        onOpenChange={(next) => !next && setPendingSegmentRemoval(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from age group?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This only removes the question from the selected age group. It stays in the club bank
+              and keeps its other age groups.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {pendingSegmentRemovalDetails && (
+            <div className="rounded-lg border p-3 text-sm">
+              <div className="font-medium">{pendingSegmentRemovalDetails.questionLabel}</div>
+              <div className="mt-1 flex flex-wrap gap-1">
+                <Badge
+                  variant="outline"
+                  className="border-destructive/30 bg-destructive/10 text-[10px] font-normal text-destructive"
+                >
+                  {pendingSegmentRemovalDetails.segmentName}
+                </Badge>
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saveMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={saveMutation.isPending}
+              onClick={() => {
+                if (!pendingSegmentRemoval) return;
+                removeSegmentFromQuestion(
+                  pendingSegmentRemoval.questionId,
+                  pendingSegmentRemoval.segmentId,
+                );
+                setPendingSegmentRemoval(null);
+              }}
             >
               Remove
             </AlertDialogAction>

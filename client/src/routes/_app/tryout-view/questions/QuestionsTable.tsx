@@ -173,7 +173,11 @@ export function QuestionsTable({
               const isSelected = selectedIds.has(question._id);
 
               return (
-                <TableRow key={question._id} data-state={isSelected ? "selected" : undefined}>
+                <TableRow
+                  key={question._id}
+                  data-state={isSelected ? "selected" : undefined}
+                  className="hover:bg-gray-50 transition"
+                >
                   <TableCell className="w-10 px-4 py-3">
                     <Checkbox
                       checked={isSelected}
