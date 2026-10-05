@@ -8,11 +8,12 @@
   - `src/components/tokenized-text-editor/TokenDropdown.tsx` (missing `classes` export from `@/lib/utils`)
   - `src/hooks/use-invitations.ts` (`AuthUser.club` missing)
   - `src/lib/api/example.functions.ts` (missing `@tanstack/react-start` / `../config.server`)
-  Treat any *new* errors as regressions; ignore those five unless they are being fixed.
+    Treat any _new_ errors as regressions; ignore those five unless they are being fixed.
 
 ## Testing
 
 - There is **no test runner configured** (jest is declared but has no config and no tests exist). Verify changes with the typecheck/build commands above, plus a manual/curl smoke test against a running server.
+- **Authenticated UI smoke test:** with `NODE_ENV=development`, `POST /api/v1/auth/login` returns the 6-digit OTP in `data.otp` (no inbox needed). Exchange it at `POST /api/v1/auth/verify-otp` for a JWT, then set `localStorage["swimclub.token"]` in the browser to load protected routes (e.g. `/tryouts/view/:id/bulk-scoring?ids=...`).
 
 ## Conventions
 

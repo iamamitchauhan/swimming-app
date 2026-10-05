@@ -34,8 +34,3 @@ export function useMediaQuery(query: string) {
 
   return matches;
 }
-
-/** True when the viewport is wider than it is tall (phones/tablets held sideways). */
-export function useIsLandscape() {
-  return useMediaQuery("(orientation: landscape)");
-}

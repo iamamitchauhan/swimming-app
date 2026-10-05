@@ -1,23 +1,21 @@
 import { useState, useMemo, useCallback } from "react";
 import { ArrowLeft, Dices, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSaveScore } from "@/hooks/use-tryout-dashboard";
 import { useSegmentQuestionsQuery } from "@/hooks/use-scoring-questions";
-import { useIsLandscape, useMediaQuery } from "@/hooks/use-mobile";
+import { useMediaQuery } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import type { Registration } from "@/lib/api/tryouts.api";
-import type { ScoringQuestion, ScoringQuestionType } from "@/lib/api/scoring-questions.api";
+import type { ScoringQuestion } from "@/lib/api/scoring-questions.api";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type ScoreValue = string | number | boolean | null;
 type ScoreMap = Record<string, Record<string, ScoreValue>>;
 type NotesMap = Record<string, string>;
-type Completion = { done: number; total: number; pct: number };
 
 interface Props {
   tryoutId: string;
@@ -32,15 +30,20 @@ interface ScoreGroup {
   questions: ScoringQuestion[];
 }
 
-const QUESTION_TYPE_LABEL: Record<ScoringQuestionType, string> = {
-  YESNO: "Yes / No",
-  RATING: "Rate 1–5",
-  TEXT: "Text",
-};
-
 /** A value counts as "answered" once it is set, non-empty and not a zero rating. */
 function isAnswered(value: ScoreValue): boolean {
   return value != null && value !== "" && value !== 0;
+}
+
+/**
+ * The question that gates scoring for a swimmer: until it is answered "Yes" the
+ * swimmer's other questions stay locked (a "No" means the tryout wasn't finished,
+ * so there is nothing else to evaluate).
+ */
+const GATE_QUESTION_LABEL = "finished the tryout?";
+
+function isGateQuestion(question: ScoringQuestion): boolean {
+  return question.label.trim().toLowerCase() === GATE_QUESTION_LABEL;
 }
 
 // ─── Score controls ────────────────────────────────────────────────────────────
@@ -50,23 +53,33 @@ function ScoreControl({
   value,
   onChange,
   size = "default",
+  disabled = false,
 }: {
   question: ScoringQuestion;
   value: ScoreValue;
   onChange: (v: ScoreValue) => void;
   /** Denser layout for the matrix cells. */
   size?: "default" | "compact";
+  /** Locks the control, e.g. until the swimmer has finished the tryout. */
+  disabled?: boolean;
 }) {
-  const btn =
-    size === "compact"
-      ? "min-w-12 px-4 py-2 text-xs phone-landscape:min-w-6 phone-landscape:px-1.5 phone-landscape:py-0.5"
-      : "min-w-16 px-4 py-2 text-sm";
+  const compact = size === "compact";
+  // Matrix cells have fixed widths (table-fixed), so the control fills its cell —
+  // capped so it doesn't stretch across a wide desktop column.
+  const group = cn(
+    "overflow-hidden rounded-lg border",
+    compact ? "mx-auto flex w-full max-w-36" : "inline-flex",
+  );
+  const btn = cn(
+    "inline-flex items-center justify-center py-3 text-center font-semibold transition disabled:cursor-not-allowed disabled:opacity-40",
+    compact ? "min-w-0 flex-1 px-2 text-xs sm:px-3 lg:px-4" : "min-w-16 px-4 text-sm sm:px-5",
+  );
 
-  // Full labels normally; single letters on a phone held sideways so 6+ columns fit.
+  // Full labels on larger screens; single letters below lg so 6+ columns fit.
   const label = (full: string, short: string) => (
     <>
-      <span className="phone-landscape:hidden">{full}</span>
-      <span className="hidden phone-landscape:inline">{short}</span>
+      <span className="hidden lg:inline">{full}</span>
+      <span className="lg:hidden">{short}</span>
     </>
   );
 
@@ -74,24 +87,22 @@ function ScoreControl({
     const isYes = value === "yes" || value === true;
     const isNo = value === "no" || value === false;
     return (
-      <div className="inline-flex overflow-hidden rounded-lg border">
+      <div className={group}>
         <button
           type="button"
+          disabled={disabled}
           onClick={() => onChange(isYes ? null : "yes")}
-          className={cn(
-            btn,
-            "font-semibold transition",
-            isYes ? "bg-emerald-500 text-white" : "bg-background hover:bg-muted",
-          )}
+          className={cn(btn, isYes ? "bg-emerald-500 text-white" : "bg-background hover:bg-muted")}
         >
           {label("Yes", "Y")}
         </button>
         <button
           type="button"
+          disabled={disabled}
           onClick={() => onChange(isNo ? null : "no")}
           className={cn(
             btn,
-            "border-l font-semibold transition",
+            "border-l",
             isNo ? "bg-rose-500 text-white" : "bg-background hover:bg-muted",
           )}
         >
@@ -104,14 +115,16 @@ function ScoreControl({
   if (question.type === "RATING") {
     const current = value != null && value !== "" ? Number(value) : 0;
     return (
-      <div className="inline-flex overflow-hidden rounded-lg border">
+      <div className={group}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
             type="button"
+            disabled={disabled}
             onClick={() => onChange(current === n ? null : n)}
             className={cn(
-              "w-7 border-l py-1 text-xs font-semibold transition first:border-l-0 phone-landscape:w-6 phone-landscape:py-0.5",
+              "border-l text-xs font-semibold transition first:border-l-0 disabled:cursor-not-allowed disabled:opacity-40",
+              compact ? "min-w-0 flex-1 py-3" : "w-7 py-1",
               current === n ? "bg-blue-600 text-white" : "bg-background hover:bg-muted",
             )}
           >
@@ -127,48 +140,21 @@ function ScoreControl({
       value={typeof value === "string" ? value : ""}
       onChange={(e) => onChange(e.target.value || null)}
       placeholder="—"
-      className={
-        size === "compact"
-          ? "h-8 min-w-32 text-xs phone-landscape:h-7 phone-landscape:min-w-20"
-          : "h-9 text-sm"
-      }
+      disabled={disabled}
+      className={cn(
+        compact ? "h-8 text-xs" : "h-9 text-sm",
+        "disabled:cursor-not-allowed disabled:opacity-40",
+      )}
     />
   );
 }
 
 // ─── Swimmer heading (matrix row/column header) ─────────────────────────────────
 
-function SwimmerHeading({
-  swimmer,
-  completion,
-}: {
-  swimmer: Registration;
-  completion: Completion;
-}) {
+function SwimmerHeading({ swimmer }: { swimmer: Registration }) {
   return (
-    <div>
-      <div className="text-sm font-semibold wrap-break-word text-foreground phone-landscape:text-xs">
-        {swimmer.swimmer_name}
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-1 phone-landscape:hidden">
-        <Badge
-          variant="outline"
-          className="border-sky-200 bg-sky-50 text-[10px] font-normal text-sky-700"
-        >
-          {swimmer.swimmer_age} yrs
-        </Badge>
-        <Badge
-          variant="outline"
-          className={cn(
-            "text-[10px] font-normal",
-            completion.pct === 100
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-amber-200 bg-amber-50 text-amber-700",
-          )}
-        >
-          {completion.pct}% ({completion.done}/{completion.total})
-        </Badge>
-      </div>
+    <div className="text-sm font-semibold wrap-break-word text-foreground phone-landscape:text-xs">
+      {swimmer.swimmer_name}
     </div>
   );
 }
@@ -182,6 +168,7 @@ function QuestionCard({
   swimmers,
   getScore,
   setScore,
+  isLocked,
 }: {
   question: ScoringQuestion;
   index: number;
@@ -189,6 +176,7 @@ function QuestionCard({
   swimmers: Registration[];
   getScore: (regId: string, questionId: string) => ScoreValue;
   setScore: (regId: string, questionId: string, v: ScoreValue) => void;
+  isLocked: (swimmer: Registration, question: ScoringQuestion) => boolean;
 }) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -204,13 +192,12 @@ function QuestionCard({
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
               {i + 1}
             </span>
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">
-              {swimmer.swimmer_name}
-            </span>
+            <span className="min-w-0 flex-1 text-sm font-medium">{swimmer.swimmer_name}</span>
             <ScoreControl
               question={question}
               value={getScore(swimmer.id, question._id)}
               onChange={(v) => setScore(swimmer.id, question._id, v)}
+              disabled={isLocked(swimmer, question)}
             />
           </li>
         ))}
@@ -219,116 +206,70 @@ function QuestionCard({
   );
 }
 
-// ─── Adaptive matrix (tablet + desktop) ────────────────────────────────────────
-
-type AxisCell =
-  | { kind: "swimmer"; key: string; swimmer: Registration }
-  | { kind: "question"; key: string; question: ScoringQuestion };
-
-const swimmerOf = (cell: AxisCell) => (cell.kind === "swimmer" ? cell.swimmer : null);
-const questionOf = (cell: AxisCell) => (cell.kind === "question" ? cell.question : null);
+// ─── Score matrix (tablet + desktop) ───────────────────────────────────────────
 
 function ScoreMatrix({
   swimmers,
   questions,
   getScore,
   setScore,
-  getCompletion,
   isMissing,
-  transposed,
+  isLocked,
 }: {
   swimmers: Registration[];
   questions: ScoringQuestion[];
   getScore: (regId: string, questionId: string) => ScoreValue;
   setScore: (regId: string, questionId: string, v: ScoreValue) => void;
-  getCompletion: (swimmer: Registration) => Completion;
   isMissing: (regId: string, questionId: string) => boolean;
-  /** true → questions as rows, swimmers as columns (portrait/tablet). */
-  transposed: boolean;
+  isLocked: (swimmer: Registration, question: ScoringQuestion) => boolean;
 }) {
-  const swimmerCells: AxisCell[] = swimmers.map((s) => ({
-    kind: "swimmer",
-    key: s.id,
-    swimmer: s,
-  }));
-  const questionCells: AxisCell[] = questions.map((q) => ({
-    kind: "question",
-    key: q._id,
-    question: q,
-  }));
-  const rows = transposed ? questionCells : swimmerCells;
-  const cols = transposed ? swimmerCells : questionCells;
-
-  const renderHeader = (cell: AxisCell) =>
-    cell.kind === "swimmer" ? (
-      <SwimmerHeading swimmer={cell.swimmer} completion={getCompletion(cell.swimmer)} />
-    ) : (
-      <div>
-        <div className="text-sm font-semibold wrap-break-word text-foreground phone-landscape:text-xs phone-landscape:leading-tight">
-          {cell.question.label}
-        </div>
-        <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-violet-600 phone-landscape:hidden">
-          {QUESTION_TYPE_LABEL[cell.question.type]}
-        </div>
-      </div>
-    );
-
   return (
-    <div className="max-h-[calc(100vh-8rem)] overflow-auto overscroll-x-contain border border-border phone-landscape:max-h-[calc(100vh-7rem)]">
-      <table className="w-full min-w-max border-collapse text-sm">
+    <div className="max-h-[calc(100vh-8rem)] overflow-auto overscroll-x-contain rounded-xl border border-border phone-landscape:max-h-[calc(100vh-7rem)]">
+      {/* table-fixed + w-full: the table never exceeds its container, so all question
+          columns fit — labels wrap and controls shrink to the cell. No min-width, so
+          narrow landscape tablets don't get a horizontal scrollbar. The swimmer column
+          is wide enough for a ~20-character name on a single line (300px on xl+). */}
+      <table className="w-full table-fixed border-collapse text-sm">
         <thead>
           <tr>
-            <th className="sticky left-0 top-0 z-30 border-b border-r border-border bg-muted px-4 py-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-muted-foreground phone-landscape:px-2 phone-landscape:py-2">
-              {transposed ? "Question" : "Swimmer"}
+            <th className="sticky left-0 top-0 z-30 w-44 border-b border-r border-border bg-muted px-3 py-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-muted-foreground xl:w-75 xl:px-4">
+              Swimmer
             </th>
-            {cols.map((col) => (
+            {questions.map((question) => (
               <th
-                key={col.key}
-                className={cn(
-                  "sticky top-0 z-20 border-b border-l border-border px-4 py-3 text-left align-middle phone-landscape:px-2 phone-landscape:py-2",
-                  col.kind === "swimmer"
-                    ? "min-w-35.5 bg-muted phone-landscape:min-w-21"
-                    : "min-w-37.5 bg-violet-50 phone-landscape:min-w-22 phone-landscape:max-w-25",
-                )}
+                key={question._id}
+                className="sticky top-0 z-20 border-b border-l border-border bg-violet-50 px-3 py-3 text-center align-middle"
               >
-                {renderHeader(col)}
+                <div className="text-xs font-semibold wrap-break-word text-foreground lg:text-sm">
+                  {question.label}
+                </div>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.key} className="hover:bg-muted/20">
-              <th
-                className={cn(
-                  "sticky left-0 z-10 border-b border-r border-border px-4 py-3 text-left align-middle phone-landscape:px-2 phone-landscape:py-2",
-                  row.kind === "swimmer"
-                    ? "min-w-42.75 bg-background phone-landscape:min-w-19 phone-landscape:max-w-45"
-                    : "min-w-45 bg-violet-50 phone-landscape:min-w-20",
-                )}
-              >
-                {renderHeader(row)}
+          {swimmers.map((swimmer) => (
+            <tr key={swimmer.id} className="hover:bg-muted/20">
+              <th className="sticky left-0 z-10 border-b border-r border-border bg-background px-3 py-3 text-left align-middle xl:px-4">
+                <SwimmerHeading swimmer={swimmer} />
               </th>
-              {cols.map((col) => {
-                const swimmer = (swimmerOf(row) ?? swimmerOf(col))!;
-                const question = (questionOf(row) ?? questionOf(col))!;
-                return (
-                  <td
-                    key={col.key}
-                    className={cn(
-                      "border-b border-l border-border px-3 py-3 text-center align-middle phone-landscape:max-w-25 phone-landscape:px-2 phone-landscape:py-1.5",
-                      isMissing(swimmer.id, question._id) && "bg-rose-50",
-                    )}
-                  >
-                    <ScoreControl
-                      question={question}
-                      value={getScore(swimmer.id, question._id)}
-                      onChange={(v) => setScore(swimmer.id, question._id, v)}
-                      size="compact"
-                    />
-                  </td>
-                );
-              })}
+              {questions.map((question) => (
+                <td
+                  key={question._id}
+                  className={cn(
+                    "border-b border-l border-border px-2 py-3 align-middle lg:px-3",
+                    isMissing(swimmer.id, question._id) && "bg-rose-50",
+                  )}
+                >
+                  <ScoreControl
+                    question={question}
+                    value={getScore(swimmer.id, question._id)}
+                    onChange={(v) => setScore(swimmer.id, question._id, v)}
+                    size="compact"
+                    disabled={isLocked(swimmer, question)}
+                  />
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -425,6 +366,45 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     });
   }, []);
 
+  // The "Finished the tryout?" question gates a swimmer's other questions: they
+  // stay locked until it is answered "Yes". A "No" ends the evaluation, so the
+  // remaining questions are neither editable nor required.
+  const gateQuestionFor = useCallback(
+    (swimmer: Registration) => questionsFor(swimmer).find(isGateQuestion) ?? null,
+    [questionsFor],
+  );
+
+  const isFinished = useCallback(
+    (swimmer: Registration): boolean => {
+      const gate = gateQuestionFor(swimmer);
+      if (!gate) return true;
+      const value = getScore(swimmer.id, gate._id);
+      return value === "yes" || value === true;
+    },
+    [gateQuestionFor, getScore],
+  );
+
+  const isQuestionLocked = useCallback(
+    (swimmer: Registration, question: ScoringQuestion): boolean => {
+      const gate = gateQuestionFor(swimmer);
+      if (!gate || gate._id === question._id) return false;
+      return !isFinished(swimmer);
+    },
+    [gateQuestionFor, isFinished],
+  );
+
+  // Questions a swimmer must answer to save: all of them once the tryout is
+  // finished, otherwise just the gate question.
+  const requiredQuestions = useCallback(
+    (swimmer: Registration): ScoringQuestion[] => {
+      const questions = questionsFor(swimmer);
+      const gate = questions.find(isGateQuestion);
+      if (!gate || isFinished(swimmer)) return questions;
+      return [gate];
+    },
+    [questionsFor, isFinished],
+  );
+
   const notesDirtyIds = useMemo(
     () =>
       registrations
@@ -446,44 +426,37 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     return scoreIds.size;
   }, [scores, notesDirtyIds]);
 
-  // Score completion per swimmer, against that swimmer's own questions.
-  const getCompletion = useCallback(
-    (swimmer: Registration): Completion => {
-      const questions = questionsFor(swimmer);
-      const all = { ...committedScores[swimmer.id], ...scores[swimmer.id] };
-      const done = questions.filter((q) => isAnswered(all[q._id])).length;
-      const total = questions.length;
-      return { done, total, pct: total ? Math.round((done / total) * 100) : 100 };
-    },
-    [committedScores, scores, questionsFor],
-  );
-
   const getMissingQuestions = useCallback(
     (swimmer: Registration): string[] => {
       const all = { ...committedScores[swimmer.id], ...scores[swimmer.id] };
-      return questionsFor(swimmer)
+      return requiredQuestions(swimmer)
         .filter((q) => !isAnswered(all[q._id]))
         .map((q) => q.label);
     },
-    [committedScores, scores, questionsFor],
+    [committedScores, scores, requiredQuestions],
   );
 
   const isMissing = useCallback(
     (regId: string, questionId: string) => {
       if (!highlightMissing) return false;
       const swimmer = registrations.find((r) => r.id === regId);
-      if (!swimmer || !questionsFor(swimmer).some((q) => q._id === questionId)) return false;
+      const question = swimmer
+        ? questionsFor(swimmer).find((q) => q._id === questionId)
+        : undefined;
+      if (!swimmer || !question) return false;
+      // Locked questions aren't required, so never flag them as missing.
+      if (isQuestionLocked(swimmer, question)) return false;
       return !isAnswered(getScore(regId, questionId));
     },
-    [highlightMissing, registrations, questionsFor, getScore],
+    [highlightMissing, registrations, questionsFor, isQuestionLocked, getScore],
   );
 
   async function saveAll() {
-    // Validate: every swimmer must have all of their questions scored
+    // Validate: every swimmer must have all of their required questions scored
     const incomplete = registrations
       .map((s) => {
         const missing = getMissingQuestions(s);
-        const total = questionsFor(s).length;
+        const total = requiredQuestions(s).length;
         return missing.length > 0 ? { name: s.swimmer_name, missing, total } : null;
       })
       .filter(Boolean) as { name: string; missing: string[]; total: number }[];
@@ -570,7 +543,6 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
   }
 
   const swimmers = registrations;
-  const isLandscape = useIsLandscape();
 
   if (swimmers.length === 0) {
     return (
@@ -681,20 +653,20 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
                       swimmers={group.swimmers}
                       getScore={getScore}
                       setScore={setScore}
+                      isLocked={isQuestionLocked}
                     />
                   ))}
                 </div>
 
-                {/* Tablet / desktop — matrix flips axes by orientation */}
+                {/* Tablet / desktop — swimmers × questions matrix */}
                 <div className="hidden sm:block">
                   <ScoreMatrix
                     swimmers={group.swimmers}
                     questions={group.questions}
                     getScore={getScore}
                     setScore={setScore}
-                    getCompletion={getCompletion}
                     isMissing={isMissing}
-                    transposed={!isLandscape}
+                    isLocked={isQuestionLocked}
                   />
                 </div>
               </>
@@ -717,10 +689,12 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
             </span>
           </button>
           {notesExpanded && (
-            <div className="grid gap-3 border-t p-4 sm:grid-cols-2">
+            <div className="grid gap-3 border-t p-4 sm:grid-cols-2 xl:grid-cols-1">
               {swimmers.map((swimmer) => (
-                <div key={swimmer.id}>
-                  <div className="mb-1.5 truncate text-sm font-medium">{swimmer.swimmer_name}</div>
+                <div key={swimmer.id} className="xl:flex xl:items-start xl:gap-3">
+                  <div className="mb-1.5 text-sm font-medium xl:mb-0 xl:w-75 xl:shrink-0 xl:pt-2">
+                    {swimmer.swimmer_name}
+                  </div>
                   <Textarea
                     rows={3}
                     value={notesByReg[swimmer.id] ?? ""}
@@ -733,6 +707,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
                       });
                     }}
                     placeholder="Strengths, focus areas…"
+                    className="xl:flex-1"
                   />
                 </div>
               ))}

@@ -54,7 +54,7 @@ export function AddToGroupsDialog({
           <DialogTitle>
             Add {questionCount} question{questionCount === 1 ? "" : "s"} to…
           </DialogTitle>
-          <DialogDescription>Choose one or more age groups.</DialogDescription>
+          <DialogDescription>Choose one or more segments.</DialogDescription>
         </DialogHeader>
 
         {segments.length === 0 ? (
@@ -70,10 +70,7 @@ export function AddToGroupsDialog({
                 <li key={key}>
                   <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2.5 hover:bg-muted/50">
                     <span className="flex items-center gap-3">
-                      <Checkbox
-                        checked={checked.has(key)}
-                        onCheckedChange={() => toggle(key)}
-                      />
+                      <Checkbox checked={checked.has(key)} onCheckedChange={() => toggle(key)} />
                       <span className="font-medium">{segment.name}</span>
                     </span>
                     <span className="text-sm text-muted-foreground">
@@ -91,7 +88,7 @@ export function AddToGroupsDialog({
             Cancel
           </Button>
           <Button onClick={() => onSave([...checked])} disabled={isSaving || checked.size === 0}>
-            Save
+            Assign
           </Button>
         </DialogFooter>
       </DialogContent>

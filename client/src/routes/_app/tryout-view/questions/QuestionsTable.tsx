@@ -111,7 +111,7 @@ export function QuestionsTable({
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium">{selectedIds.size} selected</span>
             <Button size="sm" onClick={onAddToGroups} disabled={isSaving}>
-              Add to groups…
+              Add to segments
             </Button>
           </div>
           <Button variant="destructive" size="sm" onClick={onRemoveSelected} disabled={isSaving}>
@@ -160,7 +160,7 @@ export function QuestionsTable({
               <TableHead>Question</TableHead>
               <TableHead className="w-24 whitespace-nowrap">Type</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Added to age groups</TableHead>
+              <TableHead>Added to segments</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
