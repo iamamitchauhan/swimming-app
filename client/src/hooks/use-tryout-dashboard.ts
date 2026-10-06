@@ -150,7 +150,7 @@ export function usePromoteWaitlist(tryoutId: string) {
   });
 }
 
-export function useSaveScore(tryoutId: string) {
+export function useSaveScore(tryoutId: string, { silent = false }: { silent?: boolean } = {}) {
   const qc = useQueryClient();
 
   return useMutation({
@@ -202,7 +202,7 @@ export function useSaveScore(tryoutId: string) {
           qc.setQueryData(key, data);
         });
       }
-      toast.error("Failed to save score.");
+      if (!silent) toast.error("Failed to save score.");
     },
 
     // On success, silently invalidate in background (no loading flicker).
@@ -215,7 +215,7 @@ export function useSaveScore(tryoutId: string) {
       qc.invalidateQueries({
         queryKey: ["tryouts", tryoutId, "registration", regId, "email-preview"],
       });
-      toast.success("Saved.", { id: "score-toast-success" });
+      if (!silent) toast.success("Saved.", { id: "score-toast-success" });
     },
   });
 }

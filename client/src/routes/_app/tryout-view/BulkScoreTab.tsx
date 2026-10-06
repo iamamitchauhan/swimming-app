@@ -312,7 +312,7 @@ function ScoreMatrix({
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
-  const saveScoreMutation = useSaveScore(tryoutId);
+  const saveScoreMutation = useSaveScore(tryoutId, { silent: true });
   const { data: segmentQuestions = [], isLoading: questionsLoading } =
     useSegmentQuestionsQuery(tryoutId);
 
