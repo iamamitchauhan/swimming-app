@@ -13,7 +13,6 @@ import {
   MoreVertical,
   RotateCcw,
   Smartphone,
-  Undo2,
   X,
   XCircle,
 } from "lucide-react";
@@ -239,6 +238,41 @@ function SortIcon({ field, active, order }: { field: string; active: string; ord
   );
 }
 
+// ─── Bulk action button ─────────────────────────────────────────────────────────
+
+/** Plain text action used inside the floating bulk-action pill. */
+function BulkAction({
+  onClick,
+  disabled = false,
+  tone = "neutral",
+  children,
+}: {
+  onClick: () => void | Promise<void>;
+  disabled?: boolean;
+  tone?: "neutral" | "success" | "danger" | "info";
+  children: React.ReactNode;
+}) {
+  const tones = {
+    neutral: "text-gray-300 hover:bg-white/10 hover:text-white",
+    success: "text-emerald-400 hover:bg-emerald-400/10 hover:text-emerald-300",
+    danger: "text-red-400 hover:bg-red-400/10 hover:text-red-300",
+    info: "text-blue-300 hover:bg-blue-400/10 hover:text-blue-200",
+  } as const;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "flex h-8 shrink-0 items-center whitespace-nowrap rounded-lg px-3 font-medium transition disabled:cursor-not-allowed disabled:opacity-40",
+        tones[tone],
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -404,6 +438,24 @@ export function RosterTab({ tryoutId }: Props) {
       else next.add(id);
       return next;
     });
+  }
+
+  /** Navigate to bulk scoring for the selected, score-eligible swimmers. */
+  function goToBulkScoring() {
+    if (scoreEligibleRows.length === 0) {
+      toast.error("No swimmers can be scored", {
+        description:
+          "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers can't be scored.",
+      });
+      return;
+    }
+    notifySkipped(
+      selectedRows.length - scoreEligibleRows.length,
+      "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers were skipped.",
+    );
+    navigate(
+      `/tryouts/view/${tryoutId}/bulk-scoring?ids=${scoreEligibleRows.map((r) => r.id).join(",")}`,
+    );
   }
 
   async function handleConfirm() {
@@ -747,34 +799,30 @@ export function RosterTab({ tryoutId }: Props) {
           ))}
       </div>
 
-      {/* ── Bulk action bar ───────────────────────────────────────────────── */}
-      {/* Mobile: full-width bottom sheet with a 2-column action grid.
-          Tablet (md+): centered floating panel with every action on one row.
-          Desktop (xl+): the same panel collapses into the compact inline pill. */}
+      {/* ── Bulk action bar — one compact pill for coaches and admins ──────── */}
       {someSelected && (
-        <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col gap-3 border-t border-gray-700 bg-gray-900 px-4 pt-3 pb-4 text-sm text-white shadow-2xl md:inset-x-4 md:bottom-6 md:mx-auto md:max-w-3xl md:rounded-2xl md:border xl:max-w-5xl xl:flex-row xl:flex-wrap xl:items-center xl:justify-center xl:gap-x-3 xl:gap-y-2 xl:py-3">
-          <div className="flex items-center justify-between gap-2 border-b border-gray-700 pb-3 xl:justify-start xl:border-0 xl:pb-0">
-            <span className="flex items-center gap-2 font-semibold">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-bold">
-                {selectedIds.size}
-              </span>
-              Selected
-            </span>
-            <div className="hidden h-4 w-px bg-gray-600 xl:block" />
+        <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-3 sm:pb-5">
+          <div className="flex max-w-[calc(100vw-1.5rem)] flex-wrap items-center gap-x-0.5 gap-y-1 rounded-2xl bg-gray-900 px-2 py-2 text-sm text-white shadow-2xl ring-1 ring-white/10">
             <button
               onClick={() => setSelectedIds(new Set())}
-              className="flex min-h-10 items-center gap-1.5 rounded-lg border border-gray-700 px-3 text-gray-300 transition hover:text-white xl:min-h-0 xl:rounded-none xl:border-0 xl:px-0"
+              aria-label="Clear selection"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-gray-300 transition hover:bg-white/20 hover:text-white"
             >
-              <X className="h-3.5 w-3.5" /> Clear all
+              <X className="h-4 w-4" />
             </button>
-          </div>
 
-          <div className="hidden h-4 w-px bg-gray-600 xl:block" />
+            <span className="shrink-0 whitespace-nowrap px-2 text-gray-300">
+              <span className="font-semibold text-white">{selectedIds.size}</span> of {total}{" "}
+              selected
+            </span>
 
-          <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center md:justify-center md:gap-2 xl:gap-x-3 xl:gap-y-2">
+            <span className="mx-1 hidden h-5 w-px shrink-0 bg-white/15 sm:block" />
+
             {!isCoach && (
               <>
-                <button
+                <BulkAction
+                  tone="success"
+                  disabled={checkInEligibleRows.some((r) => pendingRegIds.includes(r.id))}
                   onClick={async () => {
                     if (checkInEligibleRows.length === 0) {
                       toast.error("No swimmers can be checked in", {
@@ -795,23 +843,22 @@ export function RosterTab({ tryoutId }: Props) {
                       setSelectedIds(new Set());
                     }
                   }}
-                  disabled={checkInEligibleRows.some((r) => pendingRegIds.includes(r.id))}
-                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 font-medium text-emerald-300 transition hover:text-emerald-200 disabled:cursor-not-allowed disabled:opacity-50 xl:min-h-0 xl:justify-start xl:rounded-none xl:border-0 xl:px-0"
                 >
-                  <CheckCircle2 className="h-4 w-4" /> Check in
-                </button>
-                <button
+                  Check in
+                </BulkAction>
+
+                <BulkAction
+                  disabled={Array.from(selectedIds).some((id) => pendingRegIds.includes(id))}
                   onClick={async () => {
                     const ids = Array.from(selectedIds);
                     if (await setCheckIn(ids, false)) setSelectedIds(new Set());
                   }}
-                  disabled={Array.from(selectedIds).some((id) => pendingRegIds.includes(id))}
-                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 font-medium text-gray-300 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50 xl:min-h-0 xl:justify-start xl:rounded-none xl:border-0 xl:px-0"
                 >
-                  <Undo2 className="h-4 w-4" /> Un-check
-                </button>
-                <div className="hidden h-4 w-px bg-gray-600 xl:block" />
-                <button
+                  Un-check
+                </BulkAction>
+
+                <BulkAction
+                  tone="success"
                   onClick={() => {
                     if (offerRejectEligibleRows.length === 0) {
                       toast.error("No swimmers can be offered", {
@@ -833,11 +880,12 @@ export function RosterTab({ tryoutId }: Props) {
                     setBulkAction("offered");
                     setConfirmOpen(true);
                   }}
-                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 font-medium text-green-400 transition hover:text-green-300 xl:min-h-0 xl:justify-start xl:rounded-none xl:border-0 xl:px-0"
                 >
-                  <CheckCircle2 className="h-4 w-4" /> Offer
-                </button>
-                <button
+                  Offer
+                </BulkAction>
+
+                <BulkAction
+                  tone="danger"
                   onClick={() => {
                     if (offerRejectEligibleRows.length === 0) {
                       toast.error("No swimmers can be rejected", {
@@ -857,37 +905,16 @@ export function RosterTab({ tryoutId }: Props) {
                     setBulkAction("rejected");
                     setConfirmOpen(true);
                   }}
-                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 font-medium text-red-400 transition hover:text-red-300 xl:min-h-0 xl:justify-start xl:rounded-none xl:border-0 xl:px-0"
                 >
-                  <XCircle className="h-4 w-4" /> Reject
-                </button>
+                  Reject
+                </BulkAction>
               </>
             )}
+
             {selectedIds.size <= MAX_BULK_SCORE_SWIMMERS && (
-              <>
-                {!isCoach && <div className="hidden h-4 w-px bg-gray-600 xl:block" />}
-                <button
-                  onClick={() => {
-                    if (scoreEligibleRows.length === 0) {
-                      toast.error("No swimmers can be scored", {
-                        description:
-                          "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers can't be scored.",
-                      });
-                      return;
-                    }
-                    notifySkipped(
-                      selectedRows.length - scoreEligibleRows.length,
-                      "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers were skipped.",
-                    );
-                    navigate(
-                      `/tryouts/view/${tryoutId}/bulk-scoring?ids=${scoreEligibleRows.map((r) => r.id).join(",")}`,
-                    );
-                  }}
-                  className="col-span-2 flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 font-medium text-blue-300 transition hover:text-blue-200 xl:col-span-1 xl:min-h-0 xl:justify-start xl:rounded-none xl:border-0 xl:px-0"
-                >
-                  <ClipboardList className="h-4 w-4" /> Score {scoreEligibleRows.length} together
-                </button>
-              </>
+              <BulkAction tone="info" onClick={goToBulkScoring}>
+                Score{scoreEligibleRows.length > 0 ? ` ${scoreEligibleRows.length}` : ""} together
+              </BulkAction>
             )}
           </div>
         </div>
