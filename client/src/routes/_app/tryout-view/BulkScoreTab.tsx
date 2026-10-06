@@ -516,6 +516,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
         (item) => `${item.name}: ${item.missing.length} of ${item.total} questions missing`,
       );
       toast.error(`All questions must be scored before saving`, {
+        id: "bulk-missing-scores",
         description: messages.join("\n"),
         duration: 6000,
       });
@@ -561,13 +562,14 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
         setSavedIds(new Set(registrations.map((r) => r.id)));
         setSavingAll(false);
 
-        toast.success("Scores saved successfully");
+        toast.success("Scores saved successfully", { id: "bulk-save-success" });
         // redirect to main tryout page
         onBack();
       })
       .catch((err) => {
         setSavingAll(false);
         toast.error("Failed to save scores", {
+          id: "bulk-save-failed",
           description: err instanceof Error ? err.message : "Please try again",
         });
       });
@@ -589,7 +591,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     }
     setScores(next);
     setSavedIds(new Set());
-    toast.success("Random scores filled for all swimmers");
+    toast.success("Random scores filled for all swimmers", { id: "bulk-random-fill" });
   }
 
   const swimmers = registrations;

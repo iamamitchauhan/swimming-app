@@ -238,21 +238,22 @@ export function CommsTab({ tryoutId: _tryoutId }: Props) {
 
   function handleSave() {
     if (!clubId) {
-      toast.error("No club selected.");
+      toast.error("No club selected.", { id: "comms-no-club" });
       return;
     }
 
     const templates = buildTemplatesForSave();
     if (templates.length === 0) {
-      toast.error("No templates to save.");
+      toast.error("No templates to save.", { id: "comms-no-templates" });
       return;
     }
 
     saveTemplates(
       { templates },
       {
-        onSuccess: () => toast.success("Templates saved successfully"),
-        onError: () => toast.error("Failed to save templates."),
+        onSuccess: () =>
+          toast.success("Templates saved successfully", { id: "comms-save-success" }),
+        onError: () => toast.error("Failed to save templates.", { id: "comms-save-failed" }),
       },
     );
   }

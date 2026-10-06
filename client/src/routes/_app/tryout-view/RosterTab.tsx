@@ -198,7 +198,10 @@ function canEditCoachRecommendation(r: Registration) {
 /** Toast how many selected rows a bulk action skipped because they were ineligible. */
 function notifySkipped(skipped: number, reason: string) {
   if (skipped > 0) {
-    toast.info(`Skipped ${skipped} swimmer${skipped === 1 ? "" : "s"}`, { description: reason });
+    toast.info(`Skipped ${skipped} swimmer${skipped === 1 ? "" : "s"}`, {
+      id: "roster-skipped",
+      description: reason,
+    });
   }
 }
 
@@ -343,6 +346,7 @@ export function RosterTab({ tryoutId }: Props) {
     const missing = rows.filter((r) => !r.coach_recommendation);
     if (missing.length > 0) {
       toast.error("Coach recommendation required", {
+        id: "coach-rec-required",
         description: `Please assign a coach recommendation before proceeding`,
         duration: 6000,
       });
@@ -358,6 +362,7 @@ export function RosterTab({ tryoutId }: Props) {
     const rejectedOnes = rows.filter((r) => r.coach_recommendation === REJECTED_VALUE);
     if (rejectedOnes.length > 0) {
       toast.error("Cannot offer — coach recommendation is set to Reject", {
+        id: "offer-rec-is-reject",
         description: `Please change coach recommendation to a group before offering.`,
         duration: 6000,
       });
@@ -374,6 +379,7 @@ export function RosterTab({ tryoutId }: Props) {
     if (notRejected.length > 0) {
       const names = notRejected.map((r) => r.swimmer_name).join(", ");
       toast.error("Coach recommendation must be set to Reject", {
+        id: "reject-rec-not-reject",
         description: `Please change coach recommendation to Reject before rejecting.`,
         duration: 6000,
       });
@@ -404,6 +410,7 @@ export function RosterTab({ tryoutId }: Props) {
 
   function notifySelectionLimit() {
     toast.info(`You can select up to ${MAX_BULK_SCORE_SWIMMERS} swimmers`, {
+      id: "roster-selection-limit",
       description: `Bulk scoring supports up to ${MAX_BULK_SCORE_SWIMMERS} swimmers at a time.`,
     });
   }
@@ -447,6 +454,7 @@ export function RosterTab({ tryoutId }: Props) {
   function goToBulkScoring() {
     if (scoreEligibleRows.length === 0) {
       toast.error("No swimmers can be scored", {
+        id: "no-score-eligible",
         description:
           "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers can't be scored.",
       });
@@ -845,6 +853,7 @@ export function RosterTab({ tryoutId }: Props) {
                   onClick={async () => {
                     if (checkInEligibleRows.length === 0) {
                       toast.error("No swimmers can be checked in", {
+                        id: "no-checkin-eligible",
                         description: "Cancelled and waitlisted registrations can't be checked in.",
                       });
                       return;
@@ -881,6 +890,7 @@ export function RosterTab({ tryoutId }: Props) {
                   onClick={() => {
                     if (offerRejectEligibleRows.length === 0) {
                       toast.error("No swimmers can be offered", {
+                        id: "no-offer-eligible",
                         description: "Only registered swimmers can be offered.",
                       });
                       return;
@@ -908,6 +918,7 @@ export function RosterTab({ tryoutId }: Props) {
                   onClick={() => {
                     if (offerRejectEligibleRows.length === 0) {
                       toast.error("No swimmers can be rejected", {
+                        id: "no-reject-eligible",
                         description: "Only registered swimmers can be rejected.",
                       });
                       return;
@@ -1497,7 +1508,11 @@ function DecisionActions({
               variant="default"
               onClick={() => {
                 if (offerDisabled) {
-                  toast.error("Cannot offer", { description: offerTooltip, duration: 6000 });
+                  toast.error("Cannot offer", {
+                    id: "cannot-offer",
+                    description: offerTooltip,
+                    duration: 6000,
+                  });
                   return;
                 }
                 onOpenDecision(r.id, "offered");
@@ -1510,7 +1525,11 @@ function DecisionActions({
             <button
               onClick={() => {
                 if (offerDisabled) {
-                  toast.error("Cannot offer", { description: offerTooltip, duration: 6000 });
+                  toast.error("Cannot offer", {
+                    id: "cannot-offer",
+                    description: offerTooltip,
+                    duration: 6000,
+                  });
                   return;
                 }
                 onOpenDecision(r.id, "offered");
@@ -1525,7 +1544,11 @@ function DecisionActions({
               variant="outline"
               onClick={() => {
                 if (rejectDisabled) {
-                  toast.error("Cannot reject", { description: rejectTooltip, duration: 6000 });
+                  toast.error("Cannot reject", {
+                    id: "cannot-reject",
+                    description: rejectTooltip,
+                    duration: 6000,
+                  });
                   return;
                 }
                 onOpenDecision(r.id, "rejected");
@@ -1538,7 +1561,11 @@ function DecisionActions({
             <button
               onClick={() => {
                 if (rejectDisabled) {
-                  toast.error("Cannot reject", { description: rejectTooltip, duration: 6000 });
+                  toast.error("Cannot reject", {
+                    id: "cannot-reject",
+                    description: rejectTooltip,
+                    duration: 6000,
+                  });
                   return;
                 }
                 onOpenDecision(r.id, "rejected");
@@ -1620,6 +1647,7 @@ function DecisionActions({
                     onClick={() => {
                       if (offerDisabled) {
                         toast.error("Cannot resend offer", {
+                          id: "cannot-resend-offer",
                           description: offerTooltip,
                           duration: 6000,
                         });
@@ -1635,6 +1663,7 @@ function DecisionActions({
                     onClick={() => {
                       if (rejectDisabled) {
                         toast.error("Cannot resend rejection", {
+                          id: "cannot-resend-rejection",
                           description: rejectTooltip,
                           duration: 6000,
                         });

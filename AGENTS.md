@@ -13,6 +13,7 @@
 ## Testing
 
 - There is **no test runner configured** (jest is declared but has no config and no tests exist). Verify changes with the typecheck/build commands above, plus a manual/curl smoke test against a running server.
+- **Don't verify UI changes visually unless asked.** Assert on computed styles, DOM presence and `getBoundingClientRect()` geometry from a headless script (see `/tmp/pptr/*.js`), and report the measured numbers. Don't take or read screenshots as a routine step — only when the user explicitly asks for a visual check.
 - **Authenticated UI smoke test:** with `NODE_ENV=development`, `POST /api/v1/auth/login` returns the 6-digit OTP in `data.otp` (no inbox needed). Exchange it at `POST /api/v1/auth/verify-otp` for a JWT, then set `localStorage["swimclub.token"]` in the browser to load protected routes (e.g. `/tryouts/view/:id/bulk-scoring?ids=...`).
 
 ## Conventions
