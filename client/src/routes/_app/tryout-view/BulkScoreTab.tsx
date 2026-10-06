@@ -169,6 +169,7 @@ function QuestionCard({
   getScore,
   setScore,
   isLocked,
+  isApplicable,
 }: {
   question: ScoringQuestion;
   index: number;
@@ -177,6 +178,8 @@ function QuestionCard({
   getScore: (regId: string, questionId: string) => ScoreValue;
   setScore: (regId: string, questionId: string, v: ScoreValue) => void;
   isLocked: (swimmer: Registration, question: ScoringQuestion) => boolean;
+  /** False when the question isn't configured for the swimmer's segment. */
+  isApplicable?: (swimmer: Registration, questionId: string) => boolean;
 }) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -187,24 +190,31 @@ function QuestionCard({
         <div className="mt-0.5 text-sm font-semibold text-foreground">{question.label}</div>
       </div>
       <ul className="divide-y">
-        {swimmers.map((swimmer, i) => (
-          <li key={swimmer.id} className="flex items-center gap-3 px-4 py-3">
-            {swimmers.length > 1 && (
-              <>
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
-                  {i + 1}
-                </span>
-                <span className="min-w-0 flex-1 text-sm font-medium">{swimmer.swimmer_name}</span>
-              </>
-            )}
-            <ScoreControl
-              question={question}
-              value={getScore(swimmer.id, question._id)}
-              onChange={(v) => setScore(swimmer.id, question._id, v)}
-              disabled={isLocked(swimmer, question)}
-            />
-          </li>
-        ))}
+        {swimmers.map((swimmer, i) => {
+          const applicable = isApplicable ? isApplicable(swimmer, question._id) : true;
+          return (
+            <li key={swimmer.id} className="flex items-center gap-3 px-4 py-3">
+              {swimmers.length > 1 && (
+                <>
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm font-medium">{swimmer.swimmer_name}</span>
+                </>
+              )}
+              {applicable ? (
+                <ScoreControl
+                  question={question}
+                  value={getScore(swimmer.id, question._id)}
+                  onChange={(v) => setScore(swimmer.id, question._id, v)}
+                  disabled={isLocked(swimmer, question)}
+                />
+              ) : (
+                <span className="text-xs text-muted-foreground/40">—</span>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -219,6 +229,7 @@ function ScoreMatrix({
   setScore,
   isMissing,
   isLocked,
+  isApplicable,
 }: {
   swimmers: Registration[];
   questions: ScoringQuestion[];
@@ -226,6 +237,8 @@ function ScoreMatrix({
   setScore: (regId: string, questionId: string, v: ScoreValue) => void;
   isMissing: (regId: string, questionId: string) => boolean;
   isLocked: (swimmer: Registration, question: ScoringQuestion) => boolean;
+  /** False when the question isn't configured for the swimmer's segment. */
+  isApplicable?: (swimmer: Registration, questionId: string) => boolean;
 }) {
   return (
     <div className="max-h-[calc(100vh-8rem)] overflow-auto overscroll-x-contain rounded-xl border border-border phone-landscape:max-h-[calc(100vh-7rem)]">
@@ -257,23 +270,30 @@ function ScoreMatrix({
               <th className="sticky left-0 z-10 border-b border-r border-border bg-background px-3 py-3 text-left align-middle xl:px-4">
                 <SwimmerHeading swimmer={swimmer} />
               </th>
-              {questions.map((question) => (
-                <td
-                  key={question._id}
-                  className={cn(
-                    "border-b border-l border-border px-2 py-3 align-middle lg:px-3",
-                    isMissing(swimmer.id, question._id) && "bg-rose-50",
-                  )}
-                >
-                  <ScoreControl
-                    question={question}
-                    value={getScore(swimmer.id, question._id)}
-                    onChange={(v) => setScore(swimmer.id, question._id, v)}
-                    size="compact"
-                    disabled={isLocked(swimmer, question)}
-                  />
-                </td>
-              ))}
+              {questions.map((question) => {
+                const applicable = isApplicable ? isApplicable(swimmer, question._id) : true;
+                return (
+                  <td
+                    key={question._id}
+                    className={cn(
+                      "border-b border-l border-border px-2 py-3 align-middle lg:px-3",
+                      isMissing(swimmer.id, question._id) && "bg-rose-50",
+                    )}
+                  >
+                    {applicable ? (
+                      <ScoreControl
+                        question={question}
+                        value={getScore(swimmer.id, question._id)}
+                        onChange={(v) => setScore(swimmer.id, question._id, v)}
+                        size="compact"
+                        disabled={isLocked(swimmer, question)}
+                      />
+                    ) : (
+                      <span className="block text-center text-xs text-muted-foreground/40">—</span>
+                    )}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>
@@ -298,7 +318,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
   const [highlightMissing, setHighlightMissing] = useState(false);
   // null → follow the viewport default (open on tablet+, collapsed on phones);
   // a boolean means the user has toggled it explicitly.
-  const [notesOpen, setNotesOpen] = useState<boolean | null>(null);
+  const [notesOpen, setNotesOpen] = useState<boolean | null>(false);
   const isTabletUp = useMediaQuery("(min-width: 768px)");
   const notesExpanded = notesOpen ?? isTabletUp;
 
@@ -346,6 +366,25 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
       questions: questionsBySegment.get(segmentId) ?? [],
     }));
   }, [registrations, questionsBySegment]);
+
+  // Union of every selected swimmer's questions so all swimmers render in a
+  // single table. Segments normally share the same question set; where they
+  // differ, a swimmer's cell is left blank for questions their segment lacks.
+  const allQuestions = useMemo<ScoringQuestion[]>(() => {
+    const seen = new Map<string, ScoringQuestion>();
+    for (const group of groups) {
+      for (const question of group.questions) {
+        if (!seen.has(question._id)) seen.set(question._id, question);
+      }
+    }
+    return Array.from(seen.values());
+  }, [groups]);
+
+  const hasQuestion = useCallback(
+    (swimmer: Registration, questionId: string) =>
+      questionsFor(swimmer).some((q) => q._id === questionId),
+    [questionsFor],
+  );
 
   // Get the display value: local edits take priority, then committed scores
   const getScore = useCallback(
@@ -565,7 +604,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
   }
 
   const singleGroup = groups.length === 1 ? groups[0] : null;
-  const questionCount = singleGroup?.questions.length ?? 0;
+  const questionCount = allQuestions.length;
 
   return (
     <>
@@ -583,10 +622,8 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
             Tryout scoring{singleGroup ? ` · ${singleGroup.name}` : ""}
           </div>
           <div className="truncate text-xs text-muted-foreground">
-            {swimmers.length} swimmer{swimmers.length === 1 ? "" : "s"} ·{" "}
-            {singleGroup
-              ? `${questionCount} question${questionCount === 1 ? "" : "s"}`
-              : `${groups.length} age groups`}
+            {swimmers.length} swimmer{swimmers.length === 1 ? "" : "s"} · {questionCount} question
+            {questionCount === 1 ? "" : "s"}
           </div>
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -625,58 +662,46 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
         </div>
       </div>
 
-      {/* ── Groups ─────────────────────────────────────────────────────────── */}
+      {/* ── Single table for every selected swimmer ────────────────────────── */}
       <div className="space-y-8 px-4 pt-20 pb-8 sm:px-6 lg:px-8">
-        {groups.map((group) => (
-          <section key={group.segmentId}>
-            {!singleGroup && (
-              <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 phone-landscape:hidden">
-                <h2 className="text-base font-semibold">{group.name}</h2>
-                <span className="text-xs text-muted-foreground">
-                  {group.swimmers.length} swimmer{group.swimmers.length === 1 ? "" : "s"} ·{" "}
-                  {group.questions.length} question{group.questions.length === 1 ? "" : "s"}
-                </span>
-              </div>
-            )}
+        {allQuestions.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
+            No scoring questions are configured for these swimmers. Add questions to their age
+            groups in the Questions tab, then come back to score.
+          </div>
+        ) : (
+          <>
+            {/* Phone portrait — one card per question */}
+            <div className="space-y-4 sm:hidden">
+              {allQuestions.map((question, index) => (
+                <QuestionCard
+                  key={question._id}
+                  question={question}
+                  index={index}
+                  total={allQuestions.length}
+                  swimmers={swimmers}
+                  getScore={getScore}
+                  setScore={setScore}
+                  isLocked={isQuestionLocked}
+                  isApplicable={hasQuestion}
+                />
+              ))}
+            </div>
 
-            {group.questions.length === 0 ? (
-              <div className="rounded-xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
-                No scoring questions are configured for {group.name}. Add questions to this age
-                group in the Questions tab, then come back to score.
-              </div>
-            ) : (
-              <>
-                {/* Phone portrait — one card per question */}
-                <div className="space-y-4 sm:hidden">
-                  {group.questions.map((question, index) => (
-                    <QuestionCard
-                      key={question._id}
-                      question={question}
-                      index={index}
-                      total={group.questions.length}
-                      swimmers={group.swimmers}
-                      getScore={getScore}
-                      setScore={setScore}
-                      isLocked={isQuestionLocked}
-                    />
-                  ))}
-                </div>
-
-                {/* Tablet / desktop — swimmers × questions matrix */}
-                <div className="hidden sm:block">
-                  <ScoreMatrix
-                    swimmers={group.swimmers}
-                    questions={group.questions}
-                    getScore={getScore}
-                    setScore={setScore}
-                    isMissing={isMissing}
-                    isLocked={isQuestionLocked}
-                  />
-                </div>
-              </>
-            )}
-          </section>
-        ))}
+            {/* Tablet / desktop — all swimmers × questions in one matrix */}
+            <div className="hidden sm:block">
+              <ScoreMatrix
+                swimmers={swimmers}
+                questions={allQuestions}
+                getScore={getScore}
+                setScore={setScore}
+                isMissing={isMissing}
+                isLocked={isQuestionLocked}
+                isApplicable={hasQuestion}
+              />
+            </div>
+          </>
+        )}
 
         {/* ── Coach notes (collapsible; open by default on tablet+) ────────── */}
         <section className="overflow-hidden rounded-xl border bg-card">
