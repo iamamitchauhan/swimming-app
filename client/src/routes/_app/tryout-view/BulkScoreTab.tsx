@@ -245,19 +245,26 @@ function ScoreMatrix({
       {/* table-fixed + w-full: the table never exceeds its container, so all question
           columns fit — labels wrap and controls shrink to the cell. No min-width, so
           narrow landscape tablets don't get a horizontal scrollbar. The swimmer column
-          is wide enough for a ~20-character name on a single line (300px on xl+). */}
+          is wide enough for a ~20-character name on a single line (300px on xl+), and
+          narrows to 120px on small landscape phones (e.g. iPhone SE) so the question
+          columns keep enough room. */}
       <table className="w-full table-fixed border-collapse text-sm">
         <thead>
           <tr>
-            <th className="sticky left-0 top-0 z-30 w-44 border-b border-r border-border bg-muted px-3 py-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-muted-foreground xl:w-75 xl:px-4">
+            <th className="sticky left-0 top-0 z-30 w-44 phone-landscape:w-[120px] border-b border-r border-border bg-muted px-3 py-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-muted-foreground xl:w-75 xl:px-4">
               Swimmer
             </th>
             {questions.map((question) => (
               <th
                 key={question._id}
-                className="sticky top-0 z-20 border-b border-l border-border bg-violet-50 px-3 py-3 text-center align-middle"
+                className="sticky top-0 z-20 border-b border-l border-border bg-violet-50 px-2 py-3 text-center align-middle lg:px-3"
               >
-                <div className="text-xs font-semibold wrap-break-word text-foreground lg:text-sm">
+                {/* Below md the question columns are ~83px, so at 12px the single words
+                    (Backstroke 75px, Breaststroke 87px, Recommended 100px) are wider than
+                    the cell and overflow-wrap breaks them mid-word. 10px keeps every word
+                    whole except "Recommended" — at 9px it would still be too wide. From md
+                    up the columns are wide enough for 12px. */}
+                <div className="text-xs font-semibold wrap-break-word text-foreground max-[48rem]:text-[10px] max-[48rem]:leading-4 lg:text-sm">
                   {question.label}
                 </div>
               </th>
