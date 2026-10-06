@@ -7,6 +7,7 @@ import {
   ChevronUp,
   ClipboardList,
   Clock,
+  Info,
   Loader2,
   Mail,
   MoreVertical,
@@ -502,8 +503,22 @@ export function RosterTab({ tryoutId }: Props) {
         fmtTime={fmtTime}
       />
 
-      {/* ── Roster: table on lg+ and on landscape phones, cards otherwise ─── */}
-      <div className="mt-4 hidden overflow-hidden rounded-xl border border-gray-200 lg:block phone-landscape:block">
+      {/* Nudge portrait-phone users to rotate — that's the only case where the
+          roster falls back to cards. */}
+      <div className="mt-4 hidden phone-portrait:block">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <Info className="h-4 w-4 text-blue-600" />
+            <span className="text-sm text-blue-800">
+              For a better viewing experience, please use landscape mode on your device.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Roster: table on tablet/desktop and landscape phones, cards only
+          on portrait phones ─────────────────────────────────────────────── */}
+      <div className="mt-4 hidden overflow-hidden rounded-xl border border-gray-200 sm:block phone-landscape:block">
         <Table>
           <TableHeader className="sticky top-0 z-20 rounded-t-xl">
             <TableRow>
@@ -526,7 +541,7 @@ export function RosterTab({ tryoutId }: Props) {
                 className="cursor-pointer select-none whitespace-nowrap"
                 onClick={() => handleSort("swimmer_age")}
               >
-                Segment / Age
+                Segment /<br className="lg:hidden" /> Age
                 <SortIcon field="swimmer_age" active={sortBy} order={sortOrder} />
               </TableHead>
               <TableHead
@@ -661,8 +676,8 @@ export function RosterTab({ tryoutId }: Props) {
         </Table>
       </div>
 
-      {/* ── Roster cards (portrait phones / tablets) ──────────────────────── */}
-      <div className="mt-3 space-y-2 lg:hidden phone-landscape:hidden">
+      {/* ── Roster cards (portrait phones only) ───────────────────────────── */}
+      <div className="mt-3 space-y-2 sm:hidden phone-landscape:hidden">
         {loading && (
           <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-gray-400">
             <Loader2 className="mr-2 inline h-5 w-5 animate-spin" />

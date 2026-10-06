@@ -490,7 +490,12 @@ export default function TryoutsList() {
                 tryouts.map((t) => (
                   <div
                     key={t._id}
-                    className="rounded-lg border border-border bg-white p-4 flex flex-col gap-3"
+                    onClick={(e) => {
+                      // The title link and the actions menu handle their own clicks.
+                      if (e.defaultPrevented) return;
+                      navigate(`/tryouts/view/${t._id}`);
+                    }}
+                    className="cursor-pointer rounded-lg border border-border bg-white p-4 flex flex-col gap-3 transition hover:border-primary/40 hover:shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <Link
@@ -499,7 +504,9 @@ export default function TryoutsList() {
                       >
                         <span className="truncate block">{t.name}</span>
                       </Link>
-                      <TryoutActions t={t} />
+                      <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <TryoutActions t={t} />
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant="outline" className={statusVariant[t.status] ?? ""}>
@@ -530,7 +537,11 @@ export default function TryoutsList() {
                         {(t.totalSlots ?? 0) > 0 && `/${t.totalSlots * t.swimmersPerSlot}`} reg
                       </span>
                     </div>
-                    {t.segments && t.segments.length > 0 && <SegmentBadges segments={t.segments} />}
+                    {t.segments && t.segments.length > 0 && (
+                      <div className="w-fit" onClick={(e) => e.stopPropagation()}>
+                        <SegmentBadges segments={t.segments} />
+                      </div>
+                    )}
                   </div>
                 ))
               )}

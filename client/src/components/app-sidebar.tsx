@@ -25,6 +25,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useIsCompact } from "@/hooks/use-mobile";
 import { BrandLogo } from "./brand-logo";
 import { ClubSwitcher } from "./club-switcher";
 import { useAuthStore } from "@/lib/auth.store";
@@ -62,8 +63,9 @@ const MENUS: Record<string, Item[]> = {
 };
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpen, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
+  const isCompact = useIsCompact();
   const user = useAuthStore((s) => s.user);
   const role = user?.role ?? "parent";
   const { pathname } = useLocation();
@@ -75,6 +77,16 @@ export function AppSidebar() {
       .join("") || "?";
   const displayName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "—";
+
+  /**
+   * Dismiss the sidebar after navigating. On phones/tablets it overlays the
+   * content, so it should get out of the way; on desktop it stays docked.
+   */
+  function closeOnNavigate() {
+    if (!isCompact) return;
+    setOpen(false);
+    setOpenMobile(false);
+  }
 
   return (
     <Sidebar collapsible="offcanvas">
@@ -109,7 +121,11 @@ export function AppSidebar() {
                       tooltip={item.title}
                       className="h-10 rounded-lg data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold"
                     >
-                      <Link to={item.url} className="flex items-center gap-3">
+                      <Link
+                        to={item.url}
+                        onClick={closeOnNavigate}
+                        className="flex items-center gap-3"
+                      >
                         <item.icon className="h-[18px] w-[18px] shrink-0" />
                         <span>{item.title}</span>
                       </Link>

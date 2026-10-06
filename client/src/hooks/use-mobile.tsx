@@ -2,6 +2,9 @@ import * as React from "react";
 
 const MOBILE_BREAKPOINT = 780;
 
+/** Phones and tablets — everything below Tailwind's `lg` breakpoint. */
+const COMPACT_BREAKPOINT = 1024;
+
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
 
@@ -33,4 +36,9 @@ export function useMediaQuery(query: string) {
   }, [query]);
 
   return matches;
+}
+
+/** True on phones and tablets, where the sidebar overlays instead of docking. */
+export function useIsCompact() {
+  return useMediaQuery(`(max-width: ${COMPACT_BREAKPOINT - 1}px)`);
 }

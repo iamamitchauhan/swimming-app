@@ -25,6 +25,12 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
+/** Reads the state persisted by `SidebarProvider` on every toggle. `null` when unset. */
+export function getSidebarStateFromCookie(): boolean | null {
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${SIDEBAR_COOKIE_NAME}=([^;]+)`));
+  return match ? match[1] === "true" : null;
+}
+
 type SidebarContextProps = {
   state: "expanded" | "collapsed";
   open: boolean;

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset, getSidebarStateFromCookie } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useMe } from "@/hooks/use-auth";
 import { useAuthStore } from "@/lib/auth.store";
 import { useOnboardingStatus } from "@/hooks/use-onboarding";
 import { ClubUnderReview } from "@/components/club-under-review";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsCompact } from "@/hooks/use-mobile";
 
 export default function AppLayout() {
   const { user } = useAuthStore();
@@ -14,12 +14,18 @@ export default function AppLayout() {
 
   const isAdmin = user?.role === "admin";
   const { data: onboarding } = useOnboardingStatus({ enabled: isAdmin });
-  const isMobile = useIsMobile();
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  // Both values are read synchronously on the first render, so there is no
+  // flash of an open sidebar. Compact viewports (phones/tablets) always start
+  // closed; on desktop the last choice is restored from the cookie that
+  // `SidebarProvider` writes on every toggle.
+  const isCompact = useIsCompact();
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    isCompact ? false : (getSidebarStateFromCookie() ?? true),
+  );
 
   useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
-  }, [isMobile]);
+    if (isCompact) setSidebarOpen(false);
+  }, [isCompact]);
 
   if (isAdmin && onboarding?.club?.status === "pending_review") {
     return <ClubUnderReview clubName={onboarding.club.name} />;

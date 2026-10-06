@@ -74,6 +74,7 @@ export default function TryoutViewPage() {
   const registerId = searchParams.get("registerId") ?? undefined;
 
   const user = useAuthStore((state) => state.user);
+  const isCoach = user?.role === "coach";
   const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
 
   useEffect(() => {
@@ -122,29 +123,34 @@ export default function TryoutViewPage() {
 
   return (
     <PageShell title={""} crumbs={[{ label: "Tryouts", href: "/tryouts" }, { label: tryout.name }]}>
-      <div className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex gap-2 flex-col">
-          <h2 className="text-2xl font-semibold">{tryout.name}</h2>
-          <p className="text-sm text-muted-foreground">{tryout.description}</p>
+      {/* Coaches get a stripped-back view — no title/description header. */}
+      {!isCoach && (
+        <div className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex gap-2 flex-col">
+            <h2 className="text-2xl font-semibold">{tryout.name}</h2>
+            <p className="text-sm text-muted-foreground">{tryout.description}</p>
+          </div>
+          {canManageCoaches && (
+            <Button
+              size="sm"
+              className="shrink-0 self-start"
+              onClick={() => setManageCoachesOpen(true)}
+            >
+              <UserCog className="mr-1.5 h-4 w-4" /> Manage coaches
+            </Button>
+          )}
         </div>
-        {canManageCoaches && (
-          <Button
-            size="sm"
-            className="shrink-0 self-start"
-            onClick={() => setManageCoachesOpen(true)}
-          >
-            <UserCog className="mr-1.5 h-4 w-4" /> Manage coaches
-          </Button>
-        )}
-      </div>
+      )}
 
       {/* ── Tryout details ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4 mb-4 sm:mb-6">
-        <InfoTile icon={CalendarDays} label="Date" value={firstSessionDate(tryout.sessions)} />
-        <InfoTile icon={MapPin} label="Location" value={tryout.location || "—"} />
-        <InfoTile icon={Users2} label="Registrations" value={`${rosterResult?.total ?? "…"}`} />
-        <InfoTile icon={Waves} label="Status" value={statusLabel(tryout.status)} />
-      </div>
+      {!isCoach && (
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4 mb-4 sm:mb-6">
+          <InfoTile icon={CalendarDays} label="Date" value={firstSessionDate(tryout.sessions)} />
+          <InfoTile icon={MapPin} label="Location" value={tryout.location || "—"} />
+          <InfoTile icon={Users2} label="Registrations" value={`${rosterResult?.total ?? "…"}`} />
+          <InfoTile icon={Waves} label="Status" value={statusLabel(tryout.status)} />
+        </div>
+      )}
 
       <div className="flex min-w-0 items-center gap-1.5">
         <SegmentedTabs
