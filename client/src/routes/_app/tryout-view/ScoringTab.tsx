@@ -164,12 +164,13 @@ export function ScoringTab({ tryoutId, registerId }: Props) {
     }
   }
 
+  const activeSegmentId = params.segmentIds?.[0];
   const segmentLabel =
-    tryout?.segments?.find((s) => (s as any).id === params.segmentId || s.name === params.segmentId)
-      ?.name ?? (params.segmentId ? params.segmentId : "All segments");
+    tryout?.segments?.find((s) => (s as any).id === activeSegmentId || s.name === activeSegmentId)
+      ?.name ?? (activeSegmentId ? activeSegmentId : "All segments");
 
-  const statusLabel = params.status
-    ? params.status.charAt(0).toUpperCase() + params.status.slice(1)
+  const statusLabel = params.statuses?.[0]
+    ? params.statuses[0].charAt(0).toUpperCase() + params.statuses[0].slice(1)
     : "All status";
 
   function getScore(id: string, field: keyof Registration, fallback: boolean | string | number) {
@@ -237,13 +238,13 @@ export function ScoringTab({ tryoutId, registerId }: Props) {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => onParamsChange({ segmentId: undefined, page: 1 })}>
+          <DropdownMenuItem onClick={() => onParamsChange({ segmentIds: undefined, page: 1 })}>
             All segments
           </DropdownMenuItem>
           {tryout?.segments?.map((seg, i) => (
             <DropdownMenuItem
               key={i}
-              onClick={() => onParamsChange({ segmentId: (seg as any).id ?? seg.name, page: 1 })}
+              onClick={() => onParamsChange({ segmentIds: [(seg as any).id ?? seg.name], page: 1 })}
             >
               {seg.name}
             </DropdownMenuItem>
@@ -259,14 +260,14 @@ export function ScoringTab({ tryoutId, registerId }: Props) {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => onParamsChange({ status: undefined, page: 1 })}>
+          <DropdownMenuItem onClick={() => onParamsChange({ statuses: undefined, page: 1 })}>
             All status
           </DropdownMenuItem>
           {ALL_STATUSES.map((s) => (
             <DropdownMenuItem
               className="capitalize"
               key={s}
-              onClick={() => onParamsChange({ status: s, page: 1 })}
+              onClick={() => onParamsChange({ statuses: [s], page: 1 })}
             >
               {s}
             </DropdownMenuItem>

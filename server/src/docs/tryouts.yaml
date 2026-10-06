@@ -633,6 +633,10 @@ paths:
 
         Use `registerIds` to fetch a selected set of registrations (e.g. for bulk scoring).
 
+        **Status filter:** Waitlisted registrations are excluded by default
+        (they are served by `GET /waitlist/tryout/{tryoutId}`). Pass
+        `statuses=waitlisted` to include them.
+
         **Sorting:** `sortBy` accepts `swimmer_name`, `swimmer_age`, `status`, or
         `session_time`. The `session_time` option sorts by the slot's
         `sessionDate` + `startTime` (ascending = earliest first) and is
@@ -655,6 +659,10 @@ paths:
         `checked_in_by_name` (display name of the checker, or null). Pass
         `checkedIn=true` to return only checked-in registrations, or
         `checkedIn=false` for those not yet checked in.
+
+        **Time-slot filter:** Pass `slotIds` as a comma-separated list of slot
+        IDs (from `GET /tryouts/{id}/slots`) to return only registrations
+        booked into those slots. Omit to disable the filter.
       operationId: listTryoutRegistrations
       parameters:
         - name: id
@@ -690,19 +698,43 @@ paths:
           description: Case-insensitive search on swimmer name or guardian email.
           schema:
             type: string
-        - name: status
+        - name: statuses
           in: query
           required: false
-          description: Filter by registration status.
+          description: |
+            Comma-separated list of registration statuses to filter by. A
+            registration matches if its `status` is one of the supplied values.
+            (The singular `status` is also accepted for backward compatibility.)
+
+            When omitted, **waitlisted** registrations are excluded from the
+            result — they are served by the dedicated waitlist endpoint
+            (`GET /waitlist/tryout/{tryoutId}`). Pass `statuses=waitlisted`
+            (alone or combined) to include them.
           schema:
             type: string
-            enum: [registered, waitlisted, offered, rejected, cancelled]
-        - name: segmentId
+          example: registered,offered
+        - name: segmentIds
           in: query
           required: false
-          description: Filter by segment ID.
+          description: |
+            Comma-separated list of segment IDs to filter by. A registration
+            matches if its `segmentId` is one of the supplied values. Omit to
+            disable the filter. (The singular `segmentId` is also accepted for
+            backward compatibility.)
           schema:
             type: string
+          example: 6a5499b323709ced7a116edc,6a5499e523709ced7a116ef9
+        - name: slotIds
+          in: query
+          required: false
+          description: |
+            Comma-separated list of time-slot IDs to filter by. A registration
+            matches if its `slotId` equals any of the supplied values. Omit to
+            disable the filter. Slot IDs come from
+            `GET /tryouts/{id}/slots`.
+          schema:
+            type: string
+          example: 6a5499b323709ced7a116edc,6a5499e523709ced7a116ef9
         - name: coachRecommendations
           in: query
           required: false

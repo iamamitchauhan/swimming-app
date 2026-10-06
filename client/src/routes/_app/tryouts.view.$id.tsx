@@ -139,23 +139,11 @@ export default function TryoutViewPage() {
       </div>
 
       {/* ── Tryout details ─────────────────────────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
         <InfoTile icon={CalendarDays} label="Date" value={firstSessionDate(tryout.sessions)} />
         <InfoTile icon={MapPin} label="Location" value={tryout.location || "—"} />
-        <InfoTile
-          icon={Users2}
-          label="Registrations"
-          value={`${rosterResult?.total ?? "…"} registered`}
-        />
-        <InfoTile
-          icon={Waves}
-          label="Status"
-          value={
-            <Badge variant="outline" className={STATUS_VARIANT[tryout.status] ?? ""}>
-              {statusLabel(tryout.status)}
-            </Badge>
-          }
-        />
+        <InfoTile icon={Users2} label="Registrations" value={`${rosterResult?.total ?? "…"}`} />
+        <InfoTile icon={Waves} label="Status" value={statusLabel(tryout.status)} />
       </div>
 
       <div className="flex min-w-0 items-center gap-1.5">

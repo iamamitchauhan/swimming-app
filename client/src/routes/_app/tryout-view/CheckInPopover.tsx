@@ -40,9 +40,11 @@ export interface CheckInPopoverProps {
   onSave: (checkedInAt: string) => Promise<boolean>;
   /** Clears the check-in. Resolves `true` on success (closes the popover). */
   onUndo: () => Promise<boolean>;
+  /** Hides the "Undo check-in" action — used once the swimmer has a score. */
+  canUndo?: boolean;
   isPending?: boolean;
-  /** Denser trigger for cards: single line, no date sub-label. */
-  compact?: boolean;
+  /** Trigger style: "default" (roster table) or "card" (compact header label). */
+  variant?: "default" | "card";
 }
 
 /**
@@ -57,8 +59,9 @@ export function CheckInPopover({
   ariaLabel = "Edit check-in",
   onSave,
   onUndo,
+  canUndo = true,
   isPending,
-  compact,
+  variant = "default",
 }: CheckInPopoverProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -86,33 +89,33 @@ export function CheckInPopover({
   return (
     <Popover open={open} onOpenChange={(next) => !isPending && setOpen(next)}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={ariaLabel}
-          className={cn(
-            "group flex cursor-pointer gap-1.5 text-left",
-            compact ? "items-center" : "items-start",
-          )}
-        >
-          <CheckCircle2 className={cn("h-4 w-4 shrink-0 text-green-600", !compact && "mt-0.5")} />
-          {/* Time + date share a column so the date aligns under the time text. */}
-          <span className="flex flex-col items-start gap-0.5">
-            <span className="inline-flex items-center gap-1.5">
-              <span
-                className={cn(
-                  "font-medium tabular-nums text-green-600",
-                  compact ? "text-xs" : "text-sm",
-                )}
-              >
-                {timeLabel}
+        {variant === "card" ? (
+          <button
+            type="button"
+            aria-label={ariaLabel}
+            className="cursor-pointer text-sm font-semibold tabular-nums text-green-600 transition-colors hover:underline"
+          >
+            In {timeLabel}
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label={ariaLabel}
+            className="group flex cursor-pointer items-start gap-1.5 text-left"
+          >
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+            {/* Time + date share a column so the date aligns under the time text. */}
+            <span className="flex flex-col items-start gap-0.5">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-sm font-medium tabular-nums text-green-600">{timeLabel}</span>
+                <Pencil className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
               </span>
-              <Pencil className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
+              <span className="text-xs text-muted-foreground">
+                222{formatDateLabel(checkedInAt)}
+              </span>
             </span>
-            {!compact && (
-              <span className="text-xs text-muted-foreground">{formatDateLabel(checkedInAt)}</span>
-            )}
-          </span>
-        </button>
+          </button>
+        )}
       </PopoverTrigger>
 
       <PopoverContent align="start" className="w-64 space-y-3">
@@ -149,15 +152,17 @@ export function CheckInPopover({
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-1">
-          <button
-            type="button"
-            onClick={handleUndo}
-            disabled={isPending}
-            className="cursor-pointer text-sm font-medium text-destructive hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Undo check-in
-          </button>
+        <div className={cn("flex items-center pt-1", canUndo ? "justify-between" : "justify-end")}>
+          {canUndo && (
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={isPending}
+              className="cursor-pointer text-sm font-medium text-destructive hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Undo check-in
+            </button>
+          )}
           <Button type="button" size="sm" onClick={handleSave} disabled={isPending || invalid}>
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             Save
