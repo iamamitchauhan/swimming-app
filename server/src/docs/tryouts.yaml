@@ -584,7 +584,7 @@ paths:
       tags: [Tryouts]
       summary: Delete tryout
       description: |
-        Deletes a tryout. Requires admin or coach role.
+        Deletes a tryout. Requires admin role — coaches are not permitted.
         This action is irreversible.
       operationId: deleteTryout
       security:

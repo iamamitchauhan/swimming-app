@@ -98,10 +98,15 @@ const PAGE_SIZE = 10;
 
 function TryoutActions({ t }: { t: Tryout }) {
   const navigate = useNavigate();
+  const role = useAuthStore((s) => s.user?.role);
   const [publishTarget, setPublishTarget] = useState<Tryout | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Tryout | null>(null);
   const deleteMutation = useDeleteTryout();
   const publishMutation = usePublishTryout();
+
+  // Preview / manage / edit / publish / delete are admin-only, so coaches get
+  // no actions menu at all. DELETE /tryouts/:id is enforced admin-only server-side.
+  const isAdmin = role === "admin";
 
   function confirmPublish() {
     if (!publishTarget) return;
@@ -130,6 +135,8 @@ function TryoutActions({ t }: { t: Tryout }) {
       },
     });
   }
+
+  if (!isAdmin) return null;
 
   return (
     <>
@@ -542,6 +549,11 @@ export default function TryoutsList() {
                         <SegmentBadges segments={t.segments} />
                       </div>
                     )}
+
+                    {/* add a button for view */}
+                    <Button size="sm" onClick={() => navigate(`/tryouts/view/${t._id}`)}>
+                      View
+                    </Button>
                   </div>
                 ))
               )}

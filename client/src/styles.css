@@ -62,6 +62,7 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --animate-rotate-device: rotate-device 3s ease-in-out infinite;
 }
 
 :root {
@@ -165,5 +166,24 @@
   h4,
   h5 {
     letter-spacing: -0.02em;
+  }
+}
+
+/* Rock a phone icon between portrait and landscape for the rotation hint. */
+@keyframes rotate-device {
+
+  0%,
+  12% {
+    transform: rotate(0deg);
+  }
+
+  45%,
+  60% {
+    transform: rotate(-90deg);
+  }
+
+  93%,
+  100% {
+    transform: rotate(0deg);
   }
 }

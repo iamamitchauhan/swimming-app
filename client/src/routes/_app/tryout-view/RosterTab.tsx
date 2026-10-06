@@ -12,6 +12,7 @@ import {
   Mail,
   MoreVertical,
   RotateCcw,
+  Smartphone,
   Undo2,
   X,
   XCircle,
@@ -45,6 +46,7 @@ import {
   useCheckInMutation,
 } from "@/hooks/use-tryout-dashboard";
 import { useGroups } from "@/hooks/use-groups";
+import { useMediaQuery } from "@/hooks/use-mobile";
 import { useAuthStore } from "@/lib/auth.store";
 import { RegistrationDetailModal } from "./RegistrationDetailModal";
 import { DecisionConfirmDialog } from "./DecisionConfirmDialog";
@@ -81,6 +83,12 @@ import { toast } from "sonner";
  * offer and reject any number of swimmers).
  */
 const MAX_BULK_SCORE_SWIMMERS = 5;
+
+/** Remembers that a coach has dismissed the one-time landscape-mode hint. */
+const LANDSCAPE_ALERT_KEY = "swimclub.coach.landscape-alert-seen";
+
+/** Phone-sized screens held upright (below Tailwind's `md` tablet breakpoint). */
+const PHONE_PORTRAIT_QUERY = "(orientation: portrait) and (max-width: 767px)";
 
 const STATUS_COLORS: Record<string, string> = {
   registered: "bg-blue-100 text-blue-700",
@@ -259,6 +267,7 @@ export function RosterTab({ tryoutId }: Props) {
   const resetScore = useResetScore(tryoutId);
   const checkInMutation = useCheckInMutation(tryoutId);
   const { data: groups } = useGroups();
+  const isPhonePortrait = useMediaQuery(PHONE_PORTRAIT_QUERY);
 
   function onParamsChange(params: Partial<RegistrationListParams>) {
     setRosterParams((prev) => ({ ...prev, ...params }));
@@ -282,6 +291,7 @@ export function RosterTab({ tryoutId }: Props) {
   // ineligible rows). Empty for single-row actions.
   const [bulkTargetIds, setBulkTargetIds] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [landscapeAlertOpen, setLandscapeAlertOpen] = useState(false);
 
   const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
 
@@ -480,6 +490,31 @@ export function RosterTab({ tryoutId }: Props) {
       );
     }
   }, [isCoach]);
+
+  // Coaches get a one-time nudge to rotate their device to landscape, shown only
+  // on phone-sized portrait screens. Once dismissed it's remembered so it never
+  // shows again; rotating to landscape simply hides it (without dismissing).
+  useEffect(() => {
+    if (!isCoach || !isPhonePortrait) {
+      setLandscapeAlertOpen(false);
+      return;
+    }
+    try {
+      if (localStorage.getItem(LANDSCAPE_ALERT_KEY) !== "true") setLandscapeAlertOpen(true);
+    } catch {
+      // localStorage unavailable (e.g. private mode) — show it anyway.
+      setLandscapeAlertOpen(true);
+    }
+  }, [isCoach, isPhonePortrait]);
+
+  function dismissLandscapeAlert() {
+    try {
+      localStorage.setItem(LANDSCAPE_ALERT_KEY, "true");
+    } catch {
+      // Ignore storage failures — the alert just reappears next visit.
+    }
+    setLandscapeAlertOpen(false);
+  }
 
   const filterSegments = visibleSegments.map((seg) => ({
     id: (seg as any).id ?? seg.name,
@@ -965,6 +1000,30 @@ export function RosterTab({ tryoutId }: Props) {
             >
               {resetScore.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
               Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={landscapeAlertOpen}
+        onOpenChange={(open) => {
+          if (!open) dismissLandscapeAlert();
+        }}
+      >
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader className="items-center text-center sm:text-center">
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/5 p-3">
+              <Smartphone className="h-8 w-8 animate-rotate-device text-primary motion-reduce:animate-none" />
+            </div>
+            <AlertDialogTitle className="text-center">Landscape mode recommended</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              For a better viewing experience, please use landscape mode on your device.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2 sm:justify-center">
+            <AlertDialogAction onClick={dismissLandscapeAlert} className="w-full sm:w-auto sm:px-8">
+              Got it
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -38,7 +38,7 @@ const controller = new TryoutController(service);
  * POST /:id/comms                — send bulk communication
  * POST /                         — create tryout (admin, coach)
  * PUT  /:id                      — update tryout (admin, coach)
- * DELETE /:id                    — delete tryout (admin, coach)
+ * DELETE /:id                    — delete tryout (admin)
  */
 const tryoutRouter = Router();
 
@@ -62,7 +62,7 @@ tryoutRouter.put("/:id", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.CO
 
 tryoutRouter.patch("/:id/publish", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.publish);
 
-tryoutRouter.delete("/:id", authenticate, authorize(USER_ROLES.ADMIN, USER_ROLES.COACH), controller.delete);
+tryoutRouter.delete("/:id", authenticate, authorize(USER_ROLES.ADMIN), controller.delete);
 
 // ─── Admin registration actions ───────────────────────────────────────────────
 
