@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   ChevronDown,
@@ -43,6 +44,7 @@ import {
   useSaveScore,
   useResetScore,
   useCheckInMutation,
+  tryoutDashboardKeys,
 } from "@/hooks/use-tryout-dashboard";
 import { useGroups } from "@/hooks/use-groups";
 import { useMediaQuery } from "@/hooks/use-mobile";
@@ -284,6 +286,7 @@ interface Props {
 export function RosterTab({ tryoutId }: Props) {
   const { data: tryout } = useTryout(tryoutId);
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const [rosterParams, setRosterParams] = useState<RegistrationListParams>(() => ({
     page: 1,
@@ -453,9 +456,25 @@ export function RosterTab({ tryoutId }: Props) {
       selectedRows.length - scoreEligibleRows.length,
       "Scoring requires a check-in; cancelled, waitlisted and rejected swimmers were skipped.",
     );
-    navigate(
-      `/tryouts/view/${tryoutId}/bulk-scoring?ids=${scoreEligibleRows.map((r) => r.id).join(",")}`,
+    const ids = scoreEligibleRows.map((r) => r.id);
+    // Seed the bulk-scoring registrations query with the rows already on screen
+    // so the scoring view renders instantly instead of re-fetching them by id.
+    // The query key must mirror BulkScoringPage exactly (page 1, limit = ids).
+    qc.setQueryData(
+      tryoutDashboardKeys.roster(tryoutId, {
+        page: 1,
+        limit: Math.max(ids.length, 1),
+        registerIds: ids,
+      }),
+      {
+        registrations: scoreEligibleRows,
+        total: scoreEligibleRows.length,
+        page: 1,
+        limit: Math.max(ids.length, 1),
+        totalPages: 1,
+      },
     );
+    navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${ids.join(",")}`);
   }
 
   async function handleConfirm() {

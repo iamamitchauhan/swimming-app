@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useTryout } from "@/hooks/use-tryouts";
 import { useTryoutRegistration } from "@/hooks/use-tryout-dashboard";
+import { useSegmentQuestionsQuery } from "@/hooks/use-scoring-questions";
 import { RosterTab } from "./tryout-view/RosterTab";
 import { SlotsTab } from "./tryout-view/SlotsTab";
 import { WaitlistTab } from "./tryout-view/WaitlistTab";
@@ -68,6 +69,11 @@ export default function TryoutViewPage() {
 
   const { data: tryout, isLoading: tryoutLoading, error: tryoutError } = useTryout(id);
   const { data: rosterResult } = useTryoutRegistration(id, { page: 1, limit: 1 });
+  // Warm the segment-questions cache on the tryout view so the bulk-scoring
+  // screen ("Score together") can render its matrix without waiting on this
+  // request. Cached for 60s (see useSegmentQuestionsQuery), and stale data is
+  // still served instantly while it revalidates in the background.
+  useSegmentQuestionsQuery(id);
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState(() => searchParams.get("tab") ?? "roster");
   const [manageCoachesOpen, setManageCoachesOpen] = useState(false);

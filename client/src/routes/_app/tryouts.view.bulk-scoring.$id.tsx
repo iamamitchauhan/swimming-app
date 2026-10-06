@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useTryout } from "@/hooks/use-tryouts";
@@ -27,6 +27,13 @@ export default function BulkScoringPage() {
 
   const loading = tryoutLoading || registrationsLoading || isFetching;
   const registrations = result?.registrations ?? [];
+
+  // This route renders outside AppLayout and there's no ScrollRestoration, so
+  // the window keeps the roster's scroll offset on navigation — leaving the
+  // table header cut off. Reset to the top whenever this view mounts.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   if (loading) {
     return (
