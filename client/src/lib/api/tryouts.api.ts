@@ -321,8 +321,9 @@ export const tryoutsApi = {
     if (params.page) query.set("page", String(params.page));
     if (params.limit) query.set("limit", String(params.limit));
     if (params.search) query.set("search", params.search);
-    if (params.status) query.set("status", params.status);
-    if (params.segmentId) query.set("segmentId", params.segmentId);
+    if (params.statuses?.length) query.set("statuses", params.statuses.join(","));
+    if (params.segmentIds?.length) query.set("segmentIds", params.segmentIds.join(","));
+    if (params.slotIds?.length) query.set("slotIds", params.slotIds.join(","));
     if (params.coachRecommendations?.length)
       query.set("coachRecommendations", params.coachRecommendations.join(","));
     if (params.registerId) query.set("registerId", params.registerId);
@@ -634,8 +635,21 @@ export interface RegistrationListParams {
   page?: number;
   limit?: number;
   search?: string;
-  status?: string;
-  segmentId?: string;
+  /**
+   * Filter by one or more registration statuses. Omit or pass an empty array
+   * to disable the filter (show all statuses).
+   */
+  statuses?: string[];
+  /**
+   * Filter by one or more segments. Omit or pass an empty array to disable the
+   * filter (show all segments).
+   */
+  segmentIds?: string[];
+  /**
+   * Filter by one or more time slots (from `GET /tryouts/:id/slots`).
+   * Omit or pass an empty array to disable the filter (show all slots).
+   */
+  slotIds?: string[];
   coachRecommendations?: string[];
   registerId?: string;
   registerIds?: string[];

@@ -12,12 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -69,8 +65,8 @@ function MultiSelectDropdown({
         : `${selected.length} selected`;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <Popover>
+      <PopoverTrigger asChild>
         <button
           type="button"
           className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
@@ -78,22 +74,34 @@ function MultiSelectDropdown({
           <span className="truncate">{display}</span>
           <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0 ml-2" />
         </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="start">
-        {options.map((option) => (
-          <DropdownMenuCheckboxItem
-            key={option.id}
-            checked={selected.includes(option.id)}
-            onCheckedChange={() => toggle(option.id)}
-          >
-            {option.name}
-          </DropdownMenuCheckboxItem>
-        ))}
-        {options.length === 0 && (
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 p-1">
+        {options.length === 0 ? (
           <div className="px-2 py-1.5 text-sm text-muted-foreground">No {label} available</div>
+        ) : (
+          <div className="max-h-64 space-y-0.5 overflow-y-auto">
+            {options.map((option) => (
+              <div
+                key={option.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => toggle(option.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggle(option.id);
+                  }
+                }}
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-accent"
+              >
+                <Checkbox checked={selected.includes(option.id)} className="pointer-events-none" />
+                <span className="truncate">{option.name}</span>
+              </div>
+            ))}
+          </div>
         )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -370,7 +378,7 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
                         </Select>
                       </div>
 
-                      <div className="space-y-1 min-w-0">
+                      {/* <div className="space-y-1 min-w-0">
                         <Label className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">
                           Role
                         </Label>
@@ -386,7 +394,7 @@ export function ManageCoachesDialog({ tryoutId, open, onOpenChange }: Props) {
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
+                      </div> */}
 
                       <div className="space-y-1 min-w-0">
                         <Label className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">

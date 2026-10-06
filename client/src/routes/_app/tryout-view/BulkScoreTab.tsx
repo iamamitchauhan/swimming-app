@@ -181,18 +181,22 @@ function QuestionCard({
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className="border-b bg-violet-50 px-4 py-3">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-violet-600">
+        {/* <div className="text-[11px] font-semibold uppercase tracking-wide text-violet-600">
           Question {index + 1} of {total}
-        </div>
+        </div> */}
         <div className="mt-0.5 text-sm font-semibold text-foreground">{question.label}</div>
       </div>
       <ul className="divide-y">
         {swimmers.map((swimmer, i) => (
           <li key={swimmer.id} className="flex items-center gap-3 px-4 py-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
-              {i + 1}
-            </span>
-            <span className="min-w-0 flex-1 text-sm font-medium">{swimmer.swimmer_name}</span>
+            {swimmers.length > 1 && (
+              <>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 text-sm font-medium">{swimmer.swimmer_name}</span>
+              </>
+            )}
             <ScoreControl
               question={question}
               value={getScore(swimmer.id, question._id)}

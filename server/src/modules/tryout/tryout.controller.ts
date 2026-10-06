@@ -825,8 +825,9 @@ export class TryoutController {
    *   page        — page number (default 1)
    *   limit       — page size (default 20)
    *   search      — swimmer name or parent/guardian email (case-insensitive)
-   *   status      — one of: registered | waitlisted | offered | rejected | cancelled
-   *   segmentId   — filter by segmentId value
+   *   statuses    — comma-separated list of: registered | waitlisted | offered | rejected | cancelled
+   *   segmentIds  — comma-separated list of segmentId values
+   *   slotIds     — comma-separated list of slot IDs (from GET /:id/slots)
    *   coachRecommendations — comma-separated list of coach recommendation values
    *                  (group ObjectId strings and/or the "__rejected__" sentinel)
    *   sortBy      — swimmer_name | swimmer_age | status | session_time (default: swimmer_name)
@@ -853,12 +854,28 @@ export class TryoutController {
       const page = Math.max(1, parseInt(req.query["page"] as string) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(req.query["limit"] as string) || 20));
       const search = ((req.query["search"] as string) || "").trim().toLowerCase();
-      const statusFilter = (req.query["status"] as string) || "";
-      const segmentIdFilter = (req.query["segmentId"] as string) || "";
+      // Multi-select filters. `statuses` / `segmentIds` take comma-separated
+      // lists; the singular `status` / `segmentId` forms are still accepted for
+      // backward compatibility.
+      const statusFilter = ((req.query["statuses"] as string) || (req.query["status"] as string) || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+      const segmentIdFilter = ((req.query["segmentIds"] as string) || (req.query["segmentId"] as string) || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
       const coachRecommendationFilter = ((req.query["coachRecommendations"] as string) || "")
         .split(",")
         .map((value) => value.trim())
         .filter(Boolean);
+      // Comma-separated slot IDs. Cast to ObjectIds here so the aggregation
+      // path (session_time sort) matches without its own casting step.
+      const slotIds = ((req.query["slotIds"] as string) || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value) => mongoose.Types.ObjectId.isValid(value))
+        .map((value) => new mongoose.Types.ObjectId(value));
       const registerId = ((req.query["registerId"] as string) || "").trim();
       const registerIds = ((req.query["registerIds"] as string) || "")
         .split(",")
@@ -883,8 +900,11 @@ export class TryoutController {
 
       // ── Build MongoDB filter ──────────────────────────────────────────────
       const mongoFilter: Record<string, any> = { tryoutId: id };
-      if (statusFilter) mongoFilter["status"] = statusFilter;
-      if (segmentIdFilter) mongoFilter["segmentId"] = segmentIdFilter;
+      // Waitlisted swimmers live in the dedicated waitlist view, so they are
+      // excluded from the roster unless a status filter explicitly asks for them.
+      if (statusFilter.length > 0) mongoFilter["status"] = { $in: statusFilter };
+      else mongoFilter["status"] = { $nin: ["waitlisted"] };
+      if (segmentIdFilter.length > 0) mongoFilter["segmentId"] = { $in: segmentIdFilter };
       // `$in: [null]` matches both null and missing fields, so it covers rows
       // created before the check-in columns existed.
       if (checkedInFilter === true) mongoFilter["checkedInAt"] = { $exists: true, $ne: null };
@@ -894,6 +914,7 @@ export class TryoutController {
         // Both are stored verbatim on the registration's `coachRecommendation` field.
         mongoFilter["coachRecommendation"] = { $in: coachRecommendationFilter };
       }
+      if (slotIds.length > 0) mongoFilter["slotId"] = { $in: slotIds };
       if (registerId && mongoose.Types.ObjectId.isValid(registerId)) {
         mongoFilter["_id"] = new mongoose.Types.ObjectId(registerId);
       } else if (registerIds.length > 0) {
@@ -988,13 +1009,17 @@ export class TryoutController {
           sendSuccess(res, { registrations: [], total: 0, page, limit, totalPages: 0 }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
           return;
         }
-        // If the coach selected a specific segment, verify it's within their assigned segments
-        if (segmentIdFilter && !coachSegmentIds.includes(segmentIdFilter)) {
-          sendSuccess(res, { registrations: [], total: 0, page, limit, totalPages: 0 }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
-          return;
-        }
-        // Only apply $in filter when no specific segment is selected
-        if (!segmentIdFilter) {
+        // A coach may only ever see registrations in their assigned segments.
+        // If they narrowed the segment filter, intersect it with the assignment;
+        // if nothing remains, the result is empty.
+        if (segmentIdFilter.length > 0) {
+          const allowed = segmentIdFilter.filter((value) => coachSegmentIds.includes(value));
+          if (allowed.length === 0) {
+            sendSuccess(res, { registrations: [], total: 0, page, limit, totalPages: 0 }, MESSAGES.SUCCESS, HTTP_STATUS.OK);
+            return;
+          }
+          mongoFilter["segmentId"] = { $in: allowed };
+        } else {
           mongoFilter["segmentId"] = { $in: coachSegmentIds };
         }
         // Re-count with the updated filter
