@@ -10,6 +10,16 @@
 /* Phones held upright: too narrow for the roster table, so it falls back to cards. */
 @custom-variant phone-portrait (@media (orientation: portrait) and (width < 40rem));
 
+/* Any phone orientation: the app header, pagination and action bars switch to
+   their compact layout. Tablets (>= 48rem portrait / >= 64rem landscape) keep
+   the roomier chrome. */
+@custom-variant phone {
+  @media (width < 48rem),
+  (orientation: landscape) and (width < 64rem) {
+    @slot;
+  }
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

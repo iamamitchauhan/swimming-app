@@ -241,7 +241,7 @@ function ScoreMatrix({
   isApplicable?: (swimmer: Registration, questionId: string) => boolean;
 }) {
   return (
-    <div className="max-h-[calc(100vh-8rem)] overflow-auto overscroll-x-contain rounded-xl border border-border phone-landscape:max-h-[calc(100vh-7rem)]">
+    <div className="max-h-[calc(100vh-8rem)] overflow-auto overscroll-x-contain rounded-xl border border-border phone:max-h-[calc(100vh-9rem)]">
       {/* table-fixed + w-full: the table never exceeds its container, so all question
           columns fit — labels wrap and controls shrink to the cell. No min-width, so
           narrow landscape tablets don't get a horizontal scrollbar. The swimmer column
@@ -616,16 +616,16 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
   return (
     <>
       {/* ── Fixed action bar ───────────────────────────────────────────────── */}
-      <div className="fixed inset-x-0 top-0 z-50 flex h-16 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+      <div className="fixed inset-x-0 top-0 z-50 flex h-16 phone:h-12 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur phone:px-3 sm:px-6 lg:px-8">
         <button
           onClick={onBack}
           aria-label="Back to roster"
-          className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          className="inline-flex h-9 w-9 phone:h-8 phone:w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1 phone-landscape:hidden">
-          <div className="truncate text-base font-semibold leading-tight">
+          <div className="truncate text-base phone:text-sm font-semibold leading-tight">
             Tryout scoring{singleGroup ? ` · ${singleGroup.name}` : ""}
           </div>
           <div className="truncate text-xs text-muted-foreground">
@@ -646,18 +646,26 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
             )}
           </span>
           {import.meta.env.VITE_ENV === "dev" && (
-            <Button variant="outline" onClick={fillRandomScores} className="hidden sm:inline-flex">
+            <Button
+              variant="outline"
+              onClick={fillRandomScores}
+              className="hidden sm:inline-flex phone:h-8 phone:px-3 phone:text-xs"
+            >
               <Dices className="mr-1 h-4 w-4" />
               Random fill
             </Button>
           )}
-          <Button variant="outline" onClick={onBack} className="phone-landscape:hidden">
+          <Button
+            variant="outline"
+            onClick={onBack}
+            className="phone-landscape:hidden phone:h-8 phone:px-3 phone:text-xs"
+          >
             Cancel
           </Button>
           <Button
             onClick={saveAll}
             disabled={savingAll || !hasEdits}
-            className="bg-blue-600 hover:bg-blue-500"
+            className="bg-blue-600 hover:bg-blue-500 phone:h-8 phone:px-3 phone:text-xs"
           >
             {savingAll ? (
               <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -670,7 +678,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
       </div>
 
       {/* ── Single table for every selected swimmer ────────────────────────── */}
-      <div className="space-y-8 px-4 pt-20 pb-8 sm:px-6 lg:px-8">
+      <div className="space-y-8 px-4 pt-20 pb-8 phone:pt-16 sm:px-6 lg:px-8">
         {allQuestions.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
             No scoring questions are configured for these swimmers. Add questions to their age

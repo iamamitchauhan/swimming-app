@@ -31,10 +31,11 @@ export function AppHeader({ title, crumbs = [] }: { title: string; crumbs?: Crum
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "—";
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-background/80 backdrop-blur-xl border-b border-border flex items-center gap-3 px-4 lg:px-6">
+    <header className="sticky top-0 z-30 h-16 phone:h-12 bg-background/80 backdrop-blur-xl border-b border-border flex items-center gap-3 phone:gap-2 px-4 phone:px-3 lg:px-6">
       <SidebarTrigger />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {/* Phones get a single-row header (title only) to keep it compact. */}
+        <div className="flex phone:hidden items-center gap-1.5 text-xs text-muted-foreground">
           <Link to="/dashboard" className="hover:text-foreground">
             Home
           </Link>
@@ -51,7 +52,13 @@ export function AppHeader({ title, crumbs = [] }: { title: string; crumbs?: Crum
             </span>
           ))}
         </div>
-        <h1 className="text-lg md:text-xl font-bold tracking-tight truncate">{title}</h1>
+        {/* Pages that render their own heading pass an empty title; on phones the
+            deepest crumb stands in for it so the header is never blank. */}
+        <h1 className="text-xl phone:text-base font-bold tracking-tight truncate">
+          {title || (
+            <span className="hidden phone:inline">{crumbs[crumbs.length - 1]?.label ?? ""}</span>
+          )}
+        </h1>
       </div>
 
       {/* <div className="hidden md:flex relative w-64 lg:w-80">
@@ -69,7 +76,7 @@ export function AppHeader({ title, crumbs = [] }: { title: string; crumbs?: Crum
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="h-9 w-9 rounded-full bg-linear-to-br from-primary to-aqua flex items-center justify-center text-primary-foreground font-semibold text-sm hover:opacity-90 transition">
+          <button className="h-9 w-9 phone:h-8 phone:w-8 rounded-full bg-linear-to-br from-primary to-aqua flex items-center justify-center text-primary-foreground font-semibold text-sm phone:text-xs hover:opacity-90 transition">
             {initials}
           </button>
         </DropdownMenuTrigger>

@@ -941,22 +941,26 @@ export function RosterTab({ tryoutId }: Props) {
 
       {/* ── Pagination ────────────────────────────────────────────────────── */}
       {total > 0 && (
-        <div className="sticky bottom-0 z-20 mt-4 flex flex-col gap-3 border-t border-gray-100 bg-white/95 py-3 text-sm text-gray-600 backdrop-blur sm:flex-row sm:items-center sm:justify-between -mx-0.5 px-3 rounded-b-xl">
-          <span>
-            Showing{" "}
+        <div className="sticky bottom-0 z-20 mt-4 flex items-center justify-between gap-3 border-t border-gray-100 bg-white/95 px-3 py-3 text-sm text-gray-600 backdrop-blur phone:gap-2 phone:py-2 phone:text-xs -mx-0.5 rounded-b-xl">
+          <span className="whitespace-nowrap">
+            <span className="phone:hidden">Showing </span>
             <span className="font-medium">
               {(page - 1) * (rosterParams.limit ?? 20) + 1}–
               {Math.min(page * (rosterParams.limit ?? 20), total)}
             </span>{" "}
-            of <span className="font-medium">{total}</span> results
+            of <span className="font-medium">{total}</span>
+            <span className="phone:hidden"> results</span>
           </span>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 phone:gap-1.5">
             {/* Page size selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer">
+                <button
+                  aria-label={`Page size: ${rosterParams.limit ?? 20}`}
+                  className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2 cursor-pointer phone:gap-1.5 phone:px-2 phone:py-1 phone:text-xs"
+                >
                   {rosterParams.limit ?? 20}
-                  <span className="text-gray-500">/ page</span>
+                  <span className="text-gray-500 phone:hidden">/ page</span>
                   <ChevronDown className="h-4 w-4 text-gray-500" />
                 </button>
               </DropdownMenuTrigger>
@@ -977,6 +981,7 @@ export function RosterTab({ tryoutId }: Props) {
             <Button
               variant="outline"
               size="sm"
+              className="phone:h-7 phone:px-2"
               disabled={page <= 1}
               onClick={() => onParamsChange({ page: page - 1 })}
             >
@@ -988,6 +993,7 @@ export function RosterTab({ tryoutId }: Props) {
             <Button
               variant="outline"
               size="sm"
+              className="phone:h-7 phone:px-2"
               disabled={page >= totalPages}
               onClick={() => onParamsChange({ page: page + 1 })}
             >
