@@ -4,11 +4,12 @@
 const HEADERS = ["category", "question", "type"];
 
 const EXAMPLE_ROWS: string[][] = [
-  ["General deck & fundamentals", "Circle swim", "yesno"],
-  ["Freestyle", "Bilateral breathing", "yesno"],
-  ["Freestyle", "Legs straight (not kicking from knees)", "rating"],
-  ["Starts & Underwaters", "Headfirst dive from the block", "yesno"],
-  ["General deck & fundamentals", "Coach comments", "text"],
+  ["General", "Finished the tryout?", "yesno"],
+  ["General", "Freestyle proficient?", "yesno"],
+  ["General", "Backstroke proficient?", "yesno"],
+  ["General", "Butterfly proficient?", "yesno"],
+  ["General", "Breaststroke proficient?", "yesno"],
+  ["General", "Recommended by coach?", "yesno"],
 ];
 
 /** A ready-to-fill CSV: header row plus example rows. */

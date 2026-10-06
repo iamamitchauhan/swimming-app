@@ -48,13 +48,13 @@ function InfoTile({
   value: React.ReactNode;
 }) {
   return (
-    <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3">
-      <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-        <Icon className="h-5 w-5" />
+    <div className="bg-card rounded-lg sm:rounded-xl border border-border p-2 sm:p-4 flex items-center gap-1.5 sm:gap-3">
+      <div className="h-6 w-6 sm:h-10 sm:w-10 rounded-md sm:rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+        <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <div className="text-sm font-semibold truncate">{value}</div>
+        <p className="text-[10px] sm:text-xs text-muted-foreground">{label}</p>
+        <div className="text-xs sm:text-sm font-semibold truncate">{value}</div>
       </div>
     </div>
   );
@@ -139,7 +139,7 @@ export default function TryoutViewPage() {
       </div>
 
       {/* ── Tryout details ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4 mb-4 sm:mb-6">
         <InfoTile icon={CalendarDays} label="Date" value={firstSessionDate(tryout.sessions)} />
         <InfoTile icon={MapPin} label="Location" value={tryout.location || "—"} />
         <InfoTile icon={Users2} label="Registrations" value={`${rosterResult?.total ?? "…"}`} />

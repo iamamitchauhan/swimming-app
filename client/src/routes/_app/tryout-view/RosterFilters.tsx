@@ -79,7 +79,7 @@ function SelectAllClear({
   onChange: (next: string[]) => void;
 }) {
   return (
-    <div className="flex items-center gap-3 text-xs font-semibold">
+    <div className="flex items-center justify-between gap-3 text-xs font-semibold">
       <button
         type="button"
         onClick={() => onChange(allValues)}
@@ -376,7 +376,9 @@ export function RosterFilterBar({
       onRemove: () => onChange({ slotIds: undefined, page: 1 }),
     });
   }
-  if (params.checkedIn !== undefined) {
+  // Coaches always run with the default check-in filter applied and can't
+  // change it, so it's never surfaced as a removable chip for them.
+  if (role !== "coach" && params.checkedIn !== undefined) {
     chips.push({
       key: "checkIn",
       label: `Check-in: ${params.checkedIn ? "Check-in" : "Not check-in"}`,
@@ -421,7 +423,8 @@ export function RosterFilterBar({
     onChange({
       segmentIds: undefined,
       slotIds: undefined,
-      checkedIn: undefined,
+      // Coaches keep their default check-in filter; everyone else clears it.
+      ...(role === "coach" ? {} : { checkedIn: undefined }),
       statuses: undefined,
       coachRecommendations: undefined,
       emailSent: undefined,
@@ -463,16 +466,6 @@ export function RosterFilterBar({
           <>
             {slotFilter}
             {segmentFilter}
-            <SingleSelectDropdown
-              options={CHECK_IN_OPTIONS}
-              value={checkInValue}
-              onChange={(v) =>
-                onChange({
-                  checkedIn: v === "all" ? undefined : v === "in",
-                  page: 1,
-                })
-              }
-            />
             <MultiSelectDropdown
               defaultLabel="All recommendations"
               title="Recommendation"

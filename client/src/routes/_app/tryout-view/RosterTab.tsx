@@ -502,8 +502,8 @@ export function RosterTab({ tryoutId }: Props) {
         fmtTime={fmtTime}
       />
 
-      {/* ── Roster: desktop table, mobile/tablet cards ────────────────────── */}
-      <div className="mt-4 hidden overflow-hidden rounded-xl border border-gray-200 lg:block">
+      {/* ── Roster: table on lg+ and on landscape phones, cards otherwise ─── */}
+      <div className="mt-4 hidden overflow-hidden rounded-xl border border-gray-200 lg:block phone-landscape:block">
         <Table>
           <TableHeader className="sticky top-0 z-20 rounded-t-xl">
             <TableRow>
@@ -519,7 +519,7 @@ export function RosterTab({ tryoutId }: Props) {
                 className="cursor-pointer select-none whitespace-nowrap"
                 onClick={() => handleSort("swimmer_name")}
               >
-                Swimmer Name
+                Swimmer Info
                 <SortIcon field="swimmer_name" active={sortBy} order={sortOrder} />
               </TableHead>
               <TableHead
@@ -536,7 +536,6 @@ export function RosterTab({ tryoutId }: Props) {
                 Slot
                 <SortIcon field="session_time" active={sortBy} order={sortOrder} />
               </TableHead>
-              <TableHead>Parent</TableHead>
               {!isCoach && (
                 <>
                   <TableHead
@@ -549,7 +548,7 @@ export function RosterTab({ tryoutId }: Props) {
                   <TableHead>Check-in</TableHead>
                 </>
               )}
-              <TableHead>Yes/No</TableHead>
+              <TableHead>Evaluation</TableHead>
               <TableHead>Coach Recommendation</TableHead>
               {!isCoach && <TableHead>Decision</TableHead>}
             </TableRow>
@@ -557,7 +556,7 @@ export function RosterTab({ tryoutId }: Props) {
           <TableBody className="divide-y divide-gray-50">
             {loading && (
               <TableRow>
-                <TableCell colSpan={isCoach ? 7 : 10} className="py-10 text-center text-gray-400">
+                <TableCell colSpan={isCoach ? 6 : 9} className="py-10 text-center text-gray-400">
                   <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
                   Loading…
                 </TableCell>
@@ -565,7 +564,7 @@ export function RosterTab({ tryoutId }: Props) {
             )}
             {!loading && registrations.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isCoach ? 7 : 10} className="py-10 text-center text-gray-400">
+                <TableCell colSpan={isCoach ? 6 : 9} className="py-10 text-center text-gray-400">
                   No registrations found
                 </TableCell>
               </TableRow>
@@ -586,14 +585,21 @@ export function RosterTab({ tryoutId }: Props) {
                         className="cursor-pointer"
                       />
                     </TableCell>
-                    <TableCell
-                      className="text-blue-700 cursor-pointer hover:underline px-4 py-3"
-                      onClick={() => {
-                        setSelectedRegId(r.id);
-                        setModalOpen(true);
-                      }}
-                    >
-                      {r.swimmer_name}
+                    <TableCell className="px-4 py-3">
+                      <div
+                        className="cursor-pointer text-blue-700 hover:underline"
+                        onClick={() => {
+                          setSelectedRegId(r.id);
+                          setModalOpen(true);
+                        }}
+                      >
+                        {r.swimmer_name}
+                      </div>
+                      {(r.guardian_name || r.parent_name) && (
+                        <div className="text-xs text-gray-400">
+                          Parent: {r.guardian_name || r.parent_name}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <div className="text-gray-600">{r.segment_name || "—"}</div>
@@ -608,12 +614,6 @@ export function RosterTab({ tryoutId }: Props) {
                       {r.session_date && (
                         <div className="text-xs text-gray-400">{fmtDate(r.session_date)}</div>
                       )}
-                    </TableCell>
-                    <TableCell className="px-4 py-3">
-                      <div className="text-gray-700">{r.guardian_name || r.parent_name}</div>
-                      <div className="text-xs text-gray-400">
-                        {r.guardian_email || r.parent_email}
-                      </div>
                     </TableCell>
                     {!isCoach && (
                       <>
@@ -661,8 +661,8 @@ export function RosterTab({ tryoutId }: Props) {
         </Table>
       </div>
 
-      {/* ── Roster cards (mobile / tablet) ────────────────────────────────── */}
-      <div className="mt-3 space-y-2 lg:hidden">
+      {/* ── Roster cards (portrait phones / tablets) ──────────────────────── */}
+      <div className="mt-3 space-y-2 lg:hidden phone-landscape:hidden">
         {loading && (
           <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-gray-400">
             <Loader2 className="mr-2 inline h-5 w-5 animate-spin" />
@@ -1278,7 +1278,7 @@ function ScoreControl({
       <button
         onClick={() => navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)}
         className={cn(
-          "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap border border-primary/40 font-medium text-primary transition-colors hover:bg-primary/5",
+          "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap bg-primary font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90",
           variant === "card"
             ? "w-full justify-center rounded-lg px-3 py-2 text-sm"
             : "rounded-full px-3 py-1 text-sm",

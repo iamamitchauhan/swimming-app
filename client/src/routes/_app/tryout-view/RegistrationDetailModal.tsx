@@ -165,7 +165,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-4 py-1.5 border-b border-border/50 last:border-0">
-      <span className="text-sm text-muted-foreground shrink-0">{label}</span>
+      <span className="text-sm text-muted-foreground shrink-0 max-w-64">{label}</span>
       <span
         className={`text-sm text-right ${highlight ? "font-bold text-foreground" : "text-foreground"}`}
       >

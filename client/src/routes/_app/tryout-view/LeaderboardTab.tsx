@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { CheckCircle2, ChevronDown, Loader2, Mail, XCircle } from "lucide-react";
-import { useTryoutLeaderboard, useSendDecision, useSaveScore } from "@/hooks/use-tryout-dashboard";
+import { ChevronDown, Loader2 } from "lucide-react";
+import { useTryoutLeaderboard, useSaveScore } from "@/hooks/use-tryout-dashboard";
 import { useGroups } from "@/hooks/use-groups";
 import {
   DropdownMenu,
@@ -10,8 +10,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TooltipProvider } from "@radix-ui/react-tooltip";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -21,11 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { LeaderboardEntry, Registration } from "@/lib/api/tryouts.api";
-import { calculateDetailedScoreTotal } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth.store";
-import { toast } from "sonner";
-import { DecisionConfirmDialog } from "./DecisionConfirmDialog";
-import { SentEmailPreviewDialog } from "./SentEmailPreviewDialog";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -55,32 +49,9 @@ export function LeaderboardTab({ tryoutId }: Props) {
   }, []);
 
   const { data: leaderboard = [], isLoading } = useTryoutLeaderboard(tryoutId, enabled);
-  const decision = useSendDecision(tryoutId);
-
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [bulkAction, setBulkAction] = useState<"offered" | "rejected" | null>(null);
-  const [pendingRegId, setPendingRegId] = useState<string | null>(null);
-  const [sentEmailPreview, setSentEmailPreview] = useState<{
-    regId: string;
-    action: "offered" | "rejected";
-  } | null>(null);
 
   const user = useAuthStore((state) => state.user);
   const canManageCoaches = user?.role === "admin" || user?.role === "super_admin";
-
-  function openDecisionDialog(regId: string, status: "offered" | "rejected") {
-    setPendingRegId(regId);
-    setBulkAction(status);
-    setConfirmOpen(true);
-  }
-
-  function handleConfirm() {
-    if (!pendingRegId || !bulkAction) return;
-    decision.mutate({ regId: pendingRegId, status: bulkAction });
-    setConfirmOpen(false);
-    setBulkAction(null);
-    setPendingRegId(null);
-  }
 
   if (isLoading) {
     return (
@@ -99,81 +70,6 @@ export function LeaderboardTab({ tryoutId }: Props) {
   }
 
   const segments = [...new Set(leaderboard.map((l) => l.segment_name || l.age_segment || "Other"))];
-
-  function OfferReject({ l }: { l: LeaderboardEntry }) {
-    const hasAvg = calculateDetailedScoreTotal(l.detailed_scores) !== null;
-    const offerBtn = (
-      <button
-        disabled={!hasAvg || !l.coach_recommendation || l.coach_recommendation === REJECTED_VALUE}
-        onClick={() => {
-          if (!l.coach_recommendation) {
-            toast.error("Coach recommendation required", {
-              description: `Please assign a coach recommendation for ${l.swimmer_name} before proceeding.`,
-              duration: 6000,
-            });
-            return;
-          }
-          openDecisionDialog(l.registration_id, "offered");
-        }}
-        className="text-xs sm:text-sm text-green-600 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed px-1 py-0.5"
-      >
-        <CheckCircle2 className="h-4 w-4" /> Offer
-      </button>
-    );
-    const rejectBtn = (
-      <button
-        disabled={!hasAvg}
-        onClick={() => {
-          if (!l.coach_recommendation) {
-            toast.error("Coach recommendation required", {
-              description: `Please assign a coach recommendation for ${l.swimmer_name} before proceeding.`,
-              duration: 6000,
-            });
-            return;
-          }
-          openDecisionDialog(l.registration_id, "rejected");
-        }}
-        className="text-xs sm:text-sm text-red-500 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed px-1 py-0.5"
-      >
-        <XCircle className="h-4 w-4" /> Reject
-      </button>
-    );
-    const isRejected = l.coach_recommendation === REJECTED_VALUE;
-    const offerDisabled = !hasAvg || !l.coach_recommendation || isRejected;
-    const offerTooltip = isRejected
-      ? "Cannot offer — coach recommendation is set to Reject."
-      : !l.coach_recommendation
-        ? "Cannot offer — please assign a coach recommendation first."
-        : "Cannot offer without an average score.";
-    return (
-      <div className="flex items-center gap-3 justify-end">
-        {offerDisabled ? (
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="block">{offerBtn}</span>
-              </TooltipTrigger>
-              <TooltipContent side="left">{offerTooltip}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          offerBtn
-        )}
-        {hasAvg ? (
-          rejectBtn
-        ) : (
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="block">{rejectBtn}</span>
-              </TooltipTrigger>
-              <TooltipContent side="top">Cannot reject without an average score.</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-    );
-  }
 
   function YesNoBadge({ l }: { l: LeaderboardEntry }) {
     const { yes, no } = countYesNo(l.detailed_scores);
@@ -225,7 +121,7 @@ export function LeaderboardTab({ tryoutId }: Props) {
               <div className="xl:hidden divide-y divide-gray-50">
                 {group.map((l, i) => (
                   <div key={l.registration_id} className="px-4 py-3.5 space-y-3 sm:px-5 sm:py-4">
-                    {/* Row 1: rank + swimmer info + score */}
+                    {/* Row 1: rank + swimmer info */}
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <span
@@ -245,21 +141,13 @@ export function LeaderboardTab({ tryoutId }: Props) {
                           </div>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-[10px] text-gray-400 uppercase tracking-wider">
-                          Score
-                        </div>
-                        <div className="text-lg sm:text-xl font-bold text-gray-900">
-                          {calculateDetailedScoreTotal(l.detailed_scores) ?? "—"}
-                        </div>
-                      </div>
                     </div>
 
                     {/* Row 2: badges + coach recommendation */}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-between">
                       <div className="flex items-center gap-2 flex-col">
                         <span className="text-[10px] text-gray-400 uppercase tracking-wider">
-                          Yes/No
+                          Evaluation
                         </span>
                         <YesNoBadge l={l} />
                       </div>
@@ -278,45 +166,24 @@ export function LeaderboardTab({ tryoutId }: Props) {
                       )}
                     </div>
 
-                    {/* Row 3: coach recommendation select + actions */}
-                    {(canManageCoaches || (l.status === "registered" && canManageCoaches)) && (
+                    {/* Row 3: coach recommendation select */}
+                    {canManageCoaches && (
                       <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-50">
-                        {canManageCoaches && (
-                          <div className="flex items-start gap-2 flex-col">
-                            <span className="text-[10px] text-gray-400 uppercase tracking-wider">
-                              Coach recommendation
-                            </span>
-                            <CoachRecommendationSelect
-                              tryoutId={tryoutId}
-                              regId={l.registration_id}
-                              value={
-                                l.coach_recommendation === REJECTED_VALUE
-                                  ? undefined
-                                  : (l.coach_recommendation ?? null)
-                              }
-                              disabled={l.status === "rejected"}
-                            />
-                          </div>
-                        )}
-                        {l.status === "registered" && canManageCoaches && <OfferReject l={l} />}
-                      </div>
-                    )}
-
-                    {/* View sent email — shown for rows where a decision email
-                        has already been sent (offered/rejected). */}
-                    {(l.status === "offered" || l.status === "rejected") && (
-                      <div className="pt-1 border-t border-gray-50">
-                        <button
-                          onClick={() =>
-                            setSentEmailPreview({
-                              regId: l.registration_id,
-                              action: l.status as "offered" | "rejected",
-                            })
-                          }
-                          className="text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          <Mail className="h-3.5 w-3.5" /> View sent email
-                        </button>
+                        <div className="flex items-start gap-2 flex-col">
+                          <span className="text-[10px] text-gray-400 uppercase tracking-wider">
+                            Coach recommendation
+                          </span>
+                          <CoachRecommendationSelect
+                            tryoutId={tryoutId}
+                            regId={l.registration_id}
+                            value={
+                              l.coach_recommendation === REJECTED_VALUE
+                                ? undefined
+                                : (l.coach_recommendation ?? null)
+                            }
+                            disabled={l.status === "rejected"}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -330,13 +197,11 @@ export function LeaderboardTab({ tryoutId }: Props) {
                     <TableRow>
                       <TableHead className="w-12 text-center">#</TableHead>
                       <TableHead>Swimmer</TableHead>
-                      <TableHead className="w-24 max-w-24 text-center">Yes / No</TableHead>
-                      <TableHead className="w-20 max-w-20 text-center">Score</TableHead>
+                      <TableHead className="w-24 max-w-24 text-center">Evaluation</TableHead>
                       <TableHead className="w-52 max-w-52 text-center whitespace-nowrap">
                         Coach Recommendation
                       </TableHead>
                       <TableHead className="w-28 min-w-28 max-w-28 text-center">Status</TableHead>
-                      <TableHead className="w-48 min-w-48 max-w-48 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="divide-y divide-gray-50">
@@ -356,11 +221,6 @@ export function LeaderboardTab({ tryoutId }: Props) {
                         </TableCell>
                         <TableCell className="text-center align-middle px-4 py-3 w-24 max-w-24">
                           <YesNoBadge l={l} />
-                        </TableCell>
-                        <TableCell className="text-center align-middle px-4 py-3 w-20 max-w-20">
-                          <div className="text-[16px] font-bold text-gray-900">
-                            {calculateDetailedScoreTotal(l.detailed_scores) ?? "—"}
-                          </div>
                         </TableCell>
                         <TableCell className="text-center align-middle px-4 py-3 w-52 max-w-52">
                           {canManageCoaches ? (
@@ -383,25 +243,6 @@ export function LeaderboardTab({ tryoutId }: Props) {
                         <TableCell className="text-center align-middle px-4 py-3 w-28 min-w-28 max-w-28">
                           <StatusBadge status={l.status} />
                         </TableCell>
-                        <TableCell className="text-right align-middle px-4 py-3 w-36 min-w-36 max-w-36">
-                          {l.status === "registered" && canManageCoaches ? (
-                            <OfferReject l={l} />
-                          ) : l.status === "offered" || l.status === "rejected" ? (
-                            <button
-                              onClick={() =>
-                                setSentEmailPreview({
-                                  regId: l.registration_id,
-                                  action: l.status as "offered" | "rejected",
-                                })
-                              }
-                              className="text-xs text-blue-600 hover:underline cursor-pointer flex items-center gap-1 ml-auto"
-                            >
-                              <Mail className="h-3.5 w-3.5" /> View sent email
-                            </button>
-                          ) : (
-                            <span className="text-gray-400 text-xs">—</span>
-                          )}
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -411,33 +252,6 @@ export function LeaderboardTab({ tryoutId }: Props) {
           );
         })}
       </div>
-
-      <DecisionConfirmDialog
-        open={confirmOpen}
-        onOpenChange={(v) => {
-          setConfirmOpen(v);
-          if (!v) {
-            setBulkAction(null);
-            setPendingRegId(null);
-          }
-        }}
-        action={bulkAction}
-        onConfirm={handleConfirm}
-        isPending={decision.isPending}
-        tryoutId={tryoutId}
-        regId={pendingRegId}
-        selectedCount={0}
-      />
-
-      <SentEmailPreviewDialog
-        open={sentEmailPreview !== null}
-        onOpenChange={(v) => {
-          if (!v) setSentEmailPreview(null);
-        }}
-        tryoutId={tryoutId}
-        regId={sentEmailPreview?.regId ?? null}
-        action={sentEmailPreview?.action ?? "offered"}
-      />
     </>
   );
 }

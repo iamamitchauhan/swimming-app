@@ -110,9 +110,7 @@ export function CheckInPopover({
                 <span className="text-sm font-medium tabular-nums text-green-600">{timeLabel}</span>
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
               </span>
-              <span className="text-xs text-muted-foreground">
-                222{formatDateLabel(checkedInAt)}
-              </span>
+              <span className="text-xs text-muted-foreground">{formatDateLabel(checkedInAt)}</span>
             </span>
           </button>
         )}
