@@ -443,10 +443,11 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
       });
 
       if (resetRest && swimmer) {
-        toast.info("Other answers cleared", {
-          id: "bulk-gate-reset",
-          description: `${swimmer.swimmer_name} didn't finish the tryout, so the remaining questions were reset.`,
-        });
+        // toast.info("Other answers cleared", {
+        //   id: "bulk-gate-reset",
+        //   // description: `${swimmer.swimmer_name} didn't finish the tryout, so the remaining questions were reset.`,
+        //   position: "bottom-center",
+        // });
       }
     },
     [registrations, questionsFor],
@@ -456,7 +457,8 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
   const notifyLocked = useCallback((swimmer: Registration) => {
     toast.error("This score is locked", {
       id: "bulk-score-locked",
-      description: `${swimmer.swimmer_name} hasn't finished the tryout. Set "Finished the tryout?" to Yes to unlock the remaining questions.`,
+      description: `${swimmer.swimmer_name} hasn't finished the tryout.`,
+      position: "bottom-center",
     });
   }, []);
 
@@ -561,8 +563,8 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
       );
       toast.error(`All questions must be scored before saving`, {
         id: "bulk-missing-scores",
-        description: messages.join("\n"),
         duration: 6000,
+        position: "bottom-center",
       });
       setHighlightMissing(true);
       return;
@@ -616,7 +618,13 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
         setSavedIds(new Set(registrations.map((r) => r.id)));
         setSavingAll(false);
 
-        toast.success("Scores saved successfully", { id: "bulk-save-success" });
+        // Clear any lingering toasts (locked warnings, gate-reset notices, the
+        // missing-scores error, …) so only the success message remains.
+        toast.dismiss();
+        toast.success("Scores saved successfully", {
+          id: "bulk-save-success",
+          position: "bottom-center",
+        });
         // redirect to main tryout page
         onBack();
       })
@@ -645,7 +653,10 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     }
     setScores(next);
     setSavedIds(new Set());
-    toast.success("Random scores filled for all swimmers", { id: "bulk-random-fill" });
+    toast.success("Random scores filled for all swimmers", {
+      id: "bulk-random-fill",
+      position: "bottom-center",
+    });
   }
 
   const swimmers = registrations;
