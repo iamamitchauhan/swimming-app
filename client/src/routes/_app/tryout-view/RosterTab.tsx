@@ -53,7 +53,8 @@ import { RegistrationDetailModal } from "./RegistrationDetailModal";
 import { DecisionConfirmDialog } from "./DecisionConfirmDialog";
 import { CheckInPopover } from "./CheckInPopover";
 import { SentEmailPreviewDialog } from "./SentEmailPreviewDialog";
-import { RosterFilterBar, REJECTED_VALUE } from "./RosterFilters";
+import { RosterFilterBar, REJECTED_VALUE, COACH_VISIBLE_STATUSES } from "./RosterFilters";
+import { RosterCard } from "./RosterCard";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -97,15 +98,6 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: "bg-red-100 text-red-500",
   waitlisted: "bg-yellow-100 text-yellow-700",
   cancelled: "bg-gray-100 text-gray-500",
-};
-
-/** Card status pill: soft tint + solid dot (matches the redesigned card). */
-const CARD_STATUS_COLORS: Record<string, { pill: string; dot: string }> = {
-  registered: { pill: "bg-indigo-50 text-indigo-600", dot: "bg-indigo-500" },
-  offered: { pill: "bg-green-50 text-green-700", dot: "bg-green-500" },
-  rejected: { pill: "bg-red-50 text-red-500", dot: "bg-red-500" },
-  waitlisted: { pill: "bg-yellow-50 text-yellow-700", dot: "bg-yellow-500" },
-  cancelled: { pill: "bg-gray-100 text-gray-500", dot: "bg-gray-400" },
 };
 
 const VERIFY_COLORS: Record<string, string> = {
@@ -297,8 +289,9 @@ export function RosterTab({ tryoutId }: Props) {
     sortBy: "session_time",
     sortOrder: "asc",
     // Coaches default to the check-in filter (they can only score checked-in
-    // swimmers); it can still be switched back to "All check-ins".
-    ...(user?.role === "coach" ? { checkedIn: true } : {}),
+    // swimmers); it can still be switched back to "All check-ins". They also
+    // never see waitlisted or cancelled registrations.
+    ...(user?.role === "coach" ? { checkedIn: true, statuses: COACH_VISIBLE_STATUSES } : {}),
   }));
   const { data: rosterResult, isLoading: loading } = useTryoutRegistration(tryoutId, rosterParams);
   const { registrations = [], total = 0, page = 1, totalPages = 0 } = rosterResult ?? {};
@@ -570,6 +563,16 @@ export function RosterTab({ tryoutId }: Props) {
     }
   }, [isCoach]);
 
+  // Coaches never see waitlisted or cancelled registrations. Re-apply the
+  // status filter if the user object only loads after the first render.
+  useEffect(() => {
+    if (isCoach) {
+      setRosterParams((prev) =>
+        prev.statuses === undefined ? { ...prev, statuses: COACH_VISIBLE_STATUSES, page: 1 } : prev,
+      );
+    }
+  }, [isCoach]);
+
   // Coaches get a one-time nudge to rotate their device to landscape, shown only
   // on phone-sized portrait screens. Once dismissed it's remembered so it never
   // shows again; rotating to landscape simply hides it (without dismissing).
@@ -804,26 +807,68 @@ export function RosterTab({ tryoutId }: Props) {
           </div>
         )}
         {!loading &&
-          registrations.map((r) => (
-            <RosterCard
-              key={r.id}
-              registration={r}
-              tryoutId={tryoutId}
-              selected={selectedIds.has(r.id)}
-              onToggle={() => toggleRow(r.id)}
-              isCoach={isCoach}
-              canManageCoaches={canManageCoaches}
-              onOpenDetail={() => {
-                setSelectedRegId(r.id);
-                setModalOpen(true);
-              }}
-              onOpenDecision={openDecisionDialog}
-              onViewSentEmail={setSentEmailPreview}
-              onSetCheckIn={setCheckIn}
-              isPendingCheckIn={pendingRegIds.includes(r.id)}
-              onResetScore={setResetConfirmRegId}
-            />
-          ))}
+          registrations.map((r) => {
+            const hasEmail = !!r.email_info && r.email_info.length > 0;
+            // Cancelled/waitlisted rows expose no score or recommendation actions.
+            const inactive = isInactive(r);
+            // Offer/Reject footer shows for admins on registered rows, plus any
+            // row that already has an email audit trail.
+            const hasFooter =
+              !isCoach && ((r.status === "registered" && canManageCoaches) || hasEmail);
+            return (
+              <RosterCard
+                key={r.id}
+                registration={r}
+                selected={selectedIds.has(r.id)}
+                onToggle={() => toggleRow(r.id)}
+                onOpenDetail={() => {
+                  setSelectedRegId(r.id);
+                  setModalOpen(true);
+                }}
+                status={isCoach ? undefined : r.status}
+                checkInControl={
+                  isCoach ? undefined : (
+                    <CheckInControl
+                      registration={r}
+                      isPending={pendingRegIds.includes(r.id)}
+                      onSetCheckIn={setCheckIn}
+                      variant="card"
+                    />
+                  )
+                }
+                scoreControl={
+                  inactive ? undefined : (
+                    <ScoreControl
+                      registration={r}
+                      tryoutId={tryoutId}
+                      onReset={setResetConfirmRegId}
+                      variant="card"
+                    />
+                  )
+                }
+                recommendationControl={
+                  inactive ? undefined : (
+                    <CoachRecommendationControl
+                      registration={r}
+                      tryoutId={tryoutId}
+                      variant="card"
+                    />
+                  )
+                }
+                footer={
+                  hasFooter ? (
+                    <DecisionActions
+                      registration={r}
+                      canManageCoaches={canManageCoaches}
+                      onOpenDecision={openDecisionDialog}
+                      onViewSentEmail={setSentEmailPreview}
+                      variant="card"
+                    />
+                  ) : undefined
+                }
+              />
+            );
+          })}
       </div>
 
       {/* ── Bulk action bar — one compact pill for coaches and admins ──────── */}
@@ -1184,7 +1229,9 @@ function CoachRecommendationSelect({
                   aria-hidden="true"
                 />
               )}
-              {isRejected ? "Reject" : (selectedGroup?.name ?? "Select")}
+              {isRejected
+                ? "Reject"
+                : (selectedGroup?.name ?? (isCard ? "Coach recommendation" : "Select"))}
               <ChevronDown
                 className={cn("inline -mr-0.5 ml-1", isCard ? "h-3.5 w-3.5" : "h-3 w-3")}
               />
@@ -1296,7 +1343,7 @@ function YesNoValue({
           className={cn(
             "inline-flex cursor-pointer items-center gap-1 transition-colors",
             variant === "card"
-              ? "w-full justify-center rounded-full bg-blue-50 px-3 py-1.5 hover:bg-blue-100"
+              ? "rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-1.5 hover:bg-blue-50"
               : "rounded-lg border border-blue-200 bg-blue-50/50 px-2.5 py-1 hover:bg-blue-50",
           )}
         >
@@ -1399,6 +1446,7 @@ function ScoreControl({
   variant?: "table" | "card";
 }) {
   const navigate = useNavigate();
+  const isCard = variant === "card";
 
   if (isInactive(r)) return <span className="text-gray-400"></span>;
 
@@ -1416,9 +1464,7 @@ function ScoreControl({
         onClick={() => navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)}
         className={cn(
           "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap bg-primary font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90",
-          variant === "card"
-            ? "w-full justify-center rounded-lg px-3 py-2 text-sm"
-            : "rounded-full px-3 py-1 text-sm",
+          isCard ? "rounded-lg px-3 py-2 text-sm" : "rounded-full px-3 py-1 text-sm",
         )}
       >
         <ClipboardList className="h-4 w-4" /> Add Score
@@ -1430,6 +1476,20 @@ function ScoreControl({
     // Not scoreable (not checked in, or rejected) — show the existing score
     // read-only rather than the Add Score link.
     return <span className="text-sm font-medium text-gray-500">{avg(r) ?? r.total_score}</span>;
+  }
+
+  // Card: keep the entry point visible (greyed out) until the swimmer is checked
+  // in, so the action row keeps its shape instead of collapsing.
+  if (isCard && !r.checked_in_at && r.status === "registered") {
+    return (
+      <button
+        type="button"
+        disabled
+        className="inline-flex cursor-not-allowed items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow opacity-50"
+      >
+        <ClipboardList className="h-4 w-4" /> Add Score
+      </button>
+    );
   }
 
   return <span className="text-gray-400"></span>;
@@ -1467,6 +1527,20 @@ function CoachRecommendationControl({
   if (canEditCoachRecommendation(r)) {
     return (
       <CoachRecommendationSelect tryoutId={tryoutId} regId={r.id} value={value} variant={variant} />
+    );
+  }
+
+  // Card: keep the dropdown visible (disabled) until a check-in + score unlock
+  // it, so the action row keeps its shape instead of collapsing.
+  if (variant === "card") {
+    return (
+      <CoachRecommendationSelect
+        tryoutId={tryoutId}
+        regId={r.id}
+        value={value}
+        disabled
+        variant={variant}
+      />
     );
   }
 
@@ -1681,178 +1755,5 @@ function DecisionActions({
           );
         })()}
     </>
-  );
-}
-
-// ─── Roster card (mobile / tablet) ───────────────────────────────────────────
-
-/** Soft, dot-prefixed status pill used by the redesigned roster card. */
-function StatusPill({ status }: { status: string }) {
-  const colors = CARD_STATUS_COLORS[status] ?? CARD_STATUS_COLORS.cancelled;
-  return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-        colors.pill,
-      )}
-    >
-      <span className={cn("h-1.5 w-1.5 rounded-full", colors.dot)} aria-hidden="true" />
-      {status}
-    </span>
-  );
-}
-
-interface RosterCardProps {
-  registration: Registration;
-  tryoutId: string;
-  selected: boolean;
-  onToggle: () => void;
-  isCoach: boolean;
-  canManageCoaches: boolean;
-  onOpenDetail: () => void;
-  onOpenDecision: (regId: string, status: "offered" | "rejected") => void;
-  onViewSentEmail: (v: { regId: string; action: "offered" | "rejected" }) => void;
-  onSetCheckIn: (regIds: string[], checkedIn: boolean, checkedInAt?: string) => Promise<boolean>;
-  isPendingCheckIn: boolean;
-  onResetScore: (regId: string) => void;
-}
-
-/** One registration as a card — the mobile/tablet equivalent of a table row. */
-function RosterCard({
-  registration: r,
-  tryoutId,
-  selected,
-  onToggle,
-  isCoach,
-  canManageCoaches,
-  onOpenDetail,
-  onOpenDecision,
-  onViewSentEmail,
-  onSetCheckIn,
-  isPendingCheckIn,
-  onResetScore,
-}: RosterCardProps) {
-  const hasEmail = !!r.email_info && r.email_info.length > 0;
-  // Offer/Reject only once the swimmer is scored *and* has a coach
-  // recommendation recorded.
-  const decisionReady = hasAnyScore(r) && !!r.coach_recommendation;
-  const hasFooter = !isCoach && ((r.status === "registered" && canManageCoaches) || hasEmail);
-  const slotLabel = r.slot_id?.startTime
-    ? `${fmtTime(r.slot_id.startTime)} – ${fmtTime(r.slot_id.endTime)}`
-    : "—";
-  const parentName = r.guardian_name || r.parent_name;
-  const parentEmail = r.guardian_email || r.parent_email;
-  // Club admins can check in a registered swimmer that hasn't arrived yet.
-  const canCheckIn = !isCoach && !isInactive(r) && r.status === "registered" && !r.checked_in_at;
-
-  return (
-    <div
-      className={cn(
-        "rounded-xl border bg-white p-4 transition",
-        selected ? "border-primary/40 bg-primary/5" : "border-gray-200",
-      )}
-    >
-      {/* Header: selection, swimmer + status pill, check-in time */}
-      <div className="flex items-start gap-3">
-        <Checkbox
-          checked={selected}
-          onCheckedChange={onToggle}
-          aria-label={`Select ${r.swimmer_name}`}
-          className="mt-0.5 cursor-pointer"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <button type="button" onClick={onOpenDetail} className="min-w-0 text-left">
-                <span className="block truncate text-sm font-semibold text-gray-900 hover:underline">
-                  {r.swimmer_name}
-                </span>
-              </button>
-              {!isCoach && <StatusPill status={r.status} />}
-            </div>
-            {!isCoach && r.checked_in_at && (
-              <div className="shrink-0">
-                <CheckInControl
-                  registration={r}
-                  isPending={isPendingCheckIn}
-                  onSetCheckIn={onSetCheckIn}
-                  variant="card"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Age + segment */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-700">Age {r.swimmer_age}</span>
-            {r.segment_name && (
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
-                {r.segment_name}
-              </span>
-            )}
-          </div>
-
-          {/* Slot + parent */}
-          <div className="mt-1.5 text-xs text-gray-500">
-            {slotLabel}
-            {r.session_date && ` · ${fmtDate(r.session_date)}`}
-          </div>
-          <div className="mt-1 truncate text-xs text-gray-500">
-            {parentName}
-            {parentEmail && <span className="text-gray-400"> · {parentEmail}</span>}
-          </div>
-        </div>
-      </div>
-
-      {/* Controls: check-in → add score → score + coach recommendation */}
-      <div className="mt-3">
-        {canCheckIn ? (
-          <button
-            type="button"
-            onClick={() => onSetCheckIn([r.id], true)}
-            disabled={isPendingCheckIn}
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-primary/40 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isPendingCheckIn ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Clock className="h-4 w-4" />
-            )}
-            Check in
-          </button>
-        ) : !r.checked_in_at ? (
-          <span className="text-gray-400"></span>
-        ) : !hasAnyScore(r) ? (
-          <ScoreControl
-            registration={r}
-            tryoutId={tryoutId}
-            onReset={onResetScore}
-            variant="card"
-          />
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            <ScoreControl
-              registration={r}
-              tryoutId={tryoutId}
-              onReset={onResetScore}
-              variant="card"
-            />
-            <CoachRecommendationControl registration={r} tryoutId={tryoutId} variant="card" />
-          </div>
-        )}
-      </div>
-
-      {hasFooter && (
-        <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
-          <DecisionActions
-            registration={r}
-            canManageCoaches={canManageCoaches}
-            onOpenDecision={onOpenDecision}
-            onViewSentEmail={onViewSentEmail}
-            variant="card"
-          />
-        </div>
-      )}
-    </div>
   );
 }

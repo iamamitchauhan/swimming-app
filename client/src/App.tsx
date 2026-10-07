@@ -3,6 +3,9 @@ import { Suspense, lazy } from "react";
 
 import AppLayout from "./layouts/AppLayout";
 import { tokenStorage } from "./lib/api/client";
+import { useAuthStore } from "./lib/auth.store";
+import { useMe } from "./hooks/use-auth";
+import { getDefaultRoute } from "./lib/auth-redirect";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
@@ -41,6 +44,15 @@ function PageLoader() {
   );
 }
 
+/** Sends the user to their role's default landing page, waiting for the
+ *  profile to hydrate on a fresh page load before deciding. */
+function HomeRedirect() {
+  const user = useAuthStore((s) => s.user);
+  const { isLoading } = useMe();
+  if (!user && isLoading) return <PageLoader />;
+  return <Navigate to={user ? getDefaultRoute(user) : "/dashboard"} replace />;
+}
+
 export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -75,7 +87,7 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<HomeRedirect />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/clubs" element={<ClubsPage />} />
           <Route path="/users" element={<UsersPage />} />

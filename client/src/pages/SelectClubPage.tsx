@@ -4,6 +4,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useSelectClub } from "@/hooks/use-auth";
+import { getPostAuthRoute } from "@/lib/auth-redirect";
 import { useAuthStore } from "@/lib/auth.store";
 
 export default function SelectClubPage() {
@@ -23,12 +24,7 @@ export default function SelectClubPage() {
       { clubId },
       {
         onSuccess: (data) => {
-          const { role, onboardingStep } = data.user;
-          const needsOnboarding = role === "admin" && !data.user.clubId && onboardingStep < 3;
-          setTimeout(
-            () => navigate(needsOnboarding ? "/onboarding" : "/dashboard", { replace: true }),
-            700,
-          );
+          setTimeout(() => navigate(getPostAuthRoute(data.user), { replace: true }), 700);
         },
         onError: () => {
           navigate("/login", { replace: true });
@@ -52,9 +48,7 @@ export default function SelectClubPage() {
           </div>
         ) : selectClubMutation.isError ? (
           <div className="space-y-3">
-            <p className="text-sm text-destructive">
-              Failed to select club. Please try again.
-            </p>
+            <p className="text-sm text-destructive">Failed to select club. Please try again.</p>
             <Button onClick={() => navigate("/login")} variant="outline">
               Back to login
             </Button>
@@ -66,11 +60,7 @@ export default function SelectClubPage() {
           </div>
         )}
 
-        {user && (
-          <p className="text-xs text-muted-foreground">
-            Signed in as {user.email}
-          </p>
-        )}
+        {user && <p className="text-xs text-muted-foreground">Signed in as {user.email}</p>}
       </div>
     </div>
   );

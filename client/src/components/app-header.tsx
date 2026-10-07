@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@/lib/auth.store";
+import { getDefaultRoute } from "@/lib/auth-redirect";
 import { useLogout } from "@/hooks/use-auth";
 
 interface Crumb {
@@ -36,7 +37,7 @@ export function AppHeader({ title, crumbs = [] }: { title: string; crumbs?: Crum
       <div className="flex-1 min-w-0">
         {/* Phones get a single-row header (title only) to keep it compact. */}
         <div className="flex phone:hidden items-center gap-1.5 text-xs text-muted-foreground">
-          <Link to="/dashboard" className="hover:text-foreground">
+          <Link to={user ? getDefaultRoute(user) : "/dashboard"} className="hover:text-foreground">
             Home
           </Link>
           {crumbs.map((c, i) => (

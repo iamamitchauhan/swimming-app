@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ArrowLeft, CheckCircle2, Loader2, Waves } from "lucide-react";
 import { useLogin, useVerifyOtp } from "@/hooks/use-auth";
+import { getPostAuthRoute } from "@/lib/auth-redirect";
 import { useApiError } from "@/hooks/use-api-error";
 import type { ClubOption } from "@/lib/api/auth.api";
 
@@ -63,9 +64,7 @@ export default function LoginPage() {
             return;
           }
           setSuccess(true);
-          const { role, clubId, onboardingStep } = data.user;
-          const needsOnboarding = role === "admin" && !clubId && onboardingStep < 3;
-          setTimeout(() => navigate(needsOnboarding ? "/onboarding" : "/dashboard"), 700);
+          setTimeout(() => navigate(getPostAuthRoute(data.user)), 700);
         },
         onError: (err) => setError((err as Error).message),
       },

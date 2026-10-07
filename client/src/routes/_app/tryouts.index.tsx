@@ -49,6 +49,9 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  ArrowRight,
+  Calendar,
+  MapPin,
   Eye,
   Rocket,
   LayoutDashboard,
@@ -76,6 +79,21 @@ function firstSessionDate(t: Tryout) {
     year: "numeric",
   });
 }
+
+/** "2026 season" — derived from the tryout's start date. */
+function seasonLabel(t: Tryout) {
+  const d = t.startDate ?? t.sessions?.[0]?.date;
+  if (!d) return null;
+  return `${new Date(d + "T00:00:00").getFullYear()} season`;
+}
+
+/** Status dot + label colors for the mobile card header. */
+const statusAccent: Record<string, { dot: string; text: string }> = {
+  open: { dot: "bg-emerald-500", text: "text-emerald-600" },
+  published: { dot: "bg-emerald-500", text: "text-emerald-600" },
+  draft: { dot: "bg-muted-foreground/50", text: "text-muted-foreground" },
+  closed: { dot: "bg-destructive", text: "text-destructive" },
+};
 
 const SORT_OPTIONS: { value: TryoutSortField; label: string }[] = [
   { value: "createdAt", label: "Created" },
@@ -494,68 +512,116 @@ export default function TryoutsList() {
                     : "No tryouts yet. Create your first one!"}
                 </div>
               ) : (
-                tryouts.map((t) => (
-                  <div
-                    key={t._id}
-                    onClick={(e) => {
-                      // The title link and the actions menu handle their own clicks.
-                      if (e.defaultPrevented) return;
-                      navigate(`/tryouts/view/${t._id}`);
-                    }}
-                    className="cursor-pointer rounded-lg border border-border bg-white p-4 flex flex-col gap-3 transition hover:border-primary/40 hover:shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <Link
-                        to={`/tryouts/view/${t._id}`}
-                        className="font-medium hover:text-primary min-w-0"
-                      >
-                        <span className="truncate block">{t.name}</span>
-                      </Link>
-                      <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <TryoutActions t={t} />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className={statusVariant[t.status] ?? ""}>
-                        {statusLabel(t.status)}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">{firstSessionDate(t)}</span>
-                      {t.location && (
-                        <span
-                          className="text-xs text-muted-foreground truncate max-w-[120px]"
-                          title={t.location}
+                tryouts.map((t) => {
+                  const accent = statusAccent[t.status] ?? statusAccent.draft;
+                  const season = seasonLabel(t);
+                  const capacity = (t.totalSlots ?? 0) * (t.swimmersPerSlot ?? 0);
+                  return (
+                    <div
+                      key={t._id}
+                      onClick={(e) => {
+                        // The title link and the actions menu handle their own clicks.
+                        if (e.defaultPrevented) return;
+                        navigate(`/tryouts/view/${t._id}`);
+                      }}
+                      className="cursor-pointer rounded-xl border border-border bg-white flex flex-col overflow-hidden transition hover:border-primary/40 hover:shadow-sm"
+                    >
+                      {/* Header: status + season, title, date & location */}
+                      <div className="flex flex-col gap-2.5 p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <span
+                            className={`inline-flex items-center gap-1.5 text-sm font-medium ${accent.text}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${accent.dot}`} />
+                            {statusLabel(t.status)}
+                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {season && (
+                              <span className="text-xs text-muted-foreground">{season}</span>
+                            )}
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <TryoutActions t={t} />
+                            </div>
+                          </div>
+                        </div>
+                        <Link
+                          to={`/tryouts/view/${t._id}`}
+                          className="text-lg font-bold hover:text-primary min-w-0"
                         >
-                          · {t.location}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>
-                        <strong className="text-foreground">
-                          {t.sessionCount ?? t.sessions?.length ?? 0}
-                        </strong>{" "}
-                        sessions
-                      </span>
-                      <span>
-                        <strong className="text-foreground">{t.totalSlots ?? 0}</strong> slots
-                      </span>
-                      <span>
-                        <strong className="text-foreground">{t.registeredCount ?? 0}</strong>
-                        {(t.totalSlots ?? 0) > 0 && `/${t.totalSlots * t.swimmersPerSlot}`} reg
-                      </span>
-                    </div>
-                    {t.segments && t.segments.length > 0 && (
-                      <div className="w-fit" onClick={(e) => e.stopPropagation()}>
-                        <SegmentBadges segments={t.segments} />
+                          <span className="truncate block">{t.name}</span>
+                        </Link>
+                        <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 shrink-0" />
+                            {firstSessionDate(t)}
+                          </span>
+                          {t.location && (
+                            <span className="flex items-center gap-2 min-w-0">
+                              <MapPin className="h-4 w-4 shrink-0" />
+                              <span className="truncate" title={t.location}>
+                                {t.location}
+                              </span>
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
 
-                    {/* add a button for view */}
-                    <Button size="sm" onClick={() => navigate(`/tryouts/view/${t._id}`)}>
-                      View
-                    </Button>
-                  </div>
-                ))
+                      {/* Stats: sessions · slots · registered */}
+                      <div className="flex items-stretch divide-x divide-border border-t border-border">
+                        <div className="flex-1 min-w-0 px-4 py-3">
+                          <div className="text-lg font-bold leading-tight">
+                            {t.sessionCount ?? t.sessions?.length ?? 0}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">Session</div>
+                        </div>
+                        <div className="flex-1 min-w-0 px-4 py-3">
+                          <div className="text-lg font-bold leading-tight">
+                            {t.totalSlots ?? 0}{" "}
+                            <span className="text-sm font-medium text-muted-foreground">Slots</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {t.swimmersPerSlot} swimmers/slot
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0 px-4 py-3">
+                          <div className="text-lg font-bold leading-tight">
+                            {t.registeredCount ?? 0}
+                            {capacity > 0 && (
+                              <span className="text-sm font-medium text-muted-foreground">
+                                {" "}
+                                / {capacity}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">Registered</div>
+                        </div>
+                      </div>
+
+                      {/* Age segments */}
+                      {t.segments && t.segments.length > 0 && (
+                        <div className="flex flex-col gap-2 p-4 border-t border-border">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Age segments
+                          </span>
+                          <div className="w-fit" onClick={(e) => e.stopPropagation()}>
+                            <SegmentBadges segments={t.segments} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* View tryout */}
+                      <div className="p-4 border-t border-border">
+                        <Button
+                          className="w-full justify-between"
+                          onClick={() => navigate(`/tryouts/view/${t._id}`)}
+                        >
+                          View tryout
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
 

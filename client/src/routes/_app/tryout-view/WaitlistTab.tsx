@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronsUpDown, ChevronUp, Loader2 } from "lucide-react";
+import { Check, ChevronDown, ChevronsUpDown, ChevronUp, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,6 +13,7 @@ import { SearchInput } from "@/components/search-input";
 import { useWaitlistByTryout } from "@/hooks/use-tryout-dashboard";
 import type { WaitlistSortField, WaitlistListParams } from "@/lib/api/tryouts.api";
 import type { SortOrder } from "@/lib/api/tryouts.api";
+import type { WaitlistEntry } from "@/lib/api/tryouts.api";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,63 @@ function SortIcon({ field, active, order }: { field: string; active: string; ord
     <ChevronUp className="h-3.5 w-3.5 text-white ml-1 inline" />
   ) : (
     <ChevronDown className="h-3.5 w-3.5 text-white ml-1 inline" />
+  );
+}
+
+// ─── Waitlist card (portrait phones) ─────────────────────────────────────────
+
+/** One waitlist entry as a card — the mobile equivalent of a table row. */
+function WaitlistCard({ entry: e }: { entry: WaitlistEntry }) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="flex items-start gap-3">
+        {/* Queue position */}
+        <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-yellow-100 text-sm font-bold text-yellow-700">
+          {e.waitlistPosition}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <span className="block min-w-0 truncate text-sm font-semibold text-gray-900">
+              {e.swimmerFirstName} {e.swimmerLastName}
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-yellow-50 px-2 py-0.5 text-[11px] font-medium text-yellow-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-yellow-500" aria-hidden="true" />
+              Waitlisted
+            </span>
+          </div>
+
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-gray-700">Age {e.ageOnTryoutDay}</span>
+            {e.segmentId && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
+                {e.segmentId}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-1.5 truncate text-xs text-gray-500">
+            {e.guardianName}
+            {e.guardianEmail && <span className="text-gray-400"> · {e.guardianEmail}</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Joined / notified */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 text-xs text-gray-500">
+        <span>Joined {fmtDate(e.joinedAt)}</span>
+        {e.notifiedAt ? (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">
+            <Check className="h-3 w-3" />
+            Notified {fmtDate(e.notifiedAt)}
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-gray-500">
+            Not notified
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -87,8 +145,8 @@ export function WaitlistTab({ tryoutId }: Props) {
         />
       </div>
 
-      {/* ── Table ───────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-gray-200 overflow-hidden mt-4">
+      {/* ── Table (tablet, desktop and landscape phones) ─────────────────── */}
+      <div className="rounded-xl border border-gray-200 overflow-hidden mt-4 phone-portrait:hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -176,6 +234,22 @@ export function WaitlistTab({ tryoutId }: Props) {
               ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* ── Cards (portrait phones only) ─────────────────────────────────── */}
+      <div className="mt-4 hidden space-y-2 phone-portrait:block">
+        {isFetching && (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-gray-400">
+            <Loader2 className="mr-2 inline h-5 w-5 animate-spin" />
+            Loading…
+          </div>
+        )}
+        {!isFetching && entries.length === 0 && (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-gray-400">
+            No one on the waitlist
+          </div>
+        )}
+        {!isFetching && entries.map((e) => <WaitlistCard key={e._id} entry={e} />)}
       </div>
 
       {/* ── Pagination ──────────────────────────────────────────────────── */}

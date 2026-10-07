@@ -12,6 +12,13 @@ import type { RegistrationListParams, TryoutSlot } from "@/lib/api/tryouts.api";
 /** Sentinel stored on `coachRecommendation` when a swimmer is rejected. */
 export const REJECTED_VALUE = "__rejected__";
 
+/**
+ * Registration statuses a coach may see in the roster — mirrors the server-side
+ * restriction. Waitlisted swimmers have their own view and cancelled swimmers
+ * are no longer part of the tryout, so coaches never request either.
+ */
+export const COACH_VISIBLE_STATUSES = ["registered", "offered", "rejected"];
+
 /** Client-only sentinel for the coach's "Recommend" bucket (any group). */
 const RECOMMEND_VALUE = "__recommend__";
 
@@ -385,7 +392,10 @@ export function RosterFilterBar({
       onRemove: () => onChange({ checkedIn: undefined, page: 1 }),
     });
   }
-  if (selectedStatuses.length > 0) {
+  // Coaches always run with the default status filter applied (they never see
+  // waitlisted or cancelled registrations) and can't change it, so it's never
+  // surfaced as a removable chip for them.
+  if (role !== "coach" && selectedStatuses.length > 0) {
     chips.push({
       key: "status",
       label: `Status: ${selectedStatuses.map((s) => labelFor(STATUS_OPTIONS, s)).join(", ")}`,
@@ -423,9 +433,10 @@ export function RosterFilterBar({
     onChange({
       segmentIds: undefined,
       slotIds: undefined,
-      // Coaches keep their default check-in filter; everyone else clears it.
-      ...(role === "coach" ? {} : { checkedIn: undefined }),
-      statuses: undefined,
+      // Coaches keep their default check-in and status filters; everyone else clears them.
+      ...(role === "coach"
+        ? { statuses: COACH_VISIBLE_STATUSES }
+        : { checkedIn: undefined, statuses: undefined }),
       coachRecommendations: undefined,
       emailSent: undefined,
       page: 1,

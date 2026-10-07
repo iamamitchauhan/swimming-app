@@ -637,6 +637,13 @@ paths:
         (they are served by `GET /waitlist/tryout/{tryoutId}`). Pass
         `statuses=waitlisted` to include them.
 
+        **Role visibility:** Coaches are restricted to `registered`, `offered`
+        and `rejected` registrations — they never receive `waitlisted` or
+        `cancelled` rows, even when the request asks for them (an explicit
+        `statuses` filter is intersected with that set, and a request for only
+        hidden statuses returns an empty list). Admins and super admins are
+        unrestricted and receive exactly the statuses they filter for.
+
         **Sorting:** `sortBy` accepts `swimmer_name`, `swimmer_age`, `status`, or
         `session_time`. The `session_time` option sorts by the slot's
         `sessionDate` + `startTime` (ascending = earliest first) and is
@@ -710,6 +717,10 @@ paths:
             result — they are served by the dedicated waitlist endpoint
             (`GET /waitlist/tryout/{tryoutId}`). Pass `statuses=waitlisted`
             (alone or combined) to include them.
+
+            For coaches the filter is intersected with the coach-visible set
+            (`registered`, `offered`, `rejected`); `waitlisted` and `cancelled`
+            are never returned to a coach. Admins are unrestricted.
           schema:
             type: string
           example: registered,offered

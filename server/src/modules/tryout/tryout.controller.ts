@@ -40,6 +40,16 @@ function checkedInByFields(user: any): { checked_in_by: string | null; checked_i
   };
 }
 
+// ─── Coach roster visibility ─────────────────────────────────────────────────
+
+/**
+ * Registration statuses a coach may see in the roster. Waitlisted swimmers live
+ * in the dedicated waitlist view and cancelled swimmers are no longer part of
+ * the tryout, so neither is exposed to coaches — even when the request carries
+ * an explicit `statuses` filter. Admins are unrestricted.
+ */
+const COACH_VISIBLE_STATUSES = ["registered", "offered", "rejected"];
+
 // ─── Email audit logging helper ──────────────────────────────────────────────
 
 /**
@@ -844,6 +854,10 @@ export class TryoutController {
    * Each registration in the response includes an `email_info` array — the
    * audit-log rows from `email_audit_logs` for that registration (oldest →
    * newest), looked up in a single batched query for the current page.
+   *
+   * Coaches are scoped to their assigned segments and to COACH_VISIBLE_STATUSES
+   * (registered | offered | rejected) — `waitlisted` and `cancelled` are never
+   * returned to a coach. Admins are unrestricted.
    */
   getRegistrations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -902,8 +916,17 @@ export class TryoutController {
       const mongoFilter: Record<string, any> = { tryoutId: id };
       // Waitlisted swimmers live in the dedicated waitlist view, so they are
       // excluded from the roster unless a status filter explicitly asks for them.
-      if (statusFilter.length > 0) mongoFilter["status"] = { $in: statusFilter };
-      else mongoFilter["status"] = { $nin: ["waitlisted"] };
+      // Coaches are further restricted to COACH_VISIBLE_STATUSES: they never see
+      // waitlisted or cancelled registrations, whatever they request. An
+      // intersection that leaves nothing matches nothing.
+      if (req.user?.role === "coach") {
+        const allowed = statusFilter.length > 0 ? statusFilter.filter((status) => COACH_VISIBLE_STATUSES.includes(status)) : COACH_VISIBLE_STATUSES;
+        mongoFilter["status"] = { $in: allowed };
+      } else if (statusFilter.length > 0) {
+        mongoFilter["status"] = { $in: statusFilter };
+      } else {
+        mongoFilter["status"] = { $nin: ["waitlisted"] };
+      }
       if (segmentIdFilter.length > 0) mongoFilter["segmentId"] = { $in: segmentIdFilter };
       // `$in: [null]` matches both null and missing fields, so it covers rows
       // created before the check-in columns existed.
