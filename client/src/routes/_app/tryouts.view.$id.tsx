@@ -27,6 +27,9 @@ const STATUS_VARIANT: Record<string, string> = {
   closed: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
+/** Tabs that are admin-only and therefore hidden from the coach role. */
+const COACH_HIDDEN_TABS = ["slots", "waitlist", "leaderboard"];
+
 function firstSessionDate(sessions?: { date: string }[]) {
   const d = sessions?.[0]?.date;
   if (!d) return "—";
@@ -99,6 +102,7 @@ export default function TryoutViewPage() {
     setSearchParams(params, { replace: true });
   }
 
+  // Slots, Waitlist and Leaderboard are admin-only — coaches just get the roster.
   const TABS = [
     { key: "roster", label: `Roster (${rosterResult?.total ?? 0})` },
     { key: "slots", label: "Slots" },
@@ -107,7 +111,10 @@ export default function TryoutViewPage() {
     { key: "leaderboard", label: "Leaderboard" },
     ...(canManageCoaches ? [{ key: "questions", label: "Segments questions" }] : []),
     ...(canManageCoaches ? [{ key: "comms", label: "Comms" }] : []),
-  ];
+  ].filter((t) => !isCoach || !COACH_HIDDEN_TABS.includes(t.key));
+
+  // A deep link (e.g. ?tab=leaderboard) must not surface a tab the role can't see.
+  const activeTab = TABS.some((t) => t.key === tab) ? tab : "roster";
 
   if (tryoutLoading) {
     return (
@@ -158,22 +165,25 @@ export default function TryoutViewPage() {
         </div>
       )}
 
-      <div className="flex min-w-0 items-center gap-1.5">
-        <SegmentedTabs
-          tabs={TABS.map((t) => ({ value: t.key, label: t.label }))}
-          active={tab}
-          onChange={handleTabChange}
-        />
-      </div>
+      {/* Coaches only have the roster, so the tab bar is hidden for them. */}
+      {!isCoach && (
+        <div className="flex min-w-0 items-center gap-1.5">
+          <SegmentedTabs
+            tabs={TABS.map((t) => ({ value: t.key, label: t.label }))}
+            active={activeTab}
+            onChange={handleTabChange}
+          />
+        </div>
+      )}
 
       <div>
-        {tab === "roster" && <RosterTab tryoutId={id} />}
-        {tab === "slots" && <SlotsTab tryoutId={id} />}
-        {tab === "waitlist" && <WaitlistTab tryoutId={id} />}
+        {activeTab === "roster" && <RosterTab tryoutId={id} />}
+        {activeTab === "slots" && <SlotsTab tryoutId={id} />}
+        {activeTab === "waitlist" && <WaitlistTab tryoutId={id} />}
         {/* {tab === "scoring" && <ScoringTab tryoutId={id} registerId={registerId} />} */}
-        {tab === "leaderboard" && <LeaderboardTab tryoutId={id} />}
-        {tab === "questions" && canManageCoaches && <SegmentQuestionsTab tryout={tryout} />}
-        {tab === "comms" && <CommsTab tryoutId={id} />}
+        {activeTab === "leaderboard" && <LeaderboardTab tryoutId={id} />}
+        {activeTab === "questions" && canManageCoaches && <SegmentQuestionsTab tryout={tryout} />}
+        {activeTab === "comms" && <CommsTab tryoutId={id} />}
       </div>
 
       <ManageCoachesDialog
