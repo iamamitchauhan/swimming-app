@@ -734,7 +734,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
       </div>
 
       {/* ── Single table for every selected swimmer ────────────────────────── */}
-      <div className="space-y-8 px-4 pt-8 pb-20 phone:pt-4 phone:pb-16 sm:px-6 lg:px-8">
+      <div className="space-y-8 px-4 pt-20 pb-8 phone:pt-16 sm:px-6 lg:px-8">
         {allQuestions.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
             No scoring questions are configured for these swimmers. Add questions to their age
