@@ -167,9 +167,9 @@ export function useSaveScore(tryoutId: string, { silent = false }: { silent?: bo
         queryKey: ["tryouts", tryoutId, "roster"],
       });
 
-      // Patch every matching roster query (merge detailed_scores, don't replace).
-      // Strip undefined values from edits so they don't clobber existing fields
-      // (e.g. a notes-only save must not wipe detailed_scores from the cache).
+      // Patch every matching roster query. `detailed_scores` replaces the cached
+      // map (matching the server), while undefined values are stripped so they
+      // don't clobber existing fields (e.g. a notes-only save keeps the scores).
       const definedEdits = Object.fromEntries(
         Object.entries(edits).filter(([, v]) => v !== undefined),
       ) as Partial<Registration>;
@@ -180,14 +180,9 @@ export function useSaveScore(tryoutId: string, { silent = false }: { silent?: bo
         if (data?.registrations) {
           qc.setQueryData<RegistrationListResult>(key, {
             ...data,
-            registrations: data.registrations.map((r) => {
-              if (r.id !== regId) return r;
-              const next = { ...r, ...definedEdits } as Registration;
-              if (definedEdits.detailed_scores) {
-                next.detailed_scores = { ...r.detailed_scores, ...definedEdits.detailed_scores };
-              }
-              return next;
-            }),
+            registrations: data.registrations.map((r) =>
+              r.id === regId ? ({ ...r, ...definedEdits } as Registration) : r,
+            ),
           });
         }
       });

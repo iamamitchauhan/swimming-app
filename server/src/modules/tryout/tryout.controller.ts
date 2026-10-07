@@ -1685,17 +1685,23 @@ export class TryoutController {
       }
 
       if (body.detailed_scores !== undefined) {
-        // Merge with existing detailed_scores instead of replacing the whole object
-        const existing = await RegistrationModel.findById(regId).lean().exec();
-        const merged = { ...(existing?.detailedScores ?? {}), ...body.detailed_scores };
-        scoreUpdate["detailedScores"] = merged;
+        // Replace the whole map with what the client sent. The bulk-scoring UI
+        // sends the swimmer's complete criteria set, so any key it omits (e.g. a
+        // question that has since been removed) is dropped — merging instead left
+        // stale answers behind and skewed the roster/leaderboard counts.
+        const next = body.detailed_scores as Record<string, string | number | boolean | null>;
+        scoreUpdate["detailedScores"] = next;
 
-        // Compute totalScore from numeric values in detailed_scores
-        const numericScores = Object.values(merged)
+        // Recompute totalScore from the numeric values that remain.
+        const numericScores = Object.values(next)
           .map((v) => (typeof v === "string" ? Number(v) : v))
           .filter((v): v is number => typeof v === "number" && !isNaN(v) && v > 0);
         if (numericScores.length > 0) {
           scoreUpdate["scores.totalScore"] = parseFloat(numericScores.reduce((a, b) => a + b, 0).toFixed(1));
+        } else if (scores.length === 0) {
+          // No numeric criteria remain (e.g. the tryout wasn't finished): drop the
+          // derived total so a stale score doesn't linger.
+          scoreUpdate["scores.totalScore"] = null;
         }
       }
 

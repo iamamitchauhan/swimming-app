@@ -986,9 +986,13 @@ paths:
         - Rate 1-5 criteria: integer 1-5
         - Checkbox criteria: boolean
 
-        When `detailed_scores` are provided, `scores.totalScore` is automatically
-        computed by summing all numeric values (rate 1-5 scores) in the merged
-        `detailed_scores` object. This ensures the swimmer appears in the leaderboard.
+        When `detailed_scores` is provided the whole object is **replaced** with the
+        value sent (not merged), so callers must pass the swimmer's complete criteria
+        set — this drops answers to questions that no longer exist. `scores.totalScore`
+        is then recomputed by summing the numeric values (rate 1-5 scores) that remain;
+        when no numeric values remain (e.g. the swimmer did not finish the tryout and
+        the answers were reset), `scores.totalScore` is set to `null` so no stale score
+        lingers.
 
         Requires admin or coach role.
       operationId: updateScore
@@ -1046,7 +1050,8 @@ paths:
                 detailed_scores:
                   type: object
                   description: |
-                    Map of criterion ID to score value.
+                    Map of criterion ID to score value. Replaces the stored map
+                    entirely, so send the swimmer's complete criteria set.
                     Yes/No criteria use "yes" or "no".
                     Rate 1-5 criteria use integers 1-5.
                     Checkbox criteria use booleans.

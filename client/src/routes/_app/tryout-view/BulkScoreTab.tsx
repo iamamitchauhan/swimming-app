@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSaveScore } from "@/hooks/use-tryout-dashboard";
 import { useSegmentQuestionsQuery } from "@/hooks/use-scoring-questions";
-import { useMediaQuery } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import type { Registration } from "@/lib/api/tryouts.api";
 import type { ScoringQuestion } from "@/lib/api/scoring-questions.api";
@@ -54,6 +53,7 @@ function ScoreControl({
   onChange,
   size = "default",
   disabled = false,
+  onLockedClick,
 }: {
   question: ScoringQuestion;
   value: ScoreValue;
@@ -62,6 +62,8 @@ function ScoreControl({
   size?: "default" | "compact";
   /** Locks the control, e.g. until the swimmer has finished the tryout. */
   disabled?: boolean;
+  /** Invoked instead of `onChange` when locked, to explain why it can't be set. */
+  onLockedClick?: () => void;
 }) {
   const compact = size === "compact";
   // Matrix cells have fixed widths (table-fixed), so the control fills its cell —
@@ -71,9 +73,21 @@ function ScoreControl({
     compact ? "mx-auto flex w-full max-w-36" : "inline-flex",
   );
   const btn = cn(
-    "inline-flex items-center justify-center py-3 text-center font-semibold transition disabled:cursor-not-allowed disabled:opacity-40",
+    "inline-flex items-center justify-center py-3 text-center font-semibold transition",
     compact ? "min-w-0 flex-1 px-2 text-xs sm:px-3 lg:px-4" : "min-w-16 px-4 text-sm sm:px-5",
   );
+  // Locked controls stay clickable (aria-disabled, not `disabled`) so tapping one
+  // can surface a toast explaining why it's locked.
+  const locked = disabled ? "cursor-not-allowed opacity-40" : "";
+  const idle = disabled ? "bg-background" : "bg-background hover:bg-muted";
+
+  const pick = (next: ScoreValue) => {
+    if (disabled) {
+      onLockedClick?.();
+      return;
+    }
+    onChange(next);
+  };
 
   // Full labels on larger screens; single letters below lg so 6+ columns fit.
   const label = (full: string, short: string) => (
@@ -90,21 +104,17 @@ function ScoreControl({
       <div className={group}>
         <button
           type="button"
-          disabled={disabled}
-          onClick={() => onChange(isYes ? null : "yes")}
-          className={cn(btn, isYes ? "bg-emerald-500 text-white" : "bg-background hover:bg-muted")}
+          aria-disabled={disabled}
+          onClick={() => pick(isYes ? null : "yes")}
+          className={cn(btn, locked, isYes ? "bg-emerald-500 text-white" : idle)}
         >
           {label("Yes", "Y")}
         </button>
         <button
           type="button"
-          disabled={disabled}
-          onClick={() => onChange(isNo ? null : "no")}
-          className={cn(
-            btn,
-            "border-l",
-            isNo ? "bg-rose-500 text-white" : "bg-background hover:bg-muted",
-          )}
+          aria-disabled={disabled}
+          onClick={() => pick(isNo ? null : "no")}
+          className={cn(btn, locked, "border-l", isNo ? "bg-rose-500 text-white" : idle)}
         >
           {label("No", "N")}
         </button>
@@ -120,12 +130,13 @@ function ScoreControl({
           <button
             key={n}
             type="button"
-            disabled={disabled}
-            onClick={() => onChange(current === n ? null : n)}
+            aria-disabled={disabled}
+            onClick={() => pick(current === n ? null : n)}
             className={cn(
-              "border-l text-xs font-semibold transition first:border-l-0 disabled:cursor-not-allowed disabled:opacity-40",
+              "border-l text-xs font-semibold transition first:border-l-0",
+              locked,
               compact ? "min-w-0 flex-1 py-3" : "w-7 py-1",
-              current === n ? "bg-blue-600 text-white" : "bg-background hover:bg-muted",
+              current === n ? "bg-blue-600 text-white" : idle,
             )}
           >
             {n}
@@ -139,12 +150,10 @@ function ScoreControl({
     <Input
       value={typeof value === "string" ? value : ""}
       onChange={(e) => onChange(e.target.value || null)}
+      onClick={() => disabled && onLockedClick?.()}
+      readOnly={disabled}
       placeholder="—"
-      disabled={disabled}
-      className={cn(
-        compact ? "h-8 text-xs" : "h-9 text-sm",
-        "disabled:cursor-not-allowed disabled:opacity-40",
-      )}
+      className={cn(compact ? "h-8 text-xs" : "h-9 text-sm", locked)}
     />
   );
 }
@@ -170,6 +179,7 @@ function QuestionCard({
   setScore,
   isLocked,
   isApplicable,
+  onLockedClick,
 }: {
   question: ScoringQuestion;
   index: number;
@@ -180,6 +190,8 @@ function QuestionCard({
   isLocked: (swimmer: Registration, question: ScoringQuestion) => boolean;
   /** False when the question isn't configured for the swimmer's segment. */
   isApplicable?: (swimmer: Registration, questionId: string) => boolean;
+  /** Called when a locked control is tapped, to explain why it can't be set. */
+  onLockedClick: (swimmer: Registration) => void;
 }) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -208,6 +220,7 @@ function QuestionCard({
                   value={getScore(swimmer.id, question._id)}
                   onChange={(v) => setScore(swimmer.id, question._id, v)}
                   disabled={isLocked(swimmer, question)}
+                  onLockedClick={() => onLockedClick(swimmer)}
                 />
               ) : (
                 <span className="text-xs text-muted-foreground/40">—</span>
@@ -230,6 +243,7 @@ function ScoreMatrix({
   isMissing,
   isLocked,
   isApplicable,
+  onLockedClick,
 }: {
   swimmers: Registration[];
   questions: ScoringQuestion[];
@@ -239,6 +253,8 @@ function ScoreMatrix({
   isLocked: (swimmer: Registration, question: ScoringQuestion) => boolean;
   /** False when the question isn't configured for the swimmer's segment. */
   isApplicable?: (swimmer: Registration, questionId: string) => boolean;
+  /** Called when a locked control is tapped, to explain why it can't be set. */
+  onLockedClick: (swimmer: Registration) => void;
 }) {
   return (
     <div className="max-h-[calc(100vh-8rem)] overflow-auto overscroll-x-contain rounded-xl border border-border phone:max-h-[calc(100vh-9rem)]">
@@ -294,6 +310,7 @@ function ScoreMatrix({
                         onChange={(v) => setScore(swimmer.id, question._id, v)}
                         size="compact"
                         disabled={isLocked(swimmer, question)}
+                        onLockedClick={() => onLockedClick(swimmer)}
                       />
                     ) : (
                       <span className="block text-center text-xs text-muted-foreground/40">—</span>
@@ -323,11 +340,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
   const [savingAll, setSavingAll] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [highlightMissing, setHighlightMissing] = useState(false);
-  // null → follow the viewport default (open on tablet+, collapsed on phones);
-  // a boolean means the user has toggled it explicitly.
-  const [notesOpen, setNotesOpen] = useState<boolean | null>(false);
-  const isTabletUp = useMediaQuery("(min-width: 768px)");
-  const notesExpanded = notesOpen ?? isTabletUp;
+  const [notesExpanded, setNotesExpanded] = useState(false);
 
   // Track committed scores (from server + saved edits) so UI always shows current values
   const [committedScores, setCommittedScores] = useState<ScoreMap>(() => {
@@ -404,15 +417,46 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     [scores, committedScores],
   );
 
-  const setScore = useCallback((regId: string, questionId: string, value: ScoreValue) => {
-    setScores((prev) => ({
-      ...prev,
-      [regId]: { ...prev[regId], [questionId]: value },
-    }));
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(regId);
-      return next;
+  const setScore = useCallback(
+    (regId: string, questionId: string, value: ScoreValue) => {
+      const swimmer = registrations.find((r) => r.id === regId);
+      const gate = swimmer ? (questionsFor(swimmer).find(isGateQuestion) ?? null) : null;
+      // Answering the gate question "No" ends the evaluation, so reset everything
+      // else recorded for the swimmer. Cleared values are set to `null` (not
+      // removed) so the save sends them and the server clears the stored scores.
+      const resetRest =
+        !!swimmer && !!gate && gate._id === questionId && (value === "no" || value === false);
+
+      setScores((prev) => {
+        const current = { ...prev[regId], [questionId]: value };
+        if (resetRest && swimmer) {
+          for (const q of questionsFor(swimmer)) {
+            if (q._id !== questionId) current[q._id] = null;
+          }
+        }
+        return { ...prev, [regId]: current };
+      });
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(regId);
+        return next;
+      });
+
+      if (resetRest && swimmer) {
+        toast.info("Other answers cleared", {
+          id: "bulk-gate-reset",
+          description: `${swimmer.swimmer_name} didn't finish the tryout, so the remaining questions were reset.`,
+        });
+      }
+    },
+    [registrations, questionsFor],
+  );
+
+  /** Explains why a locked control can't be set (swimmer hasn't finished the tryout). */
+  const notifyLocked = useCallback((swimmer: Registration) => {
+    toast.error("This score is locked", {
+      id: "bulk-score-locked",
+      description: `${swimmer.swimmer_name} hasn't finished the tryout. Set "Finished the tryout?" to Yes to unlock the remaining questions.`,
     });
   }, []);
 
@@ -528,26 +572,36 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
     setSavingAll(true);
     const scoreIds = Object.keys(scores).filter((id) => Object.keys(scores[id]).length > 0);
     const ids = Array.from(new Set([...scoreIds, ...notesDirtyIds]));
+
+    // Send each swimmer's *complete* criteria set (not just the edits) so the
+    // server can replace `detailedScores`. That drops answers to questions that
+    // no longer exist and keeps the roster/leaderboard counts accurate.
+    const detailedById: Record<string, Record<string, ScoreValue>> = {};
+    for (const regId of ids) {
+      const swimmer = registrations.find((r) => r.id === regId);
+      if (!swimmer) continue;
+      const full: Record<string, ScoreValue> = {};
+      for (const q of questionsFor(swimmer)) full[q._id] = getScore(regId, q._id);
+      detailedById[regId] = full;
+    }
+
     Promise.all(
       ids.map(async (regId) => {
         await saveScoreMutation.mutateAsync({
           regId,
           edits: {
-            // Only include detailed_scores when there are actual score edits,
-            // otherwise undefined would clobber existing scores in the
-            // optimistic update (and unnecessarily on the server too).
-            ...(scores[regId] ? { detailed_scores: scores[regId] } : {}),
+            ...(detailedById[regId] ? { detailed_scores: detailedById[regId] } : {}),
             notes: notesByReg[regId] ?? "",
           } as Partial<Registration>,
         });
       }),
     )
       .then(() => {
-        // Merge all saved edits into committed scores
+        // The server now stores exactly what we sent, so make that the new baseline.
         setCommittedScores((prev) => {
           const next = { ...prev };
-          for (const id of scoreIds) {
-            next[id] = { ...next[id], ...scores[id] };
+          for (const id of ids) {
+            if (detailedById[id]) next[id] = detailedById[id];
           }
           return next;
         });
@@ -680,7 +734,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
       </div>
 
       {/* ── Single table for every selected swimmer ────────────────────────── */}
-      <div className="space-y-8 px-4 pt-20 pb-8 phone:pt-16 sm:px-6 lg:px-8">
+      <div className="space-y-8 px-4 pt-8 pb-20 phone:pt-4 phone:pb-16 sm:px-6 lg:px-8">
         {allQuestions.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
             No scoring questions are configured for these swimmers. Add questions to their age
@@ -701,6 +755,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
                   setScore={setScore}
                   isLocked={isQuestionLocked}
                   isApplicable={hasQuestion}
+                  onLockedClick={notifyLocked}
                 />
               ))}
             </div>
@@ -715,6 +770,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
                 isMissing={isMissing}
                 isLocked={isQuestionLocked}
                 isApplicable={hasQuestion}
+                onLockedClick={notifyLocked}
               />
             </div>
           </>
@@ -724,7 +780,7 @@ export function BulkScoreTab({ tryoutId, registrations, onBack }: Props) {
         <section className="overflow-hidden rounded-xl border bg-card">
           <button
             type="button"
-            onClick={() => setNotesOpen(!notesExpanded)}
+            onClick={() => setNotesExpanded(!notesExpanded)}
             className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-muted/40"
           >
             <span className="text-sm font-semibold">

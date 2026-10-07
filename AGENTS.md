@@ -21,7 +21,8 @@
 - API responses use the `sendSuccess(res, data, message, statusCode)` envelope; errors are thrown from `src/shared/errors/domain.errors.ts`.
 - Any new or changed API endpoint **must** be documented in `server/src/docs/*.yaml` (with component schemas in `server/src/config/swagger.ts`) in the same change.
 - Responsive variants live in `client/src/styles.css` as `@custom-variant`s: `phone` (any phone orientation — use this for compact chrome), `phone-landscape`, `phone-portrait`. Tailwind silently drops all but the **first** media query in the one-line `@custom-variant name (@media A, B);` form — for a query list you must use the block form (`@custom-variant name { @media A, B { @slot; } }`).
-- The compact chrome sizes (48px app header, 48px bulk-scoring action bar, 44px pagination bar) are tied together: `BulkScoreTab`'s content `phone:pt-16` and matrix `phone:max-h-[calc(100vh-9rem)]` compensate for the 48px action bar. Update them together if a height changes.
+- The compact chrome sizes (48px app header, 48px bulk-scoring action bar, 44px pagination bar) are tied together: `BulkScoreTab`'s action bar is **bottom-anchored**, so the content's `phone:pb-16` and the matrix's `phone:max-h-[calc(100vh-9rem)]` compensate for the 48px action bar. Update them together if a height changes.
+- `PUT /tryouts/:id/registrations/:regId/score` **replaces** `detailed_scores` (it does not merge). Callers must send the swimmer's **complete** criteria set — `BulkScoreTab` does this on save — so answers to removed questions don't linger and skew the roster/leaderboard counts. The server recomputes `scores.totalScore` from the numeric values sent (nulling it when none remain).
 
 ## Deployment
 
