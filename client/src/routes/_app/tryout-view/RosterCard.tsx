@@ -111,7 +111,7 @@ export function RosterCard({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-white p-4 transition",
+        "shadow-md rounded-xl border bg-white p-4 transition",
         selected ? "border-primary/40 bg-primary/5" : "border-gray-200",
       )}
     >

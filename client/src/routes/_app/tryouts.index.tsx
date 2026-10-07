@@ -394,7 +394,7 @@ export default function TryoutsList() {
           )}
         </div>
       </div>
-      <div className="bg-card rounded-xl border border-border">
+      <div className="">
         {/* ── Loading ─────────────────────────────────────────────────────── */}
         {isLoading && (
           <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
@@ -504,7 +504,7 @@ export default function TryoutsList() {
             </div>
 
             {/* ── Card list (mobile) ────────────────────────────────────────── */}
-            <div className={`md:hidden flex flex-col gap-3 p-3 ${isFetching ? "opacity-60" : ""}`}>
+            <div className={`md:hidden flex flex-col gap-3 ${isFetching ? "opacity-60" : ""}`}>
               {tryouts.length === 0 ? (
                 <div className="text-center text-muted-foreground py-12 text-sm">
                   {hasActiveFilters
@@ -524,7 +524,7 @@ export default function TryoutsList() {
                         if (e.defaultPrevented) return;
                         navigate(`/tryouts/view/${t._id}`);
                       }}
-                      className="cursor-pointer rounded-xl border border-border bg-white flex flex-col overflow-hidden transition hover:border-primary/40 hover:shadow-sm"
+                      className="shadow-md cursor-pointer rounded-xl border border-border bg-white flex flex-col overflow-hidden transition hover:border-primary/40 hover:shadow-sm"
                     >
                       {/* Header: status + season, title, date & location */}
                       <div className="flex flex-col gap-2.5 p-4">
@@ -574,12 +574,12 @@ export default function TryoutsList() {
                           </div>
                           <div className="text-xs text-muted-foreground mt-0.5">Session</div>
                         </div>
-                        <div className="flex-1 min-w-0 px-4 py-3">
+                        <div className="flex-[1.4] min-w-0 px-4 py-3">
                           <div className="text-lg font-bold leading-tight">
                             {t.totalSlots ?? 0}{" "}
                             <span className="text-sm font-medium text-muted-foreground">Slots</span>
                           </div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
+                          <div className="mt-0.5 truncate text-xs text-muted-foreground">
                             {t.swimmersPerSlot} swimmers/slot
                           </div>
                         </div>
