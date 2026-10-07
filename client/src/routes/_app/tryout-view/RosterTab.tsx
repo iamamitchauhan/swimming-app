@@ -633,6 +633,8 @@ export function RosterTab({ tryoutId }: Props) {
         </div>
       </div>
 
+      {/* Add sorting column dropdown */}
+
       {/* ── Roster: table on tablet/desktop and landscape phones, cards only
           on portrait phones ─────────────────────────────────────────────── */}
       <div className="mt-4 hidden overflow-hidden rounded-xl border border-gray-200 sm:block phone-landscape:block">
@@ -997,7 +999,7 @@ export function RosterTab({ tryoutId }: Props) {
 
       {/* ── Pagination ────────────────────────────────────────────────────── */}
       {total > 0 && (
-        <div className="sticky bottom-0 z-20 mt-4 flex items-center justify-between gap-3 border-t border-gray-100 bg-white/95 px-3 py-3 text-sm text-gray-600 backdrop-blur phone:gap-2 phone:py-2 phone:text-xs -mx-0.5 rounded-b-xl">
+        <div className="sticky bottom-0 z-20 mt-4 flex items-center justify-between gap-3 border-t px-3 py-3 text-sm text-gray-600 backdrop-blur phone:gap-2 phone:py-2 phone:text-xs -mx-0.5 rounded-b-xl border bg-white p-4 transition border-gray-200">
           <span className="whitespace-nowrap">
             <span className="phone:hidden">Showing </span>
             <span className="font-medium">

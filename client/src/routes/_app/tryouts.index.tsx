@@ -627,11 +627,6 @@ export default function TryoutsList() {
 
             {/* ── Pagination footer ──────────────────────────────────────── */}
             <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground border-t border-border">
-              <span>
-                {total} tryout{total !== 1 ? "s" : ""}
-                {hasActiveFilters && " (filtered)"}
-                {totalPages > 1 && ` · page ${page} of ${totalPages}`}
-              </span>
               {totalPages > 1 && (
                 <div className="flex items-center gap-1">
                   <Button

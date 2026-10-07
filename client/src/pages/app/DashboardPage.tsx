@@ -53,9 +53,9 @@ function Card({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="bg-card rounded-xl border border-border p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold tracking-tight">{title}</h3>
+    <div className="bg-card rounded-xl border border-border p-5 phone-portrait:p-4">
+      <div className="flex items-center justify-between mb-4 phone-portrait:mb-3">
+        <h3 className="font-semibold tracking-tight phone-portrait:text-sm">{title}</h3>
         {action}
       </div>
       {children}
@@ -105,9 +105,9 @@ function RecentUsers() {
   }
   if (users.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-          <Users className="h-5 w-5 text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center gap-3 py-6 phone-portrait:gap-2 phone-portrait:py-4 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted phone-portrait:h-8 phone-portrait:w-8">
+          <Users className="h-5 w-5 text-muted-foreground phone-portrait:h-4 phone-portrait:w-4" />
         </div>
         <div>
           <p className="text-sm text-muted-foreground">No users in this club yet.</p>
@@ -125,12 +125,12 @@ function RecentUsers() {
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-3 phone-portrait:space-y-2">
       {users.map((item: any) => {
         const u = item.data;
         return (
-          <li key={u._id} className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary to-aqua text-primary-foreground flex items-center justify-center text-xs font-semibold">
+          <li key={u._id} className="flex items-center gap-3 phone-portrait:gap-2.5">
+            <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary to-aqua text-primary-foreground flex items-center justify-center text-xs font-semibold phone-portrait:h-8 phone-portrait:w-8">
               {u.firstName ? `${u.firstName[0] ?? ""}${u.lastName[0] ?? ""}` : "?"}
             </div>
             <div className="flex-1">
@@ -170,9 +170,9 @@ function TryoutList() {
 
   if (!tryouts || tryouts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-          <Waves className="h-5 w-5 text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center gap-3 py-6 phone-portrait:gap-2 phone-portrait:py-4 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted phone-portrait:h-8 phone-portrait:w-8">
+          <Waves className="h-5 w-5 text-muted-foreground phone-portrait:h-4 phone-portrait:w-4" />
         </div>
         <div>
           <p className="text-sm text-muted-foreground">No upcoming tryouts.</p>
@@ -190,10 +190,10 @@ function TryoutList() {
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-3 phone-portrait:space-y-2">
       {tryouts.map((x) => (
-        <li key={x.name} className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-aqua/15 text-aqua-foreground flex flex-col items-center justify-center">
+        <li key={x.name} className="flex items-center gap-3 phone-portrait:gap-2.5">
+          <div className="h-10 w-10 rounded-lg bg-aqua/15 text-aqua-foreground flex flex-col items-center justify-center phone-portrait:h-8 phone-portrait:w-8">
             <Waves className="h-4 w-4" />
           </div>
           <div className="flex-1">
@@ -308,18 +308,16 @@ function AdminDash() {
   const navigate = useNavigate();
   const isAdmin = role === "admin";
 
-  console.info("clubState =>", clubState);
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 phone-portrait:space-y-4">
       {/* Club info */}
       <Card title="Club Information">
         {stateLoading || !clubState ? (
-          <div className="flex items-center justify-center h-24">
+          <div className="flex items-center justify-center h-24 phone-portrait:h-16">
             <Clock10 className="animate-spin h-5 w-5 text-muted-foreground" />
           </div>
         ) : (
-          <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+          <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm phone-portrait:gap-x-3 phone-portrait:gap-y-2 phone-portrait:text-xs">
             <div>
               <dt className="text-muted-foreground">Club name</dt>
               <dd className="font-medium mt-0.5">{clubState.club.name || "—"}</dd>
@@ -352,7 +350,7 @@ function AdminDash() {
         )}
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 phone-portrait:grid-cols-2 phone-portrait:gap-3">
         <StatCard label="Active Members" value={clubState?.memberCount || 0} icon={Users} />
         <StatCard
           label="Active Tryouts"
@@ -373,7 +371,7 @@ function AdminDash() {
           icon={Clock10}
         />
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 phone-portrait:gap-3">
         <Card title="Recent 3 Users">
           <RecentUsers />
         </Card>

@@ -1,11 +1,16 @@
 import { useState, type KeyboardEvent } from "react";
-import { Check, ChevronDown, Filter, X } from "lucide-react";
+import { ArrowUpDown, Check, ChevronDown, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SearchInput } from "@/components/search-input";
 import { cn } from "@/lib/utils";
-import type { RegistrationListParams, TryoutSlot } from "@/lib/api/tryouts.api";
+import type {
+  RegistrationListParams,
+  RegistrationSortField,
+  SortOrder,
+  TryoutSlot,
+} from "@/lib/api/tryouts.api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -42,6 +47,25 @@ const REGISTRATION_OPTIONS: SingleOption[] = [
   { value: "not", label: "Not sent" },
 ];
 
+/**
+ * Roster sort choices. Each entry is a complete sort (field + direction), which
+ * is what the single-select control shows. Values encode both parts as
+ * `<sortBy>:<sortOrder>` so they can be parsed straight back into params.
+ */
+const SORT_OPTIONS: SingleOption[] = [
+  { value: "swimmer_name:asc", label: "Name: A–Z" },
+  { value: "swimmer_name:desc", label: "Name: Z–A" },
+  { value: "swimmer_age:asc", label: "Age: youngest first" },
+  { value: "swimmer_age:desc", label: "Age: oldest first" },
+  { value: "session_time:asc", label: "Slot: earliest first" },
+  { value: "session_time:desc", label: "Slot: latest first" },
+  { value: "status:asc", label: "Status: A–Z" },
+  { value: "status:desc", label: "Status: Z–A" },
+];
+
+/** Coaches have no Status column, so they don't get the status sorts. */
+const COACH_SORT_OPTIONS = SORT_OPTIONS.filter((o) => !o.value.startsWith("status:"));
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface FilterOption {
@@ -65,7 +89,11 @@ export interface FilterChip {
 // ─── Shared bits ──────────────────────────────────────────────────────────────
 
 const TRIGGER_CLS =
-  "inline-flex h-9 items-center justify-between gap-2 whitespace-nowrap rounded-lg border bg-white px-3 text-sm text-gray-700 transition hover:bg-gray-50 cursor-pointer";
+  "relative inline-flex h-9 shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-lg border bg-white px-3 text-sm text-gray-700 transition hover:bg-gray-50 cursor-pointer";
+
+/** Native <select> used for the single-choice filters (check-in, registration). */
+const NATIVE_SELECT_CLS =
+  "w-full cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30";
 
 function activateOnKey(e: KeyboardEvent, action: () => void) {
   if (e.key === "Enter" || e.key === " ") {
@@ -181,6 +209,12 @@ export function MultiSelectDropdown({
       : selected.length === 1
         ? (first?.label ?? defaultLabel)
         : `${first?.label ?? ""} +${selected.length - 1}`;
+  // Widest label the trigger can ever show on its own (default or any option):
+  // the sizer that fixes the trigger width so picking options never shifts it.
+  const sizerLabel = options.reduce(
+    (a, o) => (o.label.length > a.length ? o.label : a),
+    defaultLabel,
+  );
 
   return (
     <Popover>
@@ -193,7 +227,15 @@ export function MultiSelectDropdown({
             className,
           )}
         >
-          <span className="truncate">{triggerLabel}</span>
+          {/* Invisible sizer pinned to the widest label: keeps the trigger the
+              same width once an option is picked, so it (and its neighbours)
+              never shift. The real label is overlaid and truncates to fit. */}
+          <span aria-hidden className="invisible">
+            {sizerLabel}
+          </span>
+          <span className="pointer-events-none absolute left-3 right-9 top-1/2 -translate-y-1/2 truncate text-left">
+            {triggerLabel}
+          </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
         </button>
       </PopoverTrigger>
@@ -219,6 +261,35 @@ interface SingleSelectDropdownProps {
   className?: string;
 }
 
+/** Shared option list (one row per option, check on the current one). */
+function SingleSelectList({
+  options,
+  value,
+  onSelect,
+}: {
+  options: SingleOption[];
+  value: string;
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <PopoverContent align="start" className="w-52 p-1.5">
+      {options.map((opt) => (
+        <div
+          key={opt.value}
+          role="button"
+          tabIndex={0}
+          onClick={() => onSelect(opt.value)}
+          onKeyDown={(e) => activateOnKey(e, () => onSelect(opt.value))}
+          className="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-gray-50"
+        >
+          {opt.label}
+          {opt.value === value && <Check className="h-4 w-4 text-primary" />}
+        </div>
+      ))}
+    </PopoverContent>
+  );
+}
+
 export function SingleSelectDropdown({
   options,
   value,
@@ -227,38 +298,64 @@ export function SingleSelectDropdown({
 }: SingleSelectDropdownProps) {
   const current = options.find((o) => o.value === value) ?? options[0];
   const [open, setOpen] = useState(false);
+  // Widest option label: the sizer that fixes the trigger width.
+  const sizerLabel = options.reduce((a, o) => (o.label.length > a.length ? o.label : a), "");
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button type="button" className={cn(TRIGGER_CLS, "border-gray-200", className)}>
-          <span className="truncate">{current?.label}</span>
+          {/* Invisible sizer pinned to the widest option: keeps the trigger the
+              same width as the selection changes, so it never shifts. */}
+          <span aria-hidden className="invisible">
+            {sizerLabel}
+          </span>
+          <span className="pointer-events-none absolute left-3 right-9 top-1/2 -translate-y-1/2 truncate text-left">
+            {current?.label}
+          </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-52 p-1.5">
-        {options.map((opt) => (
-          <div
-            key={opt.value}
-            role="button"
-            tabIndex={0}
-            onClick={() => {
-              onChange(opt.value);
-              setOpen(false);
-            }}
-            onKeyDown={(e) =>
-              activateOnKey(e, () => {
-                onChange(opt.value);
-                setOpen(false);
-              })
-            }
-            className="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-gray-50"
-          >
-            {opt.label}
-            {opt.value === value && <Check className="h-4 w-4 text-primary" />}
-          </div>
-        ))}
-      </PopoverContent>
+      <SingleSelectList
+        options={options}
+        value={value}
+        onSelect={(v) => {
+          onChange(v);
+          setOpen(false);
+        }}
+      />
+    </Popover>
+  );
+}
+
+/**
+ * Sort control — same button UI as the "Filters" button (outline button, leading
+ * icon, trailing dropdown arrow) so the two sit together on portrait.
+ */
+function SortDropdown({ options, value, onChange, className }: SingleSelectDropdownProps) {
+  const current = options.find((o) => o.value === value) ?? options[0];
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn("shrink-0 justify-start gap-2 bg-white", className)}
+        >
+          <ArrowUpDown className="h-4 w-4" />
+          <span className="min-w-0 truncate">{current?.label}</span>
+          <ChevronDown className="ml-auto h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <SingleSelectList
+        options={options}
+        value={value}
+        onSelect={(v) => {
+          onChange(v);
+          setOpen(false);
+        }}
+      />
     </Popover>
   );
 }
@@ -317,6 +414,7 @@ export function RosterFilterBar({
   fmtTime,
 }: RosterFilterBarProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const segmentOptions: FilterOption[] = segments.map((s) => ({ value: s.id, label: s.name }));
   const slotOptions: FilterOption[] = slots.map((s) => ({
@@ -429,6 +527,16 @@ export function RosterFilterBar({
     (selectedRecs.length > 0 ? 1 : 0) +
     (params.emailSent !== undefined ? 1 : 0);
 
+  // Portrait "Filters" badge counts every active filter group (coaches keep
+  // their default check-in/status, so those aren't counted for them).
+  const activeFilterCount =
+    (selectedSegmentIds.length > 0 ? 1 : 0) +
+    (selectedSlotIds.length > 0 ? 1 : 0) +
+    (role !== "coach" && params.checkedIn !== undefined ? 1 : 0) +
+    (role !== "coach" && selectedStatuses.length > 0 ? 1 : 0) +
+    (selectedRecs.length > 0 ? 1 : 0) +
+    (params.emailSent !== undefined ? 1 : 0);
+
   function clearAll() {
     onChange({
       segmentIds: undefined,
@@ -441,6 +549,13 @@ export function RosterFilterBar({
       emailSent: undefined,
       page: 1,
     });
+  }
+
+  const sortOptions = role === "coach" ? COACH_SORT_OPTIONS : SORT_OPTIONS;
+  const currentSort = `${params.sortBy ?? "swimmer_name"}:${params.sortOrder ?? "asc"}`;
+  function applySort(value: string) {
+    const [sortBy, sortOrder] = value.split(":") as [RegistrationSortField, SortOrder];
+    onChange({ sortBy, sortOrder, page: 1 });
   }
 
   const segmentFilter = (
@@ -461,6 +576,201 @@ export function RosterFilterBar({
       onChange={(next) => onChange({ slotIds: next.length ? next : undefined, page: 1 })}
     />
   );
+  // Sort control — portrait-only: the table view has clickable column headers,
+  // but the portrait card view doesn't, so the dropdown is shown just there.
+  const sortFilter = (
+    <SortDropdown
+      options={sortOptions}
+      value={currentSort}
+      onChange={applySort}
+      className="hidden phone-portrait:inline-flex phone-portrait:flex-1 phone-portrait:min-w-0"
+    />
+  );
+  const moreFilters = (
+    <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "shrink-0 gap-2 bg-white phone-portrait:hidden",
+            popoverFilterCount > 0 && "border-primary text-primary",
+          )}
+        >
+          <Filter className="h-4 w-4" />
+          More filters
+          {/* Always rendered (hidden at 0) so the button keeps a fixed
+              width and the dropdowns before it never shift. */}
+          <span
+            className={cn(
+              "rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground",
+              popoverFilterCount === 0 && "invisible",
+            )}
+          >
+            {popoverFilterCount}
+          </span>
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-0">
+        <div className="grid gap-4 p-4">
+          <InlineMultiSelect
+            title="Status"
+            options={STATUS_OPTIONS}
+            selected={selectedStatuses}
+            onChange={(next) => onChange({ statuses: next.length ? next : undefined, page: 1 })}
+          />
+          <InlineMultiSelect
+            title="Recommendation"
+            options={adminRecOptions}
+            selected={selectedRecs}
+            onChange={(next) =>
+              onChange({ coachRecommendations: next.length ? next : undefined, page: 1 })
+            }
+          />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-gray-800">Registration</p>
+            <select
+              value={registrationValue}
+              onChange={(e) => {
+                const v = e.target.value;
+                onChange({ emailSent: v === "all" ? undefined : v === "sent", page: 1 });
+              }}
+              className={NATIVE_SELECT_CLS}
+            >
+              {REGISTRATION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center justify-between border-t px-4 py-3">
+          <button
+            type="button"
+            onClick={clearAll}
+            className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
+          >
+            Clear
+          </button>
+          <Button onClick={() => setFiltersOpen(false)}>Done</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+  // Phone portrait collapses every filter into this single button + popover.
+  const mobileFilters = (
+    <Popover open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="hidden shrink-0 justify-start gap-2 bg-white phone-portrait:inline-flex phone-portrait:flex-1 phone-portrait:min-w-0"
+        >
+          <Filter className="h-4 w-4" />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
+              {activeFilterCount}
+            </span>
+          )}
+          <ChevronDown className="ml-auto h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[calc(100vw-1.5rem)] max-w-sm p-0">
+        <div className="grid max-h-[70vh] gap-4 overflow-y-auto p-4">
+          <InlineMultiSelect
+            title="Segment"
+            options={segmentOptions}
+            selected={selectedSegmentIds}
+            onChange={(next) => onChange({ segmentIds: next.length ? next : undefined, page: 1 })}
+          />
+          <InlineMultiSelect
+            title="Time slot"
+            options={slotOptions}
+            selected={selectedSlotIds}
+            onChange={(next) => onChange({ slotIds: next.length ? next : undefined, page: 1 })}
+          />
+          {role !== "coach" && (
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-gray-800">Check-in</p>
+              <select
+                value={checkInValue}
+                onChange={(e) =>
+                  onChange({
+                    checkedIn: e.target.value === "all" ? undefined : e.target.value === "in",
+                    page: 1,
+                  })
+                }
+                className={NATIVE_SELECT_CLS}
+              >
+                {CHECK_IN_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {role !== "coach" && (
+            <InlineMultiSelect
+              title="Status"
+              options={STATUS_OPTIONS}
+              selected={selectedStatuses}
+              onChange={(next) => onChange({ statuses: next.length ? next : undefined, page: 1 })}
+            />
+          )}
+          {role === "coach" ? (
+            <InlineMultiSelect
+              title="Recommendation"
+              options={coachRecOptions}
+              selected={coachRecSelected}
+              onChange={onCoachRecChange}
+            />
+          ) : (
+            <InlineMultiSelect
+              title="Recommendation"
+              options={adminRecOptions}
+              selected={selectedRecs}
+              onChange={(next) =>
+                onChange({ coachRecommendations: next.length ? next : undefined, page: 1 })
+              }
+            />
+          )}
+          {role !== "coach" && (
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-gray-800">Registration</p>
+              <select
+                value={registrationValue}
+                onChange={(e) =>
+                  onChange({
+                    emailSent: e.target.value === "all" ? undefined : e.target.value === "sent",
+                    page: 1,
+                  })
+                }
+                className={NATIVE_SELECT_CLS}
+              >
+                {REGISTRATION_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-between border-t px-4 py-3">
+          <button
+            type="button"
+            onClick={clearAll}
+            className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
+          >
+            Clear
+          </button>
+          <Button onClick={() => setMobileFiltersOpen(false)}>Done</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 
   return (
     <div className="border-b border-gray-50 px-0.5 pt-4">
@@ -469,109 +779,54 @@ export function RosterFilterBar({
           value={search}
           onChange={onSearch}
           placeholder="Search swimmer or parent"
-          className="min-w-48 flex-1 bg-white"
+          className="min-w-48 flex-1 bg-white phone-portrait:basis-full"
           debounceMs={350}
         />
 
-        {role === "coach" ? (
-          <>
-            {slotFilter}
-            {segmentFilter}
-            <MultiSelectDropdown
-              defaultLabel="All recommendations"
-              title="Recommendation"
-              options={coachRecOptions}
-              selected={coachRecSelected}
-              onChange={onCoachRecChange}
-            />
-          </>
-        ) : (
-          <>
-            {segmentFilter}
-            {slotFilter}
-            <SingleSelectDropdown
-              options={CHECK_IN_OPTIONS}
-              value={checkInValue}
-              onChange={(v) =>
-                onChange({
-                  checkedIn: v === "all" ? undefined : v === "in",
-                  page: 1,
-                })
-              }
-            />
-            <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "shrink-0 gap-2 bg-white",
-                    popoverFilterCount > 0 && "border-primary text-primary",
-                  )}
-                >
-                  <Filter className="h-4 w-4" />
-                  More filters
-                  {popoverFilterCount > 0 && (
-                    <span className="rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
-                      {popoverFilterCount}
-                    </span>
-                  )}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-72 p-0">
-                <div className="grid gap-4 p-4">
-                  <InlineMultiSelect
-                    title="Status"
-                    options={STATUS_OPTIONS}
-                    selected={selectedStatuses}
-                    onChange={(next) =>
-                      onChange({ statuses: next.length ? next : undefined, page: 1 })
-                    }
-                  />
-                  <InlineMultiSelect
-                    title="Recommendation"
-                    options={adminRecOptions}
-                    selected={selectedRecs}
-                    onChange={(next) =>
-                      onChange({ coachRecommendations: next.length ? next : undefined, page: 1 })
-                    }
-                  />
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-gray-800">Registration</p>
-                    <select
-                      value={registrationValue}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        onChange({ emailSent: v === "all" ? undefined : v === "sent", page: 1 });
-                      }}
-                      className="w-full cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    >
-                      {REGISTRATION_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between border-t px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={clearAll}
-                    className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    Clear
-                  </button>
-                  <Button onClick={() => setFiltersOpen(false)}>Done</Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </>
-        )}
+        {/* Phone portrait collapses every filter into the single "Filters" button
+            below, so the inline selects are hidden there. On wider screens the
+            wrapper is `display: contents`, keeping them inline exactly as before. */}
+        <div className="contents phone-portrait:hidden">
+          {role === "coach" ? (
+            <>
+              {slotFilter}
+              {segmentFilter}
+              <MultiSelectDropdown
+                defaultLabel="All recommendations"
+                title="Recommendation"
+                options={coachRecOptions}
+                selected={coachRecSelected}
+                onChange={onCoachRecChange}
+              />
+            </>
+          ) : (
+            <>
+              {segmentFilter}
+              {slotFilter}
+              <SingleSelectDropdown
+                options={CHECK_IN_OPTIONS}
+                value={checkInValue}
+                onChange={(v) =>
+                  onChange({
+                    checkedIn: v === "all" ? undefined : v === "in",
+                    page: 1,
+                  })
+                }
+              />
+            </>
+          )}
+        </div>
+
+        {role !== "coach" && moreFilters}
+
+        {mobileFilters}
 
         {/* <span className="ml-auto whitespace-nowrap text-sm text-gray-400">
           {total} swimmer{total === 1 ? "" : "s"}
         </span> */}
+
+        {/* Sort control — portrait only, beside the Filters button. */}
+        {sortFilter}
       </div>
 
       {chips.length > 0 && (

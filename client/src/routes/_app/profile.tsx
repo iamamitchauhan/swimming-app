@@ -1,28 +1,24 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, LogOut } from "lucide-react";
 import { useCurrentUser, useUpdateMe } from "@/hooks/use-users";
 import { useLogout } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
 import { toast } from "sonner";
-
-const ROLE_LABEL: Record<string, string> = {
-  super_admin: "Super Admin",
-  admin: "Club Admin",
-  coach: "Coach",
-};
+import { ROLE_LABEL } from "@/lib/utils";
 
 export default function ProfilePage() {
   const { data: user, isLoading } = useCurrentUser();
   const updateMe = useUpdateMe();
   const logout = useLogout();
   const { toastError } = useApiError();
+  const navigate = useNavigate();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -40,6 +36,9 @@ export default function ProfilePage() {
     user?.email?.[0]?.toUpperCase() ||
     "?";
 
+  const displayName =
+    firstName || lastName ? `${firstName} ${lastName}`.trim() : (user?.email ?? "");
+
   const saveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     updateMe.mutate(
@@ -55,98 +54,77 @@ export default function ProfilePage() {
   };
 
   return (
-    <PageShell
-      title="Profile"
-      actions={
-        <Button
-          variant="outline"
-          onClick={() => logout.mutate()}
-          disabled={logout.isPending}
-        >
-          {logout.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <><LogOut className="h-4 w-4 mr-1.5" /> Sign out</>
-          )}
-        </Button>
-      }
-    >
+    <PageShell title="Profile" actions={<></>}>
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="max-w-2xl space-y-6">
           <Skeleton className="h-24 rounded-xl" />
           <Skeleton className="h-64 rounded-xl" />
         </div>
       ) : (
-        <>
-          <div className="bg-card rounded-xl border border-border p-6 mb-6 flex items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl bg-linear-to-br from-primary to-aqua text-primary-foreground flex items-center justify-center font-bold text-xl">
+        <div className="max-w-2xl space-y-6">
+          {/* Identity */}
+          <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-6">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-primary to-aqua text-xl font-bold text-primary-foreground">
               {initials}
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold tracking-tight">
-                {firstName || lastName ? `${firstName} ${lastName}`.trim() : user?.email}
-              </h2>
-              <p className="text-sm text-muted-foreground">{user?.email}</p>
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-semibold tracking-tight">{displayName}</h2>
+              <p className="truncate text-sm text-muted-foreground">{user?.email}</p>
+              <Badge variant="secondary" className="mt-1.5">
+                {ROLE_LABEL[user?.role ?? ""] ?? user?.role}
+              </Badge>
             </div>
-            <Badge variant="secondary">{ROLE_LABEL[user?.role ?? ""] ?? user?.role}</Badge>
           </div>
 
-          <Tabs defaultValue="personal">
-            <TabsList>
-              <TabsTrigger value="personal">Personal Information</TabsTrigger>
-            </TabsList>
-            <TabsContent value="personal" className="mt-4">
-              <form
-                onSubmit={saveProfile}
-                className="bg-card rounded-xl border border-border p-6 grid sm:grid-cols-2 gap-4 max-w-3xl"
-              >
-                <div className="space-y-1.5">
-                  <Label htmlFor="firstName">First name</Label>
-                  <Input
-                    id="firstName"
-                    value={firstName}
-                    onChange={(e) => { setFirstName(e.target.value); setDirty(true); }}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="lastName">Last name</Label>
-                  <Input
-                    id="lastName"
-                    value={lastName}
-                    onChange={(e) => { setLastName(e.target.value); setDirty(true); }}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Email</Label>
-                  <Input value={user?.email ?? ""} disabled />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Role</Label>
-                  <Input value={ROLE_LABEL[user?.role ?? ""] ?? user?.role ?? ""} disabled />
-                </div>
-                <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setFirstName(user?.firstName ?? "");
-                      setLastName(user?.lastName ?? "");
-                      setDirty(false);
-                    }}
-                    disabled={!dirty}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={!dirty || updateMe.isPending}>
-                    {updateMe.isPending ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…</>
-                    ) : "Save changes"}
-                  </Button>
-                </div>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </>
+          {/* Personal information */}
+          <section className="rounded-xl border border-border bg-card">
+            <header className="border-b border-border px-6 py-4">
+              <h3 className="text-sm font-semibold">Personal information</h3>
+            </header>
+            <form onSubmit={saveProfile} className="grid gap-4 p-6 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="firstName">First name</Label>
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    setDirty(true);
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="lastName">Last name</Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => {
+                    setLastName(e.target.value);
+                    setDirty(true);
+                  }}
+                />
+              </div>
+              {/* <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" value={user?.email ?? ""} disabled />
+              </div> */}
+              <div className="flex justify-end gap-2 pt-2 sm:col-span-2">
+                <Button type="button" variant="outline" onClick={() => navigate("/dashboard")}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={!dirty || updateMe.isPending}>
+                  {updateMe.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…
+                    </>
+                  ) : (
+                    "Save changes"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </section>
+        </div>
       )}
     </PageShell>
   );
