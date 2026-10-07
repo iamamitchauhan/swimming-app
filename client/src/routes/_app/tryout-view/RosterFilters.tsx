@@ -240,7 +240,7 @@ export function MultiSelectDropdown({
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 p-0">
-        <div className="max-h-80 overflow-y-auto p-2">
+        <div className="max-h-[min(20rem,var(--radix-popover-content-available-height))] overflow-y-auto overscroll-contain p-2">
           <p className="px-2 pb-1 text-sm font-semibold text-gray-800">{title}</p>
           <div className="px-2 pb-1">
             <SelectAllClear allValues={options.map((o) => o.value)} onChange={onChange} />
@@ -677,7 +677,7 @@ export function RosterFilterBar({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[calc(100vw-1.5rem)] max-w-sm p-0">
-        <div className="grid max-h-[70vh] gap-4 overflow-y-auto p-4">
+        <div className="grid max-h-[calc(var(--radix-popover-content-available-height)-4rem)] gap-4 overflow-y-auto overscroll-contain p-4">
           <InlineMultiSelect
             title="Segment"
             options={segmentOptions}
@@ -773,7 +773,7 @@ export function RosterFilterBar({
   );
 
   return (
-    <div className="border-b border-gray-50 px-0.5 pt-4">
+    <div className={cn("border-b border-gray-50 px-0.5", role !== "coach" && "pt-4")}>
       <div className="flex flex-wrap items-center gap-3">
         <SearchInput
           value={search}
