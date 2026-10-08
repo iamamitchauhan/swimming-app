@@ -641,7 +641,7 @@ export function RosterTab({ tryoutId }: Props) {
         <Table>
           <TableHeader className="sticky top-0 z-20 rounded-t-xl">
             <TableRow>
-              <TableHead className="w-10 px-4">
+              <TableHead className="sticky left-0 z-30 w-8 bg-gray-900 px-4">
                 <Checkbox
                   checked={allRegisteredSelected}
                   onCheckedChange={toggleAll}
@@ -650,7 +650,7 @@ export function RosterTab({ tryoutId }: Props) {
                 />
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none whitespace-nowrap"
+                className="sticky left-8 z-30 cursor-pointer select-none whitespace-nowrap bg-gray-900 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.35)]"
                 onClick={() => handleSort("swimmer_name")}
               >
                 Swimmer Info
@@ -709,9 +709,9 @@ export function RosterTab({ tryoutId }: Props) {
                 return (
                   <TableRow
                     key={r.id}
-                    className={`hover:bg-gray-50 transition ${selectedIds.has(r.id) ? "bg-blue-50" : ""}`}
+                    className={`hover:bg-gray-50 transition ${selectedIds.has(r.id) ? "bg-blue-50" : "bg-white"}`}
                   >
-                    <TableCell className="w-10 px-4 py-3">
+                    <TableCell className="sticky left-0 z-10 w-8 bg-inherit px-4 py-3">
                       <Checkbox
                         checked={selectedIds.has(r.id)}
                         onCheckedChange={() => toggleRow(r.id)}
@@ -719,7 +719,7 @@ export function RosterTab({ tryoutId }: Props) {
                         className="cursor-pointer"
                       />
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="sticky left-8 z-10 bg-inherit px-4 py-3 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                       <div
                         className="cursor-pointer text-blue-700 hover:underline"
                         onClick={() => {
@@ -1395,7 +1395,7 @@ function CheckInControl({
 }) {
   const isCard = variant === "card";
   return (
-    <div className={cn("flex items-center", !isCard && "h-10 min-w-26")}>
+    <div className={cn("flex items-center", !isCard && "h-10 min-w-28")}>
       {isInactive(r) ? (
         <span className="text-muted-foreground"></span>
       ) : r.checked_in_at ? (

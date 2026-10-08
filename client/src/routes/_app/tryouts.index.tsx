@@ -415,7 +415,7 @@ export default function TryoutsList() {
         {!isLoading && !isError && (
           <>
             <div
-              className={`hidden md:block overflow-x-auto bg-white rounded-xl rounded-bl-none rounded-br-none border border-gray-200 overflow-hidden ${isFetching ? "opacity-60" : ""}`}
+              className={`hidden lg:block overflow-x-auto bg-white rounded-xl rounded-bl-none rounded-br-none border border-gray-200 overflow-hidden ${isFetching ? "opacity-60" : ""}`}
             >
               <Table>
                 <TableHeader className="bg-gray-900 text-xs uppercase tracking-wide">
@@ -503,10 +503,12 @@ export default function TryoutsList() {
               </Table>
             </div>
 
-            {/* ── Card list (mobile) ────────────────────────────────────────── */}
-            <div className={`md:hidden flex flex-col gap-3 ${isFetching ? "opacity-60" : ""}`}>
+            {/* ── Card list (phone + tablet) ────────────────────────────────── */}
+            <div
+              className={`lg:hidden grid gap-3 md:grid-cols-1 ${isFetching ? "opacity-60" : ""}`}
+            >
               {tryouts.length === 0 ? (
-                <div className="text-center text-muted-foreground py-12 text-sm">
+                <div className="md:col-span-2 text-center text-muted-foreground py-12 text-sm">
                   {hasActiveFilters
                     ? "No tryouts match your filters."
                     : "No tryouts yet. Create your first one!"}
@@ -536,9 +538,9 @@ export default function TryoutsList() {
                             {statusLabel(t.status)}
                           </span>
                           <div className="flex items-center gap-1 shrink-0">
-                            {season && (
+                            {/* {season && (
                               <span className="text-xs text-muted-foreground">{season}</span>
-                            )}
+                            )} */}
                             <div onClick={(e) => e.stopPropagation()}>
                               <TryoutActions t={t} />
                             </div>

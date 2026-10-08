@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { ArrowLeft, CheckCircle2, Loader2, Waves } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { useLogin, useVerifyOtp } from "@/hooks/use-auth";
 import { getPostAuthRoute } from "@/lib/auth-redirect";
 import { useApiError } from "@/hooks/use-api-error";
@@ -72,213 +72,165 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="grid min-h-dvh w-full md:grid-cols-2">
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-linear-to-br from-primary via-primary to-aqua p-8 text-primary-foreground md:flex xl:p-12">
-        <div className="absolute inset-0 opacity-20">
-          <svg className="w-full h-full" viewBox="0 0 800 800" preserveAspectRatio="none">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <path
-                key={i}
-                d={`M0 ${100 + i * 70} Q 200 ${50 + i * 70} 400 ${100 + i * 70} T 800 ${100 + i * 70}`}
-                stroke="white"
-                strokeWidth="2"
-                fill="none"
-              />
-            ))}
-          </svg>
-        </div>
-        <div className="relative">
+    <div className="flex min-h-viewport w-full items-center justify-center bg-muted/30 px-4 py-10">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
+        <div className="flex justify-center">
           <BrandLogo size="lg" />
         </div>
-        <div className="relative space-y-3">
-          <h2 className="text-2xl font-bold tracking-tight xl:text-3xl">
-            Manage your swim club with confidence
-          </h2>
-          <p className="text-base leading-relaxed text-primary-foreground/80 xl:text-lg">
-            From tryouts to evaluations — everything your club needs in one place.
-          </p>
-        </div>
-        <div className="relative flex items-center gap-3">
-          <Waves className="h-5 w-5 opacity-60" />
-          <p className="text-sm text-primary-foreground/60">Swim Tryouts · Trusted by 180+ clubs</p>
-        </div>
-      </div>
 
-      <div className="flex items-center justify-center px-5 py-10 sm:px-8">
-        <div className="w-full max-w-sm">
-          <div className="mb-6 flex justify-center md:hidden sm:mb-8">
-            <BrandLogo size="lg" />
+        {success ? (
+          <div className="mt-6 space-y-3 text-center">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
+            <h1 className="text-lg font-bold">Signed in!</h1>
+            <p className="text-sm text-muted-foreground">Redirecting you now…</p>
           </div>
-
-          {success ? (
-            <div className="text-center space-y-3">
-              <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
-              <h2 className="text-xl font-bold">Signed in!</h2>
-              <p className="text-sm text-muted-foreground">Redirecting you now…</p>
-            </div>
-          ) : clubs ? (
-            <>
-              <button
-                onClick={() => {
-                  setClubs(null);
-                  setOtp("");
-                  setError(null);
-                  setStep("email");
-                }}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
-              >
-                <ArrowLeft className="h-4 w-4" /> Back
-              </button>
-              <div className="mb-8">
-                <h1 className="text-2xl font-bold tracking-tight">Select a club</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  You're a member of multiple clubs. Choose one to continue.
-                </p>
-              </div>
-              <div className="space-y-3">
-                {clubs.map((club) => (
-                  <button
-                    key={club.clubId}
-                    onClick={() =>
-                      navigate(
-                        `/select-club?clubId=${club.clubId}&email=${encodeURIComponent(email)}`,
-                      )
-                    }
-                    className="w-full flex items-center justify-between rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent hover:border-primary/50"
-                  >
-                    <div>
-                      <p className="font-medium text-foreground">{club.clubName}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{club.role}</p>
-                    </div>
-                    <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : step === "email" ? (
-            <>
-              <div className="mb-8">
-                <h1 className="text-2xl font-bold tracking-tight">Sign in to your account</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  We'll send you a one-time code to verify your identity.
-                </p>
-              </div>
-              <form onSubmit={sendOtp} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email">Email address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@club.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    aria-invalid={!!error}
-                    className={error ? "border-destructive" : ""}
-                    autoFocus
-                  />
-                  {error && (
-                    <p className="text-xs text-destructive">
-                      {error}
-                      {errorCode === "NOT_FOUND" && (
-                        <>
-                          {" "}
-                          <Link to="/register" className="underline hover:text-destructive/80">
-                            Register now
-                          </Link>
-                        </>
-                      )}
-                      {errorCode === "EMAIL_NOT_VERIFIED" && (
-                        <>
-                          {" "}
-                          <Link to="/register" className="underline hover:text-destructive/80">
-                            Resend verification
-                          </Link>
-                        </>
-                      )}
-                    </p>
-                  )}
-                </div>
-                <Button type="submit" className="w-full h-11" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending code…
-                    </>
-                  ) : (
-                    "Continue with email"
-                  )}
-                </Button>
-              </form>
-              <p className="text-center text-sm text-muted-foreground mt-6">
-                Don't have an account?{" "}
-                <Link to="/register" className="text-primary font-medium hover:underline">
-                  Register
-                </Link>
-              </p>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => {
-                  setStep("email");
-                  setOtp("");
-                  setError(null);
-                }}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
-              >
-                <ArrowLeft className="h-4 w-4" /> Back
-              </button>
-              <div className="mb-8">
-                <h1 className="text-2xl font-bold tracking-tight">Check your inbox</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  We sent a 6-digit code to{" "}
-                  <span className="font-medium text-foreground">{email}</span>
-                </p>
-              </div>
-              <form onSubmit={verify} className="space-y-5">
-                <div className="flex justify-center">
-                  <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                    <InputOTPGroup>
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <InputOTPSlot
-                          key={i}
-                          index={i}
-                          className="h-12 w-12 text-xl lg:h-15 lg:w-15 lg:text-2xl"
-                        />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                {error && <p className="text-xs text-destructive text-center">{error}</p>}
-                <Button
-                  type="submit"
-                  className="w-full h-11"
-                  disabled={loading || otp.length !== 6}
+        ) : clubs ? (
+          <>
+            <button
+              onClick={() => {
+                setClubs(null);
+                setOtp("");
+                setError(null);
+                setStep("email");
+              }}
+              className="mt-6 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
+            <h1 className="mt-5 text-center text-sm text-muted-foreground">Select a club</h1>
+            <p className="mt-1 text-center text-xs text-muted-foreground">
+              You're a member of multiple clubs. Choose one to continue.
+            </p>
+            <div className="mt-6 space-y-3">
+              {clubs.map((club) => (
+                <button
+                  key={club.clubId}
+                  onClick={() =>
+                    navigate(
+                      `/select-club?clubId=${club.clubId}&email=${encodeURIComponent(email)}`,
+                    )
+                  }
+                  className="w-full flex items-center justify-between rounded-lg border border-border p-4 text-left transition-colors hover:bg-accent hover:border-primary/50"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Verifying…
-                    </>
-                  ) : (
-                    "Verify code"
-                  )}
-                </Button>
-                <p className="text-center text-sm text-muted-foreground">
-                  Didn't get it?{" "}
-                  <button
-                    type="button"
-                    className="text-primary font-medium hover:underline"
-                    onClick={() => loginMutation.mutate({ email })}
-                  >
-                    Resend code
-                  </button>
-                </p>
-              </form>
-              <p className="text-center text-xs text-muted-foreground mt-6">
-                Enter the 6-digit code sent to your email address.
+                  <div>
+                    <p className="font-medium text-foreground">{club.clubName}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{club.role}</p>
+                  </div>
+                  <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+          </>
+        ) : step === "email" ? (
+          <>
+            <h1 className="mt-5 text-center text-sm text-muted-foreground">
+              Sign in to your account
+            </h1>
+            <form onSubmit={sendOtp} className="mt-6 space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="example@mail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  aria-invalid={!!error}
+                  className={`h-11 rounded-lg ${error ? "border-destructive" : ""}`}
+                  autoFocus
+                />
+                {error && (
+                  <p className="text-xs text-destructive">
+                    {error}
+                    {errorCode === "NOT_FOUND" && (
+                      <>
+                        {" "}
+                        <Link to="/register" className="underline hover:text-destructive/80">
+                          Register now
+                        </Link>
+                      </>
+                    )}
+                    {errorCode === "EMAIL_NOT_VERIFIED" && (
+                      <>
+                        {" "}
+                        <Link to="/register" className="underline hover:text-destructive/80">
+                          Resend verification
+                        </Link>
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+              <Button type="submit" className="w-full h-11 rounded-lg" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending code…
+                  </>
+                ) : (
+                  "Continue with email"
+                )}
+              </Button>
+            </form>
+            <p className="text-center text-sm text-muted-foreground mt-6">
+              Don't have an account?{" "}
+              <Link to="/register" className="text-primary font-medium hover:underline">
+                Register
+              </Link>
+            </p>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => {
+                setStep("email");
+                setOtp("");
+                setError(null);
+              }}
+              className="mt-6 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
+            <h1 className="mt-5 text-center text-sm text-muted-foreground">Check your inbox</h1>
+            <p className="mt-1 text-center text-xs text-muted-foreground">
+              We sent a 6-digit code to <span className="font-medium text-foreground">{email}</span>
+            </p>
+            <form onSubmit={verify} className="mt-6 space-y-5">
+              <div className="flex justify-center">
+                <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                  <InputOTPGroup>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <InputOTPSlot key={i} index={i} className="h-11 w-11 text-lg" />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              {error && <p className="text-xs text-destructive text-center">{error}</p>}
+              <Button
+                type="submit"
+                className="w-full h-11 rounded-lg"
+                disabled={loading || otp.length !== 6}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Verifying…
+                  </>
+                ) : (
+                  "Verify code"
+                )}
+              </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                Didn't get it?{" "}
+                <button
+                  type="button"
+                  className="text-primary font-medium hover:underline"
+                  onClick={() => loginMutation.mutate({ email })}
+                >
+                  Resend code
+                </button>
               </p>
-            </>
-          )}
-        </div>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
