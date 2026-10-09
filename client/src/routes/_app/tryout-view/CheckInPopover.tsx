@@ -93,7 +93,7 @@ export function CheckInPopover({
           <button
             type="button"
             aria-label={ariaLabel}
-            className="cursor-pointer text-sm font-semibold tabular-nums text-green-600 transition-colors hover:underline"
+            className="cursor-pointer text-xs font-semibold tabular-nums text-green-600 transition-colors hover:underline"
           >
             In {timeLabel}
           </button>
@@ -110,7 +110,7 @@ export function CheckInPopover({
                 <span className="text-xs font-medium tabular-nums text-green-600">{timeLabel}</span>
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
               </span>
-              <span className="text-[11px] leading-tight text-muted-foreground">
+              <span className="text-xs leading-tight text-muted-foreground">
                 {formatDateLabel(checkedInAt)}
               </span>
             </span>

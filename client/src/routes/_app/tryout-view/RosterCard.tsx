@@ -154,9 +154,9 @@ export function RosterCard({
 
       {/* Actions: score + coach recommendation (absent for inactive rows) */}
       {(scoreControl || recommendationControl) && (
-        <div className="mt-3 flex items-center gap-2">
-          <div className="shrink-0">{scoreControl}</div>
-          <div className="min-w-0 flex-1">{recommendationControl}</div>
+        <div className="mt-3 flex items-center gap-2 max-w-96 justify-center w-full">
+          <div className="w-[35%] min-w-0">{scoreControl}</div>
+          <div className="w-[65%] min-w-0">{recommendationControl}</div>
         </div>
       )}
 

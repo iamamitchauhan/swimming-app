@@ -285,7 +285,7 @@ export function RosterTab({ tryoutId }: Props) {
   const user = useAuthStore((state) => state.user);
   const [rosterParams, setRosterParams] = useState<RegistrationListParams>(() => ({
     page: 1,
-    limit: 10,
+    limit: 50,
     sortBy: "session_time",
     sortOrder: "asc",
     // Coaches default to the check-in filter (they can only score checked-in
@@ -997,8 +997,8 @@ export function RosterTab({ tryoutId }: Props) {
         </div>
       )}
 
-      {/* ── Pagination ────────────────────────────────────────────────────── */}
-      {total > 0 && (
+      {/* ── Pagination — only when there's more than one page ─────────────── */}
+      {
         <div className="sticky bottom-0 z-20 mt-4 flex items-center justify-between gap-3 border-t px-3 py-3 text-sm text-gray-600 backdrop-blur phone:gap-2 phone:py-2 phone:text-xs -mx-0.5 rounded-b-xl border bg-white p-4 transition border-gray-200">
           <span className="whitespace-nowrap">
             <span className="phone:hidden">Showing </span>
@@ -1059,7 +1059,7 @@ export function RosterTab({ tryoutId }: Props) {
             </Button>
           </div>
         </div>
-      )}
+      }
 
       <DecisionConfirmDialog
         open={confirmOpen}
@@ -1214,10 +1214,10 @@ function CoachRecommendationSelect({
             "inline-flex items-center gap-1.5 rounded-full border transition cursor-pointer hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed",
             isCard
               ? cn(
-                  "w-full justify-center px-3 py-1.5 text-sm font-semibold",
+                  "w-full justify-center px-3 py-1.5 text-xs font-semibold",
                   !cardStyle && "bg-gray-50 text-gray-600 border-gray-200",
                 )
-              : "text-xs px-2.5 py-1 font-medium bg-gray-50 text-gray-700 border-gray-200",
+              : "whitespace-nowrap text-xs px-2.5 py-1 font-medium bg-gray-50 text-gray-700 border-gray-200",
           )}
         >
           {isLoading ? (
@@ -1226,16 +1226,18 @@ function CoachRecommendationSelect({
             <>
               {value !== null && (
                 <span
-                  className="h-2 w-2 rounded-full"
+                  className="h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: dotColor }}
                   aria-hidden="true"
                 />
               )}
-              {isRejected
-                ? "Reject"
-                : (selectedGroup?.name ?? (isCard ? "Coach recommendation" : "Select"))}
+              <span className={cn(isCard && "min-w-0 truncate")}>
+                {isRejected
+                  ? "Reject"
+                  : (selectedGroup?.name ?? (isCard ? "Coach recommendation" : "Select"))}
+              </span>
               <ChevronDown
-                className={cn("inline -mr-0.5 ml-1", isCard ? "h-3.5 w-3.5" : "h-3 w-3")}
+                className={cn("inline -mr-0.5 ml-1 shrink-0", isCard ? "h-3.5 w-3.5" : "h-3 w-3")}
               />
             </>
           )}
@@ -1327,9 +1329,7 @@ function YesNoValue({
   if (yes === 0 && no === 0) return <span className="text-gray-400">—</span>;
 
   const tally = (
-    <span
-      className={cn("inline-flex items-center gap-2", variant === "card" ? "text-sm" : "text-xs")}
-    >
+    <span className="inline-flex items-center gap-2 text-xs">
       <span className="font-semibold text-green-600">{yes}</span>
       <span className="font-normal text-gray-400">/</span>
       <span className="font-semibold text-red-500">{no}</span>
@@ -1347,7 +1347,7 @@ function YesNoValue({
           className={cn(
             "inline-flex cursor-pointer items-center gap-1 transition-colors",
             variant === "card"
-              ? "rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-1.5 hover:bg-blue-50"
+              ? "w-full justify-center rounded-lg border border-blue-200 bg-blue-50/50 px-2 py-1.5 hover:bg-blue-50"
               : "rounded-lg border border-blue-200 bg-blue-50/50 px-2.5 py-1 hover:bg-blue-50",
           )}
         >
@@ -1422,7 +1422,7 @@ function CheckInControl({
           disabled={isPending}
           className={cn(
             "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-primary/40 font-medium text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50",
-            isCard ? "px-2.5 py-0.5 text-xs" : "px-2.5 py-0.5 text-sm",
+            "px-2.5 py-0.5 text-xs",
           )}
         >
           {isPending ? (
@@ -1468,7 +1468,9 @@ function ScoreControl({
         onClick={() => navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)}
         className={cn(
           "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap bg-primary font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90",
-          isCard ? "rounded-lg px-3 py-2 text-sm" : "rounded-full px-2.5 py-0.5 text-sm",
+          isCard
+            ? "w-full justify-center rounded-lg px-2 py-2 text-xs"
+            : "rounded-full px-2.5 py-1 text-xs",
         )}
       >
         <ClipboardList className={cn(isCard ? "h-4 w-4" : "h-3.5 w-3.5")} /> Add Score
@@ -1479,11 +1481,7 @@ function ScoreControl({
   if (hasScore(r)) {
     // Not scoreable (not checked in, or rejected) — show the existing score
     // read-only rather than the Add Score link.
-    return (
-      <span className={cn("font-medium text-gray-500", isCard ? "text-sm" : "text-xs")}>
-        {avg(r) ?? r.total_score}
-      </span>
-    );
+    return <span className="font-medium text-gray-500 text-xs">{avg(r) ?? r.total_score}</span>;
   }
 
   // Card: keep the entry point visible (greyed out) until the swimmer is checked
@@ -1493,7 +1491,7 @@ function ScoreControl({
       <button
         type="button"
         disabled
-        className="inline-flex cursor-not-allowed items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow opacity-50"
+        className="inline-flex w-full cursor-not-allowed items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-primary px-2 py-2 text-xs font-medium text-primary-foreground shadow opacity-50"
       >
         <ClipboardList className="h-4 w-4" /> Add Score
       </button>
