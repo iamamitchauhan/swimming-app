@@ -107,10 +107,12 @@ export function CheckInPopover({
             {/* Time + date share a column so the date aligns under the time text. */}
             <span className="flex flex-col items-start gap-0.5">
               <span className="inline-flex items-center gap-1.5">
-                <span className="text-sm font-medium tabular-nums text-green-600">{timeLabel}</span>
+                <span className="text-xs font-medium tabular-nums text-green-600">{timeLabel}</span>
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
               </span>
-              <span className="text-xs text-muted-foreground">{formatDateLabel(checkedInAt)}</span>
+              <span className="text-[11px] leading-tight text-muted-foreground">
+                {formatDateLabel(checkedInAt)}
+              </span>
             </span>
           </button>
         )}

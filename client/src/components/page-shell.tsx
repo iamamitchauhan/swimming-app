@@ -14,7 +14,7 @@ export function PageShell({
   return (
     <>
       <AppHeader title={title} crumbs={crumbs} />
-      <div className="px-4 lg:px-8 py-6 lg:py-8">
+      <div className="px-4 lg:px-8 py-4 lg:py-8">
         {actions && <div className={`flex justify-end ${actions ? "mb-4" : ""}`}>{actions}</div>}
         {children}
       </div>

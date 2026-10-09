@@ -711,7 +711,7 @@ export function RosterTab({ tryoutId }: Props) {
                     key={r.id}
                     className={`hover:bg-gray-50 transition ${selectedIds.has(r.id) ? "bg-blue-50" : "bg-white"}`}
                   >
-                    <TableCell className="sticky left-0 z-10 w-8 bg-inherit px-4 py-3">
+                    <TableCell className="sticky left-0 z-10 w-8 bg-inherit px-4 py-3 align-middle">
                       <Checkbox
                         checked={selectedIds.has(r.id)}
                         onCheckedChange={() => toggleRow(r.id)}
@@ -719,7 +719,7 @@ export function RosterTab({ tryoutId }: Props) {
                         className="cursor-pointer"
                       />
                     </TableCell>
-                    <TableCell className="sticky left-8 z-10 bg-inherit px-4 py-3 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                    <TableCell className="sticky left-8 z-10 bg-inherit px-4 py-3 align-middle shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                       <div
                         className="cursor-pointer text-blue-700 hover:underline"
                         onClick={() => {
@@ -735,11 +735,11 @@ export function RosterTab({ tryoutId }: Props) {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="px-4 py-3 align-middle">
                       <div className="text-gray-600">{r.segment_name || "—"}</div>
                       <div className="text-xs text-gray-400">Age {r.swimmer_age}</div>
                     </TableCell>
-                    <TableCell className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 align-middle whitespace-nowrap">
                       <div className="text-gray-600">
                         {r.slot_id?.startTime
                           ? `${fmtTime(r.slot_id.startTime)} – ${fmtTime(r.slot_id.endTime)}`
@@ -751,14 +751,14 @@ export function RosterTab({ tryoutId }: Props) {
                     </TableCell>
                     {!isCoach && (
                       <>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="px-4 py-3 align-middle">
                           <span
                             className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${STATUS_COLORS[r.status]}`}
                           >
                             {r.status}
                           </span>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="px-4 py-3 align-middle">
                           <CheckInControl
                             registration={r}
                             isPending={pendingRegIds.includes(r.id)}
@@ -768,18 +768,18 @@ export function RosterTab({ tryoutId }: Props) {
                       </>
                     )}
 
-                    <TableCell className="px-4 py-3 font-semibold text-blue-700">
+                    <TableCell className="px-4 py-3 align-middle font-semibold text-blue-700">
                       <ScoreControl
                         registration={r}
                         tryoutId={tryoutId}
                         onReset={setResetConfirmRegId}
                       />
                     </TableCell>
-                    <TableCell className="px-4 py-3 font-semibold text-blue-700">
+                    <TableCell className="px-4 py-3 align-middle font-semibold text-blue-700">
                       <CoachRecommendationControl registration={r} tryoutId={tryoutId} />
                     </TableCell>
                     {!isCoach && (
-                      <TableCell className="px-4 py-3">
+                      <TableCell className="px-4 py-3 align-middle">
                         <DecisionActions
                           registration={r}
                           canManageCoaches={canManageCoaches}
@@ -1327,7 +1327,9 @@ function YesNoValue({
   if (yes === 0 && no === 0) return <span className="text-gray-400">—</span>;
 
   const tally = (
-    <span className="inline-flex items-center gap-2 text-sm">
+    <span
+      className={cn("inline-flex items-center gap-2", variant === "card" ? "text-sm" : "text-xs")}
+    >
       <span className="font-semibold text-green-600">{yes}</span>
       <span className="font-normal text-gray-400">/</span>
       <span className="font-semibold text-red-500">{no}</span>
@@ -1420,13 +1422,13 @@ function CheckInControl({
           disabled={isPending}
           className={cn(
             "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-primary/40 font-medium text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50",
-            isCard ? "px-2.5 py-0.5 text-xs" : "px-3 py-1 text-sm",
+            isCard ? "px-2.5 py-0.5 text-xs" : "px-2.5 py-0.5 text-sm",
           )}
         >
           {isPending ? (
-            <Loader2 className={cn("animate-spin", isCard ? "h-3.5 w-3.5" : "h-4 w-4")} />
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Clock className={cn(isCard ? "h-3.5 w-3.5" : "h-4 w-4")} />
+            <Clock className="h-3.5 w-3.5" />
           )}
           Check in
         </button>
@@ -1466,10 +1468,10 @@ function ScoreControl({
         onClick={() => navigate(`/tryouts/view/${tryoutId}/bulk-scoring?ids=${r.id}`)}
         className={cn(
           "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap bg-primary font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90",
-          isCard ? "rounded-lg px-3 py-2 text-sm" : "rounded-full px-3 py-1 text-sm",
+          isCard ? "rounded-lg px-3 py-2 text-sm" : "rounded-full px-2.5 py-0.5 text-sm",
         )}
       >
-        <ClipboardList className="h-4 w-4" /> Add Score
+        <ClipboardList className={cn(isCard ? "h-4 w-4" : "h-3.5 w-3.5")} /> Add Score
       </button>
     );
   }
@@ -1477,7 +1479,11 @@ function ScoreControl({
   if (hasScore(r)) {
     // Not scoreable (not checked in, or rejected) — show the existing score
     // read-only rather than the Add Score link.
-    return <span className="text-sm font-medium text-gray-500">{avg(r) ?? r.total_score}</span>;
+    return (
+      <span className={cn("font-medium text-gray-500", isCard ? "text-sm" : "text-xs")}>
+        {avg(r) ?? r.total_score}
+      </span>
+    );
   }
 
   // Card: keep the entry point visible (greyed out) until the swimmer is checked
